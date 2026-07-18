@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>문서 출력 | 근로복지공단 인천병원 장례식장</title>
+  <style>
+    :root { --navy:#1f2a44; --line:#333; --soft:#f2f2ee; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:#e9e8e4; font-family:"Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; color:#1a1a1a; font-size:13px; }
+    .bar { background:var(--navy); color:#fff; padding:12px 20px; display:flex; gap:10px; align-items:center; justify-content:center; }
+    .bar button, .bar a { padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,.3); background:transparent; color:#fff; cursor:pointer; font-size:13px; font-weight:600; }
+    .bar button.primary { background:#a98b52; border-color:#a98b52; }
+    .sheet { width:210mm; min-height:auto; margin:20px auto; background:#fff; padding:18mm 16mm; box-shadow:0 6px 24px rgba(0,0,0,.15); }
+    .doc-title { text-align:center; font-size:30px; letter-spacing:16px; font-weight:800; color:var(--navy); margin:0 0 6px; padding-left:16px; }
+    .doc-sub { text-align:center; color:#666; margin:0 0 22px; font-size:12px; }
+    .meta { display:flex; justify-content:space-between; margin-bottom:14px; font-size:12.5px; }
+    .parties { display:flex; gap:12px; margin-bottom:18px; }
+    .party { flex:1; border:1.5px solid var(--line); }
+    .party .h { background:var(--soft); text-align:center; font-weight:700; padding:6px; border-bottom:1px solid var(--line); }
+    .party table { width:100%; border-collapse:collapse; }
+    .party td { border:1px solid #bbb; padding:6px 8px; font-size:12px; }
+    .party td.k { background:#fafafa; width:70px; font-weight:600; color:#333; white-space:nowrap; }
+    table.items { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    table.items th, table.items td { border:1px solid var(--line); padding:8px; font-size:12px; text-align:center; }
+    table.items th { background:var(--soft); }
+    table.items td.l { text-align:left; }
+    table.items td.r { text-align:right; }
+    table.items tfoot td { font-weight:700; background:#fbfbf8; }
+    .total-line { text-align:right; font-size:16px; font-weight:800; color:var(--navy); margin-top:6px; }
+    .memo { margin-top:16px; border:1px solid #bbb; padding:10px 12px; font-size:12px; min-height:44px; }
+    .memo b { color:var(--navy); }
+    .foot-note { margin-top:26px; text-align:center; color:#888; font-size:11px; }
+    .stamp { color:#c0392b; border:1px solid #c0392b; border-radius:6px; padding:2px 6px; font-size:10px; }
+    .loading { text-align:center; padding:80px 0; color:#666; }
+    @media print {
+      body { background:#fff; }
+      .bar { display:none; }
+      .sheet { box-shadow:none; margin:0; width:auto; padding:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <span id="barTitle" style="color:#fff;font-weight:700;margin-right:10px"></span>
+    <button class="primary" onclick="window.print()">인쇄</button>
+    <a href="#" id="typeOrder">주문서</a>
+    <a href="#" id="typeStatement">거래명세서</a>
+    <a href="#" id="typeTax">세금계산서</a>
+  </div>
+
+  <div class="sheet" id="sheet"><div class="loading">문서를 불러오는 중…</div></div>
+
+  <script src="../../assets/js/member.js"></script>
+  <script>
+    const SUPPLIER = {
+      name: "근로복지공단 인천병원 장례식장",
+      ceo: "",
+      bizNo: "",
+      address: "인천광역시 부평구 무네미로 446",
+      phone: "032-205-1100",
+    };
+    const params = new URLSearchParams(location.search);
+    const orderId = params.get("id");
+    const type = params.get("type") || "order";
+    const TITLES = { order: "주 문 서", statement: "거 래 명 세 서", tax: "세 금 계 산 서" };
+
+    ["order", "statement", "tax"].forEach((t) => {
+      const a = document.getElementById("type" + t.charAt(0).toUpperCase() + t.slice(1));
+      a.href = `?type=${t}&id=${encodeURIComponent(orderId || "")}`;
+    });
+
+    (async function () {
+      if (!orderId) { document.getElementById("sheet").innerHTML = '<div class="loading">주문 정보가 없습니다.</div>'; return; }
+      try {
+        const o = (await mApi("/orders/" + orderId)).order;
+        document.getElementById("barTitle").textContent = TITLES[type] || "문서";
+        render(o);
+      } catch (e) {
+        document.getElementById("sheet").innerHTML = `<div class="loading">오류: ${mEsc(e.message)}</div>`;
+      }
+    })();
+
+    function fmtDate(iso) {
+      const d = new Date(iso); const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}년 ${p(d.getMonth() + 1)}월 ${p(d.getDate())}일`;
+    }
+
+    function partyTable(title, p, withBiz) {
+      return `
+        <div class="party">
+          <div class="h">${title}</div>
+          <table>
+            <tr><td class="k">상호</td><td>${mEsc(p.name) || "-"}</td></tr>
+            ${withBiz ? `<tr><td class="k">사업자번호</td><td>${mEsc(p.bizNo) || "-"}</td></tr>
+            <tr><td class="k">대표자</td><td>${mEsc(p.ceo) || "-"}</td></tr>` : ""}
+            <tr><td class="k">주소</td><td>${mEsc(p.address) || "-"}</td></tr>
+            <tr><td class="k">연락처</td><td>${mEsc(p.phone) || "-"}</td></tr>
+          </table>
+        </div>`;
+    }
+
+    function render(o) {
+      const isTax = type === "tax";
+      const isStatement = type === "statement";
+      const showTaxCols = isTax || isStatement;
+
+      const buyer = {
+        name: (o.buyer && o.buyer.name) || (o.family && o.family.name) || "",
+        ceo: (o.buyer && o.buyer.ceo) || "",
+        bizNo: (o.buyer && o.buyer.bizNo) || "",
+        address: (o.buyer && o.buyer.address) || (o.hall ? "빈소: " + o.hall.hallNumber : ""),
+        phone: (o.buyer && o.buyer.phone) || (o.family && o.family.phone) || "",
+      };
+
+      const rows = o.items.map((it, i) => {
+        const supply = it.price * it.qty;
+        const vat = it.taxable ? Math.round(supply * 0.1) : 0;
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td class="l">${mEsc(it.name)}</td>
+            <td>${it.qty}${mEsc(it.unit)}</td>
+            <td class="r">${won(it.price)}</td>
+            <td class="r">${won(supply)}</td>
+            ${showTaxCols ? `<td class="r">${won(vat)}</td>` : ""}
+          </tr>`;
+      }).join("");
+
+      const colspanBase = showTaxCols ? 4 : 4;
+
+      const sheet = document.getElementById("sheet");
+      sheet.innerHTML = `
+        <h1 class="doc-title">${TITLES[type]}</h1>
+        <p class="doc-sub">${mEsc(SUPPLIER.name)}</p>
+
+        <div class="meta">
+          <div>주문번호 : <b>${mEsc(o.orderNumber)}</b></div>
+          <div>작성일자 : ${fmtDate(o.createdAt)}</div>
+        </div>
+
+        <div class="parties">
+          ${partyTable("공급자", SUPPLIER, true)}
+          ${partyTable("공급받는자", buyer, isTax)}
+        </div>
+
+        <table class="items">
+          <thead>
+            <tr>
+              <th style="width:36px">No</th><th>품목</th><th style="width:70px">수량</th>
+              <th style="width:100px">단가</th><th style="width:110px">공급가액</th>
+              ${showTaxCols ? '<th style="width:90px">세액</th>' : ""}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="${colspanBase}" class="r">공급가액 합계</td>
+              <td class="r">${won(o.supplyAmount)}</td>
+              ${showTaxCols ? `<td class="r">${won(o.vatAmount)}</td>` : ""}
+            </tr>
+            <tr>
+              <td colspan="${showTaxCols ? 5 : 4}" class="r">합계금액 (VAT 포함)</td>
+              <td class="r">${won(o.totalAmount)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="total-line">합계 금액 : ${won(o.totalAmount)}</div>
+
+        <div class="memo"><b>비고</b> &nbsp; ${mEsc(o.memo) || (o.hall ? ("빈소 " + mEsc(o.hall.hallNumber) + (o.hall.deceasedName ? " / 故 " + mEsc(o.hall.deceasedName) : "")) : "-")}</div>
+
+        <div class="foot-note">
+          ${isTax ? "※ 본 문서는 내부 관리용 참고 자료이며, 실제 세금계산서는 국세청 전자세금계산서로 발행됩니다." : "본 문서는 " + mEsc(SUPPLIER.name) + "에서 발행한 내부 관리 문서입니다."}
+          <br />문의 : ${mEsc(SUPPLIER.phone)}
+        </div>`;
+    }
+  </script>
+</body>
+</html>

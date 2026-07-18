@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>관리자 콘솔 | 근로복지공단 인천병원 장례식장</title>
+  <link rel="stylesheet" href="assets/admin.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="side-brand">
+        <strong>관리자 콘솔</strong>
+        <span>근로복지공단 인천병원 장례식장</span>
+      </div>
+      <nav class="side-nav" id="sideNav">
+        <a href="#dashboard" data-view="dashboard">대시보드</a>
+        <a href="#halls" data-view="halls">빈소 관리</a>
+        <a href="#families" data-view="families">상주 계정</a>
+        <a href="#products" data-view="products">상품 관리</a>
+        <a href="#orders" data-view="orders">주문 관리 <span class="badge" id="navOrderBadge" style="display:none">0</span></a>
+        <a href="#notices" data-view="notices">알림 소식</a>
+        <a href="#inquiries" data-view="inquiries">온라인 문의 <span class="badge" id="navInqBadge" style="display:none">0</span></a>
+        <a href="#memorials" data-view="memorials">추모글 관리</a>
+      </nav>
+      <div class="side-foot">
+        <p class="muted" id="whoName" style="margin:0 0 10px;color:#8b93a7"></p>
+        <button id="logoutBtn">로그아웃</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <h2 id="viewTitle">대시보드</h2>
+        <span class="who"><a href="/" target="_blank" style="color:var(--gold);font-weight:600">홈페이지 보기 →</a></span>
+      </div>
+      <div class="content" id="content"><div class="empty">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <div class="modal-back" id="modalBack">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle">제목</h3>
+        <button class="x" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot" id="modalFoot"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/admin.js"></script>
+</body>
+</html>

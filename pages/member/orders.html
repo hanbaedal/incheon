@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>내 주문 | 상주 전용 서비스</title>
+  <link rel="stylesheet" href="../../assets/css/member.css" />
+</head>
+<body>
+  <header id="mHeader"></header>
+  <div class="m-wrap">
+    <h1 class="m-title">내 주문 내역</h1>
+    <p class="m-lead">주문하신 내역과 처리 상태를 확인하실 수 있습니다.</p>
+    <div id="okBox"></div>
+    <div id="ordArea" class="card"><div class="state">주문 내역을 불러오는 중…</div></div>
+  </div>
+
+  <script src="../../assets/js/member.js"></script>
+  <script>
+    let ME = null;
+
+    (async function () {
+      ME = await memberHeader("orders");
+      if (!ME) return;
+
+      const ok = new URLSearchParams(location.search).get("ok");
+      if (ok) {
+        document.getElementById("okBox").innerHTML =
+          `<div class="notice-box" style="background:#e8f5ee;border-color:#bfe2cd;color:#256b4c">주문이 정상 접수되었습니다. (주문번호 ${mEsc(ok)})</div>`;
+      }
+      await load();
+    })();
+
+    async function load() {
+      const area = document.getElementById("ordArea");
+      try {
+        const items = (await mApi("/orders/mine")).items;
+        if (items.length === 0) {
+          area.innerHTML = '<div class="state">주문 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">상품 주문하기 →</a></div>';
+          return;
+        }
+        area.innerHTML = `
+          <div class="card-body" style="padding:0">
+          <table class="tbl">
+            <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th class="nowrap">주문일</th><th class="right">문서</th></tr></thead>
+            <tbody>${items.map((o) => `
+              <tr>
+                <td class="nowrap"><b>${mEsc(o.orderNumber)}</b></td>
+                <td>${mEsc(o.items[0] ? o.items[0].name : "-")}${o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}</td>
+                <td class="right nowrap">${won(o.totalAmount)}</td>
+                <td><span class="tag ${o.status}">${MEMBER_STATUS[o.status] || o.status}</span></td>
+                <td class="nowrap">${mFmtDay(o.createdAt)}</td>
+                <td class="right nowrap">
+                  <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}" target="_blank">주문서</a>
+                </td>
+              </tr>`).join("")}</tbody>
+          </table></div>`;
+      } catch (e) {
+        area.innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>

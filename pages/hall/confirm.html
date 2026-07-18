@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="keywords" content="구산동장례식장, 부평구장례식장, 송내역장례식장, 부천장례식장, 인천장례식장, 근로복지공단 인천병원 장례식장" />
+  <title>빈소 정보 확인 | 근로복지공단 인천병원 장례식장</title>
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+</head>
+<body>
+  <div id="pageContent">
+    <h2 class="page-title"><span class="bar"></span>빈소 정보 확인</h2>
+    <p class="page-lead">고인과 상주 정보, 빈소 위치 및 발인 일정을 확인하실 수 있습니다.</p>
+
+    <div class="block" id="hallStatusArea"><div class="dyn-loading">불러오는 중…</div></div>
+
+    <p class="note"><strong>안내</strong> &nbsp;개인정보 보호를 위해 일부 정보는 표시되지 않을 수 있으며, 상세 정보는 유가족 확인 후 제공됩니다.</p>
+  </div>
+
+  <script>
+    window.SITE_BASE = "../../";
+    window.SITE_PAGE = { section: "hall", sub: "confirm" };
+    window.PAGE_I18N = {
+      zh: `
+    <h2 class="page-title"><span class="bar"></span>灵堂信息查询</h2>
+    <p class="page-lead">可确认逝者与丧主信息、灵堂位置及出殡日程。</p>
+    <div class="block" id="hallStatusArea"><div class="dyn-loading">加载中…</div></div>
+    <p class="note"><strong>提示</strong> &nbsp;为保护个人信息，部分信息可能不予显示，详细信息经遗属确认后提供。</p>`,
+      en: `
+    <h2 class="page-title"><span class="bar"></span>Hall Information</h2>
+    <p class="page-lead">Check the deceased and mourner info, hall location, and procession schedule.</p>
+    <div class="block" id="hallStatusArea"><div class="dyn-loading">Loading…</div></div>
+    <p class="note"><strong>Note</strong> &nbsp;Some details may be hidden to protect privacy; full details are provided after family confirmation.</p>`,
+    };
+  </script>
+  <script src="../../assets/js/site.js"></script>
+  <script src="../../assets/js/api.js"></script>
+  <script src="../../assets/js/pages/hall.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>관리자 로그인 | 근로복지공단 인천병원 장례식장</title>
+  <link rel="stylesheet" href="assets/admin.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" id="loginForm">
+      <h1>관리자 로그인</h1>
+      <p class="sub">근로복지공단 인천병원 장례식장 관리 콘솔</p>
+      <label for="username">아이디</label>
+      <input type="text" id="username" autocomplete="username" required />
+      <label for="password">비밀번호</label>
+      <input type="password" id="password" autocomplete="current-password" required />
+      <button type="submit">로그인</button>
+      <p class="msg" id="msg"></p>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const msg = document.getElementById("msg");
+
+    // 이미 로그인된 관리자면 대시보드로
+    fetch("/api/auth/me", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && d.user && d.user.role === "admin") location.href = "/admin/"; })
+      .catch(() => {});
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      try {
+        const r = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ username, password }),
+        });
+        const d = await r.json();
+        if (!r.ok) { msg.textContent = d.error || "로그인에 실패했습니다."; return; }
+        if (d.user.role !== "admin") {
+          msg.textContent = "관리자 전용 페이지입니다.";
+          await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+          return;
+        }
+        location.href = "/admin/";
+      } catch (err) {
+        msg.textContent = "서버에 연결할 수 없습니다.";
+      }
+    });
+  </script>
+</body>
+</html>
