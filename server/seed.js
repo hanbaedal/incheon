@@ -2,22 +2,14 @@
 
 const env = require("./config/env");
 const { connectDB, disconnectDB } = require("./config/db");
-const User = require("./models/User");
 const Notice = require("./models/Notice");
 const Product = require("./models/Product");
 const Hall = require("./models/Hall");
+const { ensureAdmin } = require("./utils/ensureAdmin");
 
 async function seedAdmin() {
-  const username = env.ADMIN_USERNAME.toLowerCase().trim();
-  let admin = await User.findOne({ username });
-  if (admin) {
-    console.log(`- 관리자 계정 이미 존재: ${username}`);
-    return;
-  }
-  admin = new User({ username, role: "admin", name: env.ADMIN_NAME });
-  await admin.setPassword(env.ADMIN_PASSWORD);
-  await admin.save();
-  console.log(`+ 관리자 계정 생성: ${username} / (env ADMIN_PASSWORD)`);
+  const r = await ensureAdmin();
+  console.log(r.created ? `+ 관리자 계정 생성: ${r.username}` : `- 관리자 계정 이미 존재: ${r.username}`);
 }
 
 async function seedProducts() {
