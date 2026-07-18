@@ -52,7 +52,7 @@
     utilSearch: { ko: "빈소 찾기", zh: "灵堂查询", en: "Find a Hall" },
     utilDirections: { ko: "찾아오시는 길", zh: "交通指南", en: "Directions" },
     utilCyber: { ko: "온라인 추모", zh: "网上吊唁", en: "Online Tribute" },
-    utilMember: { ko: "상주 로그인", zh: "遗属登录", en: "Family Login" },
+    utilMember: { ko: "로그인", zh: "登录", en: "Login" },
     consultTitle: { ko: "장례 상담", zh: "殡葬咨询", en: "Consultation" },
     consultDesc: { ko: "연중무휴 24시간 운영", zh: "全年无休 24小时", en: "Open 24/7, year-round" },
     footerCopy: {
