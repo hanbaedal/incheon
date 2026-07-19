@@ -10,6 +10,7 @@ router.use("/auth", require("./auth"));
 router.use("/notices", require("./notices"));
 router.use("/inquiries", require("./inquiries"));
 router.use("/halls", require("./halls"));
+router.use("/hall-facility-fees", require("./hallFacilityFees"));
 router.use("/memorials", require("./memorials"));
 router.use("/users", require("./users"));
 router.use("/products", require("./products"));

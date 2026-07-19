@@ -55,8 +55,9 @@
         <tbody>
           <tr><td>빈소</td><td>일반실</td><td>-</td><td class="right">480,000원</td><td>1일</td><td>-</td></tr>
           <tr><td>빈소</td><td>특실</td><td>-</td><td class="right">624,000원</td><td>1일</td><td>-</td></tr>
-          <tr><td>안치료</td><td>-</td><td>-</td><td class="right">40,000원</td><td>1일</td><td>-</td></tr>
-          <tr><td>입관실</td><td>-</td><td>-</td><td class="right">300,000원</td><td>1일</td><td>-</td></tr>
+        </tbody>
+        <tbody id="facilityFeeRows">
+          <tr><td colspan="6" class="state">불러오는 중…</td></tr>
         </tbody>
       </table>
     </div>
@@ -93,9 +94,7 @@
       <table class="tbl"><thead><tr><th>区分</th><th>设施名</th><th>面积</th><th class="right">费用</th><th>单位</th><th>备注</th></tr></thead><tbody>
         <tr><td>灵堂</td><td>一般室</td><td>-</td><td class="right">480,000韩元</td><td>1日</td><td>-</td></tr>
         <tr><td>灵堂</td><td>特室</td><td>-</td><td class="right">624,000韩元</td><td>1日</td><td>-</td></tr>
-        <tr><td>安置费</td><td>-</td><td>-</td><td class="right">40,000韩元</td><td>1日</td><td>-</td></tr>
-        <tr><td>入殓室</td><td>-</td><td>-</td><td class="right">300,000韩元</td><td>1日</td><td>-</td></tr>
-      </tbody></table>
+      </tbody><tbody id="facilityFeeRows"></tbody></table>
     </div>`,
       en: `
     <h2 class="page-title"><span class="bar"></span>Halls &amp; Rooms</h2>
@@ -124,12 +123,11 @@
       <table class="tbl"><thead><tr><th>Category</th><th>Facility</th><th>Area</th><th class="right">Fee</th><th>Unit</th><th>Notes</th></tr></thead><tbody>
         <tr><td>Hall</td><td>Standard</td><td>-</td><td class="right">480,000 KRW</td><td>1 day</td><td>-</td></tr>
         <tr><td>Hall</td><td>Premium</td><td>-</td><td class="right">624,000 KRW</td><td>1 day</td><td>-</td></tr>
-        <tr><td>Enshrinement</td><td>-</td><td>-</td><td class="right">40,000 KRW</td><td>1 day</td><td>-</td></tr>
-        <tr><td>Preparation room</td><td>-</td><td>-</td><td class="right">300,000 KRW</td><td>1 day</td><td>-</td></tr>
-      </tbody></table>
+      </tbody><tbody id="facilityFeeRows"></tbody></table>
     </div>`,
     };
   </script>
   <script src="../../assets/js/site.js"></script>
+  <script src="../../assets/js/hall-facility-fees-rooms.js"></script>
 </body>
 </html>

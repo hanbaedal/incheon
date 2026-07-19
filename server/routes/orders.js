@@ -13,6 +13,7 @@ const PhotoItem = require("../models/PhotoItem");
 const DressItem = require("../models/DressItem");
 const HearseItem = require("../models/HearseItem");
 const ServicePrice = require("../models/ServicePrice");
+const HallFacilityFee = require("../models/HallFacilityFee");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
@@ -32,7 +33,7 @@ function summaryHallFromOrders(orders, usage, hall) {
 }
 
 function resolveItemType(it) {
-  if (["coffin", "hoengdae", "shroud", "accessory", "foodItem", "flowerItem", "photoItem", "dressItem", "hearseItem", "servicePrice"].includes(it.itemType)) return it.itemType;
+  if (["coffin", "hoengdae", "shroud", "accessory", "foodItem", "flowerItem", "photoItem", "dressItem", "hearseItem", "servicePrice", "hallFacilityFee"].includes(it.itemType)) return it.itemType;
   if (it.coffinId) return "coffin";
   if (it.hoengdaeId) return "hoengdae";
   if (it.shroudId) return "shroud";
@@ -56,6 +57,7 @@ function resolveRefId(it, itemType) {
   if (itemType === "dressItem") return it.itemRefId || it.dressItemId;
   if (itemType === "hearseItem") return it.itemRefId || it.hearseItemId;
   if (itemType === "servicePrice") return it.itemRefId || it.servicePriceId;
+  if (itemType === "hallFacilityFee") return it.itemRefId || it.hallFacilityFeeId;
   return it.productId;
 }
 
@@ -86,6 +88,24 @@ function orderItemFromServicePrice(ref, qty) {
     catKey: "service",
     name: label,
     unit: ref.unit || "-",
+    price: ref.price,
+    qty,
+    finalQty: isPostpaid ? null : qty,
+    settlementType: ref.settlementType || "prepaid",
+    settled: !isPostpaid,
+    taxable: ref.taxable,
+  };
+}
+
+function orderItemFromHallFacilityFee(ref, qty) {
+  const isPostpaid = ref.settlementType === "postpaid";
+  const label = ref.name && ref.name !== "-" ? `${ref.group} · ${ref.name}` : ref.group;
+  return {
+    itemType: "hallFacilityFee",
+    itemRefId: ref._id,
+    catKey: "facility",
+    name: label,
+    unit: ref.unit || "1일",
     price: ref.price,
     qty,
     finalQty: isPostpaid ? null : qty,
@@ -132,6 +152,7 @@ router.post(
     const dressItemIds = [];
     const hearseItemIds = [];
     const servicePriceIds = [];
+    const hallFacilityFeeIds = [];
     for (const it of rawItems) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
@@ -146,10 +167,11 @@ router.post(
       else if (itemType === "dressItem") dressItemIds.push(refId);
       else if (itemType === "hearseItem") hearseItemIds.push(refId);
       else if (itemType === "servicePrice") servicePriceIds.push(refId);
+      else if (itemType === "hallFacilityFee") hallFacilityFeeIds.push(refId);
       else productIds.push(refId);
     }
 
-    const [products, coffins, hoengdaes, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems, servicePrices] = await Promise.all([
+    const [products, coffins, hoengdaes, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems, servicePrices, hallFacilityFees] = await Promise.all([
       productIds.length ? Product.find({ _id: { $in: productIds }, active: true }) : [],
       coffinIds.length ? Coffin.find({ _id: { $in: coffinIds }, active: true }) : [],
       hoengdaeIds.length ? Hoengdae.find({ _id: { $in: hoengdaeIds }, active: true }) : [],
@@ -161,6 +183,7 @@ router.post(
       dressItemIds.length ? DressItem.find({ _id: { $in: dressItemIds }, active: true }) : [],
       hearseItemIds.length ? HearseItem.find({ _id: { $in: hearseItemIds }, active: true }) : [],
       servicePriceIds.length ? ServicePrice.find({ _id: { $in: servicePriceIds }, active: true, orderable: true }) : [],
+      hallFacilityFeeIds.length ? HallFacilityFee.find({ _id: { $in: hallFacilityFeeIds }, active: true, orderable: true }) : [],
     ]);
     const productMap = new Map(products.map((p) => [String(p._id), p]));
     const coffinMap = new Map(coffins.map((c) => [String(c._id), c]));
@@ -173,6 +196,7 @@ router.post(
     const dressItemMap = new Map(dressItems.map((d) => [String(d._id), d]));
     const hearseItemMap = new Map(hearseItems.map((h) => [String(h._id), h]));
     const servicePriceMap = new Map(servicePrices.map((s) => [String(s._id), s]));
+    const hallFacilityFeeMap = new Map(hallFacilityFees.map((f) => [String(f._id), f]));
 
     const orderItems = [];
     for (const it of rawItems) {
@@ -220,6 +244,10 @@ router.post(
         const sp = servicePriceMap.get(String(refId));
         if (!sp) return res.status(400).json({ error: "존재하지 않거나 청구 불가한 서비스 항목이 포함되어 있습니다." });
         orderItems.push(orderItemFromServicePrice(sp, qty));
+      } else if (itemType === "hallFacilityFee") {
+        const ff = hallFacilityFeeMap.get(String(refId));
+        if (!ff) return res.status(400).json({ error: "존재하지 않거나 청구 불가한 시설 사용료 항목이 포함되어 있습니다." });
+        orderItems.push(orderItemFromHallFacilityFee(ff, qty));
       } else {
         const p = productMap.get(String(refId));
         if (!p) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상품이 포함되어 있습니다." });

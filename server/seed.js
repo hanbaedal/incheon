@@ -6,6 +6,7 @@ const Notice = require("./models/Notice");
 const Product = require("./models/Product");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureServicePrices } = require("./utils/ensureServicePrices");
+const { ensureHallFacilityFees } = require("./utils/ensureHallFacilityFees");
 const { ensureAdmin } = require("./utils/ensureAdmin");
 const { ensureHalls } = require("./utils/ensureHalls");
 const { ensureFuneralForms } = require("./utils/ensureFuneralForms");
@@ -43,6 +44,8 @@ async function seedAmcCatalog() {
   console.log(`+ 운구·차량 ${r.hearseItems.total}건 (신규 ${r.hearseItems.created})`);
   const sp = await ensureServicePrices();
   console.log(`+ 서비스 요금 ${sp.total}건 (신규 ${sp.created})`);
+  const hf = await ensureHallFacilityFees();
+  console.log(`+ 시설 사용료 ${hf.total}건 (신규 ${hf.created})`);
 }
 
 async function seedNotice() {

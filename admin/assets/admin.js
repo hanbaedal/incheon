@@ -493,7 +493,37 @@ async function renderDashboard() {
 
 /* ---------- 빈소 목록(호실 마스터) ---------- */
 async function renderHalls() {
-  const d = await api("/halls/admin/all");
+  const [d, feesRes] = await Promise.all([
+    api("/halls/admin/all"),
+    api("/hall-facility-fees/admin/all"),
+  ]);
+  const fees = feesRes.items || [];
+  const feeRow = (f) => `
+    <tr>
+      <td class="nowrap">${esc(f.group)}</td>
+      <td>${esc(f.name || "-")}</td>
+      <td class="nowrap">${esc(f.unit || "1일")}</td>
+      <td class="right nowrap">${won(f.price)}</td>
+      <td>${esc(f.note || "-")}</td>
+      <td>${f.active ? '<span class="tag free">노출</span>' : '<span class="tag gray">숨김</span>'}</td>
+      <td class="actions">
+        <button class="btn btn-sm" data-fee-edit='${esc(JSON.stringify(f))}'>수정</button>
+        <button class="btn btn-sm btn-danger" data-fee-del="${f.id}" data-name="${esc(f.group)}">삭제</button>
+      </td>
+    </tr>`;
+  const feeBlock = (title, group) => {
+    const items = fees.filter((f) => f.group === group);
+    return `
+      <h3 style="margin:24px 0 10px;font-size:1.05rem">${esc(title)}</h3>
+      <div class="panel"><div class="panel-body" style="padding:0">
+        ${items.length === 0 ? `<div class="empty">${esc(title)} 요금이 등록되지 않았습니다.</div>` : `
+        <table class="grid">
+          <thead><tr><th>구분</th><th>항목</th><th>단위</th><th class="right">요금</th><th>비고</th><th>노출</th><th class="right">관리</th></tr></thead>
+          <tbody>${items.map(feeRow).join("")}</tbody>
+        </table>`}
+      </div></div>`;
+  };
+
   content.innerHTML = `
     <p class="muted" style="margin:0 0 14px">101·102·103·109호 빈소와 규격(35·50·80평형, 무빈소)입니다. 상주는 호실을 선택해 이용 신청합니다.</p>
     <div class="panel"><div class="panel-body" style="padding:0">
@@ -514,10 +544,96 @@ async function renderHalls() {
             </td>
           </tr>`).join("")}</tbody>
       </table>`}
-    </div></div>`;
+    </div></div>
+
+    <h3 style="margin:28px 0 10px;font-size:1.1rem">시설 사용료</h3>
+    <p class="muted" style="margin:0 0 12px">안치료·입관실 요금입니다. 상주 예약·청구 및 홈페이지 시설 사용료 안내에 반영됩니다.</p>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addHallFacilityFee">+ 시설 사용료 등록</button>
+      <button class="btn" id="syncHallFacilityFees">기본 2건 맞추기</button>
+    </div>
+    ${feeBlock("안치료", "안치료")}
+    ${feeBlock("입관실", "입관실")}
+    ${fees.filter((f) => f.group !== "안치료" && f.group !== "입관실").length ? `
+      <h3 style="margin:24px 0 10px;font-size:1.05rem">기타 시설</h3>
+      <div class="panel"><div class="panel-body" style="padding:0">
+        <table class="grid">
+          <thead><tr><th>구분</th><th>항목</th><th>단위</th><th class="right">요금</th><th>비고</th><th>노출</th><th class="right">관리</th></tr></thead>
+          <tbody>${fees.filter((f) => f.group !== "안치료" && f.group !== "입관실").map(feeRow).join("")}</tbody>
+        </table>
+      </div></div>` : ""}`;
 
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => hallCatalogForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-fee-edit]").forEach((b) =>
+    b.addEventListener("click", () => hallFacilityFeeForm(JSON.parse(b.getAttribute("data-fee-edit")))));
+  content.querySelectorAll("[data-fee-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("시설 사용료", b.getAttribute("data-name"), async () => {
+      await api("/hall-facility-fees/" + b.getAttribute("data-fee-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+  const addFeeBtn = document.getElementById("addHallFacilityFee");
+  if (addFeeBtn) addFeeBtn.addEventListener("click", () => hallFacilityFeeForm(null));
+  const syncFeeBtn = document.getElementById("syncHallFacilityFees");
+  if (syncFeeBtn) {
+    syncFeeBtn.addEventListener("click", async () => {
+      syncFeeBtn.disabled = true;
+      try {
+        const r = await api("/hall-facility-fees/admin/sync", { method: "POST" });
+        toast(`기본 ${(r.items || []).length}건으로 맞췄습니다.`);
+        route();
+      } catch (err) {
+        toast(err.message);
+        syncFeeBtn.disabled = false;
+      }
+    });
+  }
+}
+
+function hallFacilityFeeForm(f) {
+  const e = f || {};
+  const settleOpts = Object.keys(SETTLEMENT_LABELS).map((k) =>
+    `<option value="${k}" ${(e.settlementType || "prepaid") === k ? "selected" : ""}>${SETTLEMENT_LABELS[k]}</option>`).join("");
+  openModal(f ? "시설 사용료 수정" : "시설 사용료 등록", `
+    <div class="field-row">
+      <div class="field"><label>코드 *</label><input id="f_code" value="${esc(e.code || "")}" placeholder="예: enshrine, admission" ${f ? "readonly" : ""} /></div>
+      <div class="field"><label>구분 *</label><input id="f_group" value="${esc(e.group || "")}" placeholder="예: 안치료, 입관실" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>항목</label><input id="f_name" value="${esc(e.name || "-")}" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "1일")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>요금(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정산 방식</label><select id="f_settlementType">${settleOpts}</select></div>
+      <div class="field"><label>비고</label><input id="f_note" value="${esc(e.note || "-")}" /></div>
+    </div>
+    <div class="field" style="display:flex;gap:18px;flex-wrap:wrap">
+      <label class="check"><input type="checkbox" id="f_orderable" ${e.orderable === false ? "" : "checked"}/> 상주 예약·청구 가능</label>
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 홈페이지 노출</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        code: val("f_code"), group: val("f_group"), name: val("f_name") || "-",
+        unit: val("f_unit") || "1일", price: Number(val("f_price")) || 0,
+        note: val("f_note") || "-", settlementType: val("f_settlementType"),
+        sortOrder: Number(val("f_sortOrder")) || 0,
+        orderable: checked("f_orderable"), taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.code || !body.group) { toast("코드와 구분을 입력하세요."); return; }
+      try {
+        if (f) await api("/hall-facility-fees/" + f.id, { method: "PATCH", body });
+        else await api("/hall-facility-fees", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
 }
 
 function hallCatalogForm(h) {

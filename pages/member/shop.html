@@ -48,6 +48,7 @@
     let DRESS_ITEMS = [];
     let HEARSE_ITEMS = [];
     let SERVICE_PRICES = [];
+    let FACILITY_FEES = [];
     let ACTIVE_FOOD_CAT = "meal";
     let ACTIVE_FLOWER_CAT = "altar";
     let ACTIVE_PHOTO_CAT = "portrait";
@@ -76,7 +77,7 @@
       mPageTitle("shop.pageTitle");
       renderTabs();
       try {
-        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes, serviceRes] = await Promise.all([
+        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes, serviceRes, facilityRes] = await Promise.all([
           mApi("/products"),
           mApi("/coffins"),
           mApi("/hoengdae"),
@@ -88,6 +89,7 @@
           mApi("/dress-items"),
           mApi("/hearse-items"),
           mApi("/service-prices?orderable=1"),
+          mApi("/hall-facility-fees?orderable=1"),
         ]);
         PRODUCTS = prodRes.items;
         COFFINS = coffinRes.items;
@@ -100,6 +102,7 @@
         DRESS_ITEMS = dressRes.items;
         HEARSE_ITEMS = hearseRes.items;
         SERVICE_PRICES = serviceRes.items;
+        FACILITY_FEES = facilityRes.items;
         await loadHallData();
         renderMain();
         renderCart();
@@ -255,12 +258,19 @@
       if (type === "dressItem") return DRESS_ITEMS.find((x) => x.id === id);
       if (type === "hearseItem") return HEARSE_ITEMS.find((x) => x.id === id);
       if (type === "servicePrice") return SERVICE_PRICES.find((x) => x.id === id);
+      if (type === "hallFacilityFee") return FACILITY_FEES.find((x) => x.id === id);
       return PRODUCTS.find((x) => x.id === id);
     }
 
     function servicePriceLabel(p) {
       if (!p) return "";
       return p.group && p.group !== p.name ? p.group + " · " + p.name : p.name;
+    }
+
+    function itemDisplayLabel(p, cartType) {
+      if (cartType === "servicePrice") return servicePriceLabel(p);
+      if (cartType === "hallFacilityFee") return p.group && p.name && p.name !== "-" ? p.group + " · " + p.name : p.group;
+      return p.spec ? p.name + " " + p.spec : p.name;
     }
 
     function selectedHall() {
@@ -773,6 +783,24 @@
           });
           html += "</tbody></table>";
         }
+        html += `<h4 style="margin:20px 0 8px">${mEsc(mT("prod.facilityHead"))}</h4>`;
+        html += `<p class="note" style="margin-top:0">${mEsc(mT("prod.facilityLead"))}</p>`;
+        if (FACILITY_FEES.length === 0) {
+          html += `<div class="state">${mEsc(mT("prod.noneGeneric"))}</div>`;
+        } else {
+          html += `<table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colItem"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th><th></th></tr></thead><tbody>`;
+          FACILITY_FEES.forEach((f) => {
+            const label = f.name && f.name !== "-" ? f.group + " · " + f.name : f.group;
+            html += `
+              <tr>
+                <th>${mEsc(label)}</th>
+                <td>${mEsc(f.unit || "1일")}</td>
+                <td class="nowrap">${won(f.price)}</td>
+                <td><button class="btn btn-sm btn-primary" data-add="hallFacilityFee:${f.id}">${mEsc(mT("common.addToCart"))}</button></td>
+              </tr>`;
+          });
+          html += "</tbody></table>";
+        }
         html += "</div>";
         area.innerHTML = html;
         area.querySelectorAll("[data-add]").forEach((b) =>
@@ -852,7 +880,7 @@
           const line = isPostpaid ? 0 : p.price * qty;
           supply += line;
           if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
-          const label = cartType === "servicePrice" ? servicePriceLabel(p) : (p.spec ? p.name + " " + p.spec : p.name);
+          const label = itemDisplayLabel(p, cartType);
           html += `
             <div class="cart-item">
               <span class="nm">${mEsc(label)}${isPostpaid ? `<br><small class="status-postpaid">${mEsc(mT("shop.postpaidShort"))}</small>` : ""}<br><span class="rm" data-rm="${key}">${mEsc(mT("common.delete"))}</span></span>
@@ -904,6 +932,7 @@
         if (type === "dressItem") return { itemType: "dressItem", itemRefId: id, qty };
         if (type === "hearseItem") return { itemType: "hearseItem", itemRefId: id, qty };
         if (type === "servicePrice") return { itemType: "servicePrice", itemRefId: id, qty };
+        if (type === "hallFacilityFee") return { itemType: "hallFacilityFee", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
       const memo = prompt(mT("shop.memoPrompt"), "") || "";

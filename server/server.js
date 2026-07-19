@@ -6,6 +6,7 @@ const { createApp } = require("./app");
 const { ensureAdmin } = require("./utils/ensureAdmin");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureServicePrices } = require("./utils/ensureServicePrices");
+const { ensureHallFacilityFees } = require("./utils/ensureHallFacilityFees");
 const { ensureHalls } = require("./utils/ensureHalls");
 const { ensureFuneralForms } = require("./utils/ensureFuneralForms");
 const { autoCompletePastFunerals } = require("./utils/hallAvailability");
@@ -47,6 +48,12 @@ async function main() {
     await ensureServicePrices();
   } catch (err) {
     console.error("[SERVICE-PRICES] 자동 등록 실패:", err.message);
+  }
+
+  try {
+    await ensureHallFacilityFees();
+  } catch (err) {
+    console.error("[HALL-FEES] 시설 사용료 자동 등록 실패:", err.message);
   }
 
   try {
