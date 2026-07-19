@@ -447,7 +447,7 @@ p { margin: 0 0 1em; }
 .feature p { color: var(--gray); font-size: 15px; margin: 0 0 16px; }
 .feature .more { color: var(--gold); font-weight: 600; font-size: 14px; }
 
-.menu-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.menu-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .menu-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 20px; text-align: center; box-shadow: var(--shadow-sm); transition: transform 0.2s; }
 .menu-card:hover { transform: translateY(-4px); border-color: var(--gold-soft); }
 .menu-card .m-ico { font-size: 30px; margin-bottom: 12px; }

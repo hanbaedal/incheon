@@ -65,6 +65,39 @@
 
   var MENU = [
     {
+      key: "funeral",
+      label: { ko: "장례 절차 안내", zh: "殡葬流程指南", en: "Funeral Guide" },
+      href: "pages/funeral/after-death.html",
+      children: [
+        {
+          key: "progress", href: "pages/funeral/after-death.html",
+          label: { ko: "장례진행", zh: "殡葬进行", en: "Funeral Progress" },
+          children: [
+            { key: "afterDeath", href: "pages/funeral/after-death.html", label: { ko: "임종직후", zh: "刚去世时", en: "Right After Passing" } },
+            { key: "during", href: "pages/funeral/during.html", label: { ko: "장례진행중", zh: "殡葬进行中", en: "During the Funeral" } },
+            { key: "afterProcession", href: "pages/funeral/after-procession.html", label: { ko: "발인직후", zh: "出殡后", en: "After Procession" } },
+          ],
+        },
+        {
+          key: "admin", href: "pages/funeral/death-report.html",
+          label: { ko: "행정·서류", zh: "行政·文件", en: "Admin & Documents" },
+          children: [
+            { key: "deathReport", href: "pages/funeral/death-report.html", label: { ko: "사망신고(상속)", zh: "死亡申报(继承)", en: "Death Report" } },
+            { key: "day49", href: "pages/funeral/day49.html", label: { ko: "49재", zh: "49祭", en: "49th-Day Rite" } },
+          ],
+        },
+        {
+          key: "inheritance", href: "pages/funeral/inheritance-decision.html",
+          label: { ko: "상속·세무", zh: "继承·税务", en: "Inheritance & Tax" },
+          children: [
+            { key: "inheritDecision", href: "pages/funeral/inheritance-decision.html", label: { ko: "상속결정", zh: "继承决定", en: "Inheritance Decision" } },
+            { key: "inheritTax", href: "pages/funeral/inheritance-tax.html", label: { ko: "상속세", zh: "继承税", en: "Inheritance Tax" } },
+            { key: "acquisitionTax", href: "pages/funeral/acquisition-tax.html", label: { ko: "취득세", zh: "取得税", en: "Acquisition Tax" } },
+          ],
+        },
+      ],
+    },
+    {
       key: "guide",
       label: { ko: "이용 정보", zh: "使用信息", en: "Guide" },
       href: "pages/guide/rooms.html",
