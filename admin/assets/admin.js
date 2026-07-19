@@ -67,6 +67,49 @@ function openModal(title, bodyHtml, footButtons) {
 function closeModal() { modalBack.classList.remove("open"); }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 modalBack.addEventListener("click", (e) => { if (e.target === modalBack) closeModal(); });
+
+/* ---------- 문서 미리보기 모달 (상주 내 예약과 동일) ---------- */
+let docModalHtml = "";
+const docModalBack = document.getElementById("docModalBack");
+
+function bindDocModal() {
+  if (!docModalBack || docModalBack.dataset.bound) return;
+  docModalBack.dataset.bound = "1";
+  const closeDocModal = () => {
+    docModalBack.classList.remove("open");
+    docModalBack.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  };
+  document.getElementById("docModalClose").addEventListener("click", closeDocModal);
+  document.getElementById("docModalClose2").addEventListener("click", closeDocModal);
+  docModalBack.addEventListener("click", (e) => { if (e.target === docModalBack) closeDocModal(); });
+  document.getElementById("docModalPrint").addEventListener("click", () => {
+    printDocHtml(docModalHtml, document.getElementById("docModalTitle").textContent);
+  });
+}
+
+function openDocPreview(title, html) {
+  bindDocModal();
+  docModalHtml = html;
+  document.getElementById("docModalTitle").textContent = title;
+  document.getElementById("docModalBody").innerHTML = html;
+  docModalBack.classList.add("open");
+  docModalBack.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+async function showAdminOrderDoc(orderId) {
+  const data = await api("/orders/" + orderId);
+  openDocPreview("주문서 · " + data.order.orderNumber, buildOrderDocHtml(data.order, "order"));
+}
+
+async function showAdminAggregateDoc(familyId, type) {
+  const s = await api("/orders/admin/summary?familyUserId=" + encodeURIComponent(familyId));
+  if (!s.orderCount) { toast("집계할 주문이 없습니다."); return; }
+  const labels = { order: "주문서 합계", statement: "거래명세서", tax: "세금계산서" };
+  openDocPreview(labels[type] || "문서", buildAggregateDocHtml(s, type));
+}
+
 function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ""; }
 function checked(id) { const el = document.getElementById(id); return el ? el.checked : false; }
 
@@ -1555,27 +1598,24 @@ function groupOrdersByFamily(orders) {
   });
 }
 
-function familyDocLinks(familyId, cls) {
+function familyDocButtons(familyId, cls) {
   if (!familyId) return "";
-  const base = `/pages/member/doc.html?familyUserId=${encodeURIComponent(familyId)}&from=admin`;
   const c = cls || "btn btn-sm";
   return `
-    <a class="${c}" href="${base}&type=order&aggregate=1" target="_blank">주문서 합계</a>
-    <a class="${c}" href="${base}&type=statement&aggregate=1" target="_blank">거래명세서</a>
-    <a class="${c}" href="${base}&type=tax&aggregate=1" target="_blank">세금계산서</a>`;
+    <button type="button" class="${c} btn-primary" data-family-agg="${esc(familyId)}" data-agg="order">주문서 합계</button>
+    <button type="button" class="${c}" data-family-agg="${esc(familyId)}" data-agg="statement">거래명세서</button>
+    <button type="button" class="${c}" data-family-agg="${esc(familyId)}" data-agg="tax">세금계산서</button>`;
 }
 
 async function renderOrders() {
   const d = await api("/orders/admin/all" + (orderFilter ? "?status=" + orderFilter : ""));
   lastOrders = d.items || [];
   const groups = groupOrdersByFamily(lastOrders);
-  const tag = (s) => {
-    const cls = s === "pending" ? "pending" : s === "canceled" ? "gray" : "answered";
-    return `<span class="tag ${cls}">${ORDER_STATUS[s] || s}</span>`;
-  };
+  const tag = (s) => `<span class="tag ${s}">${ORDER_STATUS[s] || s}</span>`;
   const activeCount = (orders) => orders.filter((o) => o.status !== "canceled").length;
 
   content.innerHTML = `
+    <p class="orders-lead">상주별 예약 내역과 발인 정산 문서를 확인·출력할 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
     <div class="toolbar">
       <select id="ordStatus">
         <option value="">전체 상태</option>
@@ -1593,16 +1633,15 @@ async function renderOrders() {
           : "빈소 미지정";
         const sumCount = activeCount(g.orders);
         return `
-        <div class="panel order-family-box">
-          <div class="panel-head order-family-head">
-            <div>
-              <h3>${familyLabel}</h3>
-              <p class="sub">${hallLabel}</p>
-            </div>
+        <div class="panel order-family-card">
+          <div class="order-family-meta">
+            <h3>${familyLabel}</h3>
+            <p class="sub">${hallLabel}</p>
           </div>
+          <div class="order-family-section">건별 예약 내역</div>
           <div class="panel-body" style="padding:0">
             <table class="grid">
-              <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th>주문일</th><th class="right">관리</th></tr></thead>
+              <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th class="nowrap">주문일</th><th class="right">문서</th><th class="right">관리</th></tr></thead>
               <tbody>${g.orders.map((o) => `
                 <tr>
                   <td class="nowrap"><b>${esc(o.orderNumber)}</b></td>
@@ -1610,19 +1649,21 @@ async function renderOrders() {
                   <td class="right nowrap">${won(o.totalAmount)}</td>
                   <td>${tag(o.status)}</td>
                   <td class="nowrap">${fmtDay(o.createdAt)}</td>
-                  <td class="actions">
-                    <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${esc(o.id)}&from=admin" target="_blank">주문서</a>
-                    <button class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
+                  <td class="right nowrap">
+                    <button type="button" class="btn btn-sm" data-order-doc="${esc(o.id)}">주문서</button>
+                  </td>
+                  <td class="right nowrap actions">
+                    <button type="button" class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
                   </td>
                 </tr>`).join("")}
               </tbody>
             </table>
+            ${sumCount > 0 && g.familyId ? `
+            <div class="doc-actions">
+              <p class="doc-actions-lead">발인 정산 · 취소 제외 ${sumCount}건 합계</p>
+              <div class="doc-actions-btns">${familyDocButtons(g.familyId, "btn")}</div>
+            </div>` : ""}
           </div>
-          ${sumCount > 0 && g.familyId ? `
-          <div class="order-family-foot">
-            <p class="lead">발인 정산 · 취소 제외 ${sumCount}건</p>
-            ${familyDocLinks(g.familyId)}
-          </div>` : ""}
         </div>`;
       }).join("")}
     </div>`}
@@ -1634,6 +1675,20 @@ async function renderOrders() {
       const o = lastOrders.find((x) => x.id === b.getAttribute("data-order-id"));
       if (o) orderDetail(o);
       else toast("주문 정보를 찾을 수 없습니다.");
+    }));
+  content.querySelectorAll("[data-order-doc]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await showAdminOrderDoc(b.getAttribute("data-order-doc")); }
+      catch (e) { toast(e.message); }
+      finally { b.disabled = false; }
+    }));
+  content.querySelectorAll("[data-family-agg][data-agg]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await showAdminAggregateDoc(b.getAttribute("data-family-agg"), b.getAttribute("data-agg")); }
+      catch (e) { toast(e.message); }
+      finally { b.disabled = false; }
     }));
 }
 
@@ -1682,10 +1737,8 @@ function orderDetail(o) {
       </select>
     </div>
     <div class="toolbar" style="margin-top:8px">
-      ${o.family && o.family.id ? familyDocLinks(o.family.id, "btn btn-sm") : ""}
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}&from=admin" target="_blank">주문서</a>
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=statement&id=${o.id}&from=admin" target="_blank">거래명세서</a>
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=tax&id=${o.id}&from=admin" target="_blank">세금계산서</a>
+      ${o.family && o.family.id ? familyDocButtons(o.family.id, "btn btn-sm") : ""}
+      <button type="button" class="btn btn-sm" data-order-doc-inline="${esc(o.id)}">주문서</button>
     </div>
   `, [
     { label: "닫기", onClick: closeModal },
@@ -1694,6 +1747,24 @@ function orderDetail(o) {
       catch (err) { toast(err.message); }
     } },
   ]);
+
+  const inlineDocBtn = document.querySelector("#modalBody [data-order-doc-inline]");
+  if (inlineDocBtn) {
+    inlineDocBtn.addEventListener("click", async () => {
+      inlineDocBtn.disabled = true;
+      try { await showAdminOrderDoc(o.id); }
+      catch (e) { toast(e.message); }
+      finally { inlineDocBtn.disabled = false; }
+    });
+  }
+  document.querySelectorAll("#modalBody [data-family-agg]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try { await showAdminAggregateDoc(btn.getAttribute("data-family-agg"), btn.getAttribute("data-agg")); }
+      catch (e) { toast(e.message); }
+      finally { btn.disabled = false; }
+    });
+  });
 
   const settleBtn = document.getElementById("settleBtn");
   if (settleBtn) {
