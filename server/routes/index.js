@@ -13,6 +13,8 @@ router.use("/halls", require("./halls"));
 router.use("/memorials", require("./memorials"));
 router.use("/users", require("./users"));
 router.use("/products", require("./products"));
+router.use("/coffins", require("./coffins"));
+router.use("/hoengdae", require("./hoengdae"));
 router.use("/orders", require("./orders"));
 router.use("/images", require("./images"));
 router.use("/hall-requests", require("./hallRequests"));

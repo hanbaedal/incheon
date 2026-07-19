@@ -62,7 +62,7 @@ router.patch(
   asyncHandler(async (req, res) => {
     const allowed = [
       "category", "catKey", "name", "description", "price", "unit",
-      "image", "imageId", "settlementType", "taxable", "active", "sortOrder",
+      "image", "imageId", "settlementType", "specs", "taxable", "active", "sortOrder",
     ];
     const update = {};
     for (const k of allowed) if (k in (req.body || {})) update[k] = req.body[k];

@@ -15,6 +15,7 @@ const productSchema = new mongoose.Schema(
     image: { type: String, default: "" }, // 외부 URL 폴백
     imageId: { type: mongoose.Schema.Types.ObjectId, ref: "ProductImage", default: null },
     settlementType: { type: String, enum: SETTLEMENT_TYPES, default: "prepaid", index: true },
+    specs: { type: mongoose.Schema.Types.Mixed, default: {} }, // 카테고리별 추가 항목
     taxable: { type: Boolean, default: true }, // 부가세 과세 여부
     active: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
@@ -36,6 +37,7 @@ productSchema.methods.toJSONSafe = function toJSONSafe() {
     imageId: this.imageId,
     imageUrl,
     settlementType: this.settlementType,
+    specs: this.specs || {},
     taxable: this.taxable,
     active: this.active,
     sortOrder: this.sortOrder,

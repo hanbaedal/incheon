@@ -96,7 +96,16 @@ const VIEWS = {
   halls: { title: "빈소 관리", render: renderHalls },
   families: { title: "상주 계정 관리", render: renderFamilies },
   hallRequests: { title: "빈소 신청", render: renderHallRequests },
-  products: { title: "상품 관리", render: renderProducts },
+  prodCoffin: { title: "관 관리", render: () => renderCoffins() },
+  prodHoengdae: { title: "횡대 관리", render: () => renderHoengdae() },
+  prodShroud: { title: "수의 관리", render: () => renderProductsByCat("shroud") },
+  prodEtc: { title: "염습·부속 관리", render: () => renderProductsByCat("etc") },
+  prodFood: { title: "접객 음식 관리", render: () => renderProductsByCat("food") },
+  prodConsumables: { title: "공산품류 관리", render: () => renderProductsByCat("consumables") },
+  prodFlower: { title: "근조 화환 관리", render: () => renderProductsByCat("flower") },
+  prodPhoto: { title: "영정 사진 관리", render: () => renderProductsByCat("photo") },
+  prodDress: { title: "상복 대여 관리", render: () => renderProductsByCat("dress") },
+  prodHearse: { title: "운구·차량 관리", render: () => renderProductsByCat("hearse") },
   orders: { title: "주문 관리", render: renderOrders },
   notices: { title: "알림 소식", render: renderNotices },
   inquiries: { title: "온라인 문의", render: renderInquiries },
@@ -154,7 +163,6 @@ async function refreshHallReqBadge() {
 function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
 
 const CAT_KEYS = [
-  { key: "coffin", label: "관·횡대" },
   { key: "shroud", label: "수의(壽衣)" },
   { key: "etc", label: "염습·부속 용품" },
   { key: "food", label: "접객 음식" },
@@ -164,6 +172,21 @@ const CAT_KEYS = [
   { key: "dress", label: "상복 대여" },
   { key: "hearse", label: "운구·차량" },
 ];
+const PRODUCT_SPEC_FIELDS = {
+  shroud: [
+    { key: "material", label: "원단/재질" },
+    { key: "style", label: "형식" },
+  ],
+  etc: [{ key: "kind", label: "품목 종류" }],
+  food: [{ key: "serving", label: "1인/1판 기준" }],
+  flower: [{ key: "size", label: "단수/크기" }],
+  photo: [{ key: "size", label: "액자 규격" }],
+  dress: [
+    { key: "gender", label: "남/여" },
+    { key: "size", label: "사이즈" },
+  ],
+  hearse: [{ key: "vehicle", label: "차량 종류" }],
+};
 const SETTLEMENT_LABELS = { prepaid: "선결제", postpaid: "사후정산" };
 
 async function uploadImage(file) {
@@ -597,19 +620,201 @@ async function decideHallRequest(id, status) {
 }
 
 /* ---------- 상품 관리 ---------- */
-async function renderProducts() {
-  const d = await api("/products/admin/all");
+async function renderCoffins() {
+  const d = await api("/coffins/admin/all");
   content.innerHTML = `
-    <div class="toolbar"><button class="btn btn-primary" id="addProd">+ 상품 등록</button></div>
+    <div class="toolbar"><button class="btn btn-primary" id="addCoffin">+ 관 등록</button></div>
     <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">등록된 상품이 없습니다.</div>' : `
+      ${d.items.length === 0 ? '<div class="empty">등록된 관이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>카테고리</th><th>분류</th><th>상품명</th><th class="right">가격</th><th>정산</th><th>노출</th><th class="right">관리</th></tr></thead>
-        <tbody>${d.items.map((p) => `
+        <thead><tr><th>품명</th><th>어깨</th><th>높이</th><th>길이</th><th>두께</th><th>원산지</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((c) => `
           <tr>
-            <td class="nowrap">${esc((CAT_KEYS.find((c) => c.key === p.catKey) || {}).label || p.catKey || "-")}</td>
-            <td class="nowrap">${esc(p.category)}</td>
+            <td><b>${esc(c.name)}</b>${c.imageUrl ? `<br><img src="${esc(c.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="nowrap">${esc(c.shoulder || "-")}</td>
+            <td class="nowrap">${c.height != null ? c.height : "-"}</td>
+            <td class="nowrap">${c.length != null ? c.length : "-"}</td>
+            <td class="nowrap">${esc(c.thickness || "-")}</td>
+            <td class="nowrap">${esc(c.origin || "-")}</td>
+            <td class="right nowrap">${won(c.price)} / ${esc(c.unit)}</td>
+            <td>${c.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(c))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${c.id}" data-name="${esc(c.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addCoffin").addEventListener("click", () => coffinForm(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => coffinForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("관", b.getAttribute("data-name"), async () => {
+      await api("/coffins/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function coffinForm(c) {
+  const e = c || {};
+  openModal(c ? "관 수정" : "관 등록", `
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field"><label>원산지</label><input id="f_origin" value="${esc(e.origin || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>어깨(㎜)</label><input id="f_shoulder" value="${esc(e.shoulder || "")}" placeholder="490 또는 1,500미만" /></div>
+      <div class="field"><label>높이(㎜)</label><input id="f_height" type="number" value="${e.height != null ? e.height : ""}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>길이(㎜)</label><input id="f_length" type="number" value="${e.length != null ? e.length : ""}" /></div>
+      <div class="field"><label>두께(㎜)</label><input id="f_thickness" value="${esc(e.thickness || "")}" placeholder="28 또는 25/17" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+      <div class="field" style="display:flex;gap:18px;align-items:flex-end">
+        <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+        <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+      </div>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"), origin: val("f_origin"), shoulder: val("f_shoulder"),
+        height: val("f_height") ? Number(val("f_height")) : null,
+        length: val("f_length") ? Number(val("f_length")) : null,
+        thickness: val("f_thickness"),
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (c && c.imageId) body.imageId = c.imageId;
+      try {
+        if (c) await api("/coffins/" + c.id, { method: "PATCH", body });
+        else await api("/coffins", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderHoengdae() {
+  const d = await api("/hoengdae/admin/all");
+  content.innerHTML = `
+    <div class="toolbar"><button class="btn btn-primary" id="addHoengdae">+ 횡대 등록</button></div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 횡대가 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품명</th><th>세로</th><th>가로</th><th>두께</th><th>원산지</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((h) => `
+          <tr>
+            <td><b>${esc(h.name)}</b>${h.imageUrl ? `<br><img src="${esc(h.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="nowrap">${h.vertical != null ? h.vertical : "-"}</td>
+            <td class="nowrap">${h.horizontal != null ? h.horizontal : "-"}</td>
+            <td class="nowrap">${h.thickness != null ? h.thickness : "-"}</td>
+            <td class="nowrap">${esc(h.origin || "-")}</td>
+            <td class="right nowrap">${won(h.price)} / ${esc(h.unit)}</td>
+            <td>${h.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(h))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${h.id}" data-name="${esc(h.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addHoengdae").addEventListener("click", () => hoengdaeForm(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => hoengdaeForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("횡대", b.getAttribute("data-name"), async () => {
+      await api("/hoengdae/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function hoengdaeForm(h) {
+  const e = h || {};
+  openModal(h ? "횡대 수정" : "횡대 등록", `
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field"><label>원산지</label><input id="f_origin" value="${esc(e.origin || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>세로(㎜)</label><input id="f_vertical" type="number" value="${e.vertical != null ? e.vertical : ""}" /></div>
+      <div class="field"><label>가로(㎜)</label><input id="f_horizontal" type="number" value="${e.horizontal != null ? e.horizontal : ""}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>두께(㎜)</label><input id="f_thickness" type="number" value="${e.thickness != null ? e.thickness : ""}" /></div>
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"), origin: val("f_origin"),
+        vertical: val("f_vertical") ? Number(val("f_vertical")) : null,
+        horizontal: val("f_horizontal") ? Number(val("f_horizontal")) : null,
+        thickness: val("f_thickness") ? Number(val("f_thickness")) : null,
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (h && h.imageId) body.imageId = h.imageId;
+      try {
+        if (h) await api("/hoengdae/" + h.id, { method: "PATCH", body });
+        else await api("/hoengdae", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderProductsByCat(catKey) {
+  const catMeta = CAT_KEYS.find((c) => c.key === catKey) || { label: catKey };
+  const d = await api("/products/admin/all");
+  const items = d.items.filter((p) => p.catKey === catKey);
+  const specCols = (PRODUCT_SPEC_FIELDS[catKey] || []).slice(0, 2);
+  content.innerHTML = `
+    <div class="toolbar"><button class="btn btn-primary" id="addProd">+ ${esc(catMeta.label)} 등록</button></div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${items.length === 0 ? '<div class="empty">등록된 상품이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>상품명</th>${specCols.map((s) => `<th>${esc(s.label)}</th>`).join("")}<th class="right">가격</th><th>정산</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${items.map((p) => `
+          <tr>
             <td><b>${esc(p.name)}</b>${p.imageUrl ? `<br><img src="${esc(p.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            ${specCols.map((s) => `<td class="nowrap">${esc((p.specs && p.specs[s.key]) || "-")}</td>`).join("")}
             <td class="right nowrap">${won(p.price)} / ${esc(p.unit)}</td>
             <td>${SETTLEMENT_LABELS[p.settlementType] || p.settlementType}</td>
             <td>${p.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
@@ -621,9 +826,9 @@ async function renderProducts() {
       </table>`}
     </div></div>`;
 
-  document.getElementById("addProd").addEventListener("click", () => productForm(null));
+  document.getElementById("addProd").addEventListener("click", () => productForm(null, catKey));
   content.querySelectorAll("[data-edit]").forEach((b) =>
-    b.addEventListener("click", () => productForm(JSON.parse(b.getAttribute("data-edit")))));
+    b.addEventListener("click", () => productForm(JSON.parse(b.getAttribute("data-edit")), catKey)));
   content.querySelectorAll("[data-del]").forEach((b) =>
     b.addEventListener("click", () => confirmDelete("상품", b.getAttribute("data-name"), async () => {
       await api("/products/" + b.getAttribute("data-del"), { method: "DELETE" });
@@ -631,20 +836,36 @@ async function renderProducts() {
     })));
 }
 
-function productForm(p) {
+function specFieldsHtml(catKey, specs) {
+  const fields = PRODUCT_SPEC_FIELDS[catKey] || [];
+  if (fields.length === 0) return "";
+  const s = specs || {};
+  return `<div class="field-row">${fields.map((f) =>
+    `<div class="field"><label>${esc(f.label)}</label><input id="spec_${f.key}" value="${esc(s[f.key] || "")}" /></div>`
+  ).join("")}</div>`;
+}
+
+function collectSpecs(catKey) {
+  const fields = PRODUCT_SPEC_FIELDS[catKey] || [];
+  const specs = {};
+  fields.forEach((f) => { specs[f.key] = val("spec_" + f.key); });
+  return specs;
+}
+
+function productForm(p, fixedCatKey) {
   const e = p || {};
-  const catOpts = CAT_KEYS.map((c) => `<option value="${c.key}" ${e.catKey === c.key ? "selected" : ""}>${c.label}</option>`).join("");
+  const catKey = fixedCatKey || e.catKey || "shroud";
+  const catMeta = CAT_KEYS.find((c) => c.key === catKey) || { label: catKey };
   const settleOpts = Object.keys(SETTLEMENT_LABELS).map((k) =>
     `<option value="${k}" ${e.settlementType === k ? "selected" : ""}>${SETTLEMENT_LABELS[k]}</option>`).join("");
-  openModal(p ? "상품 수정" : "상품 등록", `
-    <div class="field-row">
-      <div class="field"><label>카테고리 *</label><select id="f_catKey">${catOpts}</select></div>
-      <div class="field"><label>표시 분류 *</label><input id="f_category" value="${esc(e.category || "")}" placeholder="예: 접객 음식" /></div>
-    </div>
+  openModal(p ? "상품 수정" : catMeta.label + " 등록", `
+    <input type="hidden" id="f_catKey" value="${esc(catKey)}" />
+    <input type="hidden" id="f_category" value="${esc(e.category || catMeta.label)}" />
     <div class="field-row">
       <div class="field"><label>상품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
       <div class="field"><label>정산 방식</label><select id="f_settlementType">${settleOpts}</select></div>
     </div>
+    ${specFieldsHtml(catKey, e.specs)}
     <div class="field-row">
       <div class="field"><label>가격(원) *</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : ""}" /></div>
       <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
@@ -669,10 +890,11 @@ function productForm(p) {
         settlementType: val("f_settlementType"),
         price: Number(val("f_price")), unit: val("f_unit") || "개",
         description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        specs: collectSpecs(catKey),
         taxable: checked("f_taxable"), active: checked("f_active"),
       };
       if (!body.catKey || !body.category || !body.name || !(body.price >= 0)) {
-        toast("카테고리·분류·상품명·가격을 입력하세요."); return;
+        toast("상품명·가격을 입력하세요."); return;
       }
       const fileEl = document.getElementById("f_imageFile");
       if (fileEl && fileEl.files && fileEl.files[0]) {
@@ -743,7 +965,7 @@ function orderDetail(o) {
       <td class="right nowrap">${it.settlementType === "postpaid" && !it.settled ? "-" : won(it.price * (it.settlementType === "postpaid" ? (it.finalQty || 0) : it.qty))}</td>
     </tr>`).join("");
 
-  const postpaidItems = o.items.filter((it) => it.settlementType === "postpaid" && !it.settled);
+  const postpaidItems = o.items.map((it, idx) => ({ ...it, _idx: idx })).filter((it) => it.settlementType === "postpaid" && !it.settled);
   const settleHtml = postpaidItems.length > 0 ? `
     <div class="block" style="margin-top:16px;padding:12px;background:#fafbfc;border:1px solid var(--line);border-radius:8px">
       <h4 style="margin:0 0 10px">사후정산 (발인 전 수기 정산)</h4>
@@ -751,7 +973,7 @@ function orderDetail(o) {
         <div class="field-row" style="align-items:center;margin-bottom:8px">
           <div class="field" style="flex:1"><label>${esc(it.name)} (예약 ${it.qty}${esc(it.unit)})</label></div>
           <div class="field" style="max-width:120px">
-            <input type="number" min="0" id="settle_${it.productId}" placeholder="실사용" value="${it.qty}" />
+            <input type="number" min="0" id="settle_${it._idx}" placeholder="실사용" value="${it.qty}" />
           </div>
         </div>`).join("")}
       <button class="btn btn-primary btn-sm" id="settleBtn">정산 반영</button>
@@ -794,8 +1016,8 @@ function orderDetail(o) {
   if (settleBtn) {
     settleBtn.addEventListener("click", async () => {
       const settleItems = postpaidItems.map((it) => ({
-        productId: it.productId,
-        finalQty: Number(document.getElementById("settle_" + it.productId).value) || 0,
+        index: it._idx,
+        finalQty: Number(document.getElementById("settle_" + it._idx).value) || 0,
       }));
       try {
         await api("/orders/" + o.id + "/settle", { method: "PATCH", body: { items: settleItems } });

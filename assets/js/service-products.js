@@ -10,6 +10,7 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
+  function fmtMm(n) { return n != null && n !== "" ? Number(n).toLocaleString("ko-KR") : "-"; }
 
   async function isMemberLoggedIn() {
     try {
@@ -23,18 +24,107 @@
     }
   }
 
+  function loginNoticeHtml() {
+    return (
+      '<div class="block service-prod-login-notice">' +
+      "<h3>품목·가격 안내</h3>" +
+      "<p>품목·가격 확인 및 온라인 예약은 <strong>상주(유족) 로그인</strong> 후 이용하실 수 있습니다.<br>" +
+      "로그인하지 않으시면 위 안내 문구만 확인하실 수 있습니다.</p>" +
+      '<a class="btn btn-gold" href="/pages/member/login.html">상주 로그인 →</a>' +
+      "</div>"
+    );
+  }
+
+  function reserveHintHtml() {
+    return '<p class="service-prod-reserve-hint"><a href="/pages/member/shop.html">장례 예약</a> 메뉴에서 품목을 선택·예약하실 수 있습니다.</p>';
+  }
+
+  async function renderCoffinSpecs(host) {
+    const [coffinRes, hoengdaeRes] = await Promise.all([
+      fetch("/api/coffins"),
+      fetch("/api/hoengdae"),
+    ]);
+    const coffins = ((await coffinRes.json()).items) || [];
+    const hoengdaes = ((await hoengdaeRes.json()).items) || [];
+    const loggedIn = await isMemberLoggedIn();
+
+    let html = "";
+    if (coffins.length > 0) {
+      html += `
+        <div class="block">
+          <h3>관 규격표</h3>
+          <p class="note" style="margin-top:0">※ 단위 : ㎜</p>
+          <table class="tbl">
+            <thead>
+              <tr><th rowspan="2">품명</th><th colspan="4">규격</th><th rowspan="2">원산지</th>${loggedIn ? '<th rowspan="2">가격</th>' : ""}</tr>
+              <tr><th>어깨</th><th>높이</th><th>길이</th><th>두께</th></tr>
+            </thead>
+            <tbody>
+              ${coffins.map((c) => `
+                <tr>
+                  <th>${esc(c.name)}</th>
+                  <td>${esc(c.shoulder || "-")}</td>
+                  <td>${fmtMm(c.height)}</td>
+                  <td>${fmtMm(c.length)}</td>
+                  <td>${esc(c.thickness || "-")}</td>
+                  <td>${esc(c.origin || "-")}</td>
+                  ${loggedIn ? `<td class="nowrap">${won(c.price)} / ${esc(c.unit)}</td>` : ""}
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    if (hoengdaes.length > 0) {
+      html += `
+        <div class="block">
+          <h3>횡대 규격표</h3>
+          <p class="note" style="margin-top:0">※ 단위 : ㎜</p>
+          <table class="tbl">
+            <thead>
+              <tr><th rowspan="2">품명</th><th colspan="3">규격</th><th rowspan="2">원산지</th>${loggedIn ? '<th rowspan="2">가격</th>' : ""}</tr>
+              <tr><th>세로</th><th>가로</th><th>두께</th></tr>
+            </thead>
+            <tbody>
+              ${hoengdaes.map((h) => `
+                <tr>
+                  <th>${esc(h.name)}</th>
+                  <td>${fmtMm(h.vertical)}</td>
+                  <td>${fmtMm(h.horizontal)}</td>
+                  <td>${fmtMm(h.thickness)}</td>
+                  <td>${esc(h.origin || "-")}</td>
+                  ${loggedIn ? `<td class="nowrap">${won(h.price)} / ${esc(h.unit)}</td>` : ""}
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    if (!loggedIn) {
+      html += loginNoticeHtml();
+    } else {
+      html += '<div class="block">' + reserveHintHtml() + "</div>";
+    }
+
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 관·횡대 정보가 없습니다.</div>';
+  }
+
   async function loadProducts(catKey) {
     const host = document.getElementById("serviceProducts");
     if (!host || !catKey) return;
 
+    if (catKey === "coffin") {
+      host.innerHTML = '<div class="service-prod-loading">관·횡대 정보를 불러오는 중…</div>';
+      try {
+        await renderCoffinSpecs(host);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">관·횡대 정보를 불러올 수 없습니다.</div>';
+      }
+      return;
+    }
+
     if (!(await isMemberLoggedIn())) {
-      host.innerHTML =
-        '<div class="block service-prod-login-notice">' +
-        "<h3>품목·가격 안내</h3>" +
-        "<p>품목·가격 확인 및 온라인 예약은 <strong>상주(유족) 로그인</strong> 후 이용하실 수 있습니다.<br>" +
-        "로그인하지 않으시면 위 안내 문구만 확인하실 수 있습니다.</p>" +
-        '<a class="btn btn-gold" href="/pages/member/login.html">상주 로그인 →</a>' +
-        "</div>";
+      host.innerHTML = loginNoticeHtml();
       return;
     }
 
@@ -60,7 +150,7 @@
             </div>
           </article>`).join("") +
         "</div>" +
-        '<p class="service-prod-reserve-hint"><a href="/pages/member/shop.html">장례 예약</a> 메뉴에서 품목을 선택·예약하실 수 있습니다.</p></div>';
+        reserveHintHtml() + "</div>";
     } catch (e) {
       host.innerHTML = '<div class="service-prod-empty">상품 정보를 불러올 수 없습니다.</div>';
     }

@@ -32,6 +32,8 @@
   <script>
     let ME = null;
     let PRODUCTS = [];
+    let COFFINS = [];
+    let HOENGDAES = [];
     let ACTIVE_CAT = "hall";
     let HALLS = [];
     let MY_HALL_REQ = null;
@@ -42,7 +44,14 @@
       if (!ME) return;
       renderTabs();
       try {
-        PRODUCTS = (await mApi("/products")).items;
+        const [prodRes, coffinRes, hoengdaeRes] = await Promise.all([
+          mApi("/products"),
+          mApi("/coffins"),
+          mApi("/hoengdae"),
+        ]);
+        PRODUCTS = prodRes.items;
+        COFFINS = coffinRes.items;
+        HOENGDAES = hoengdaeRes.items;
         await loadHallData();
         renderMain();
       } catch (e) {
@@ -68,6 +77,15 @@
         HALLS = [];
         MY_HALL_REQ = null;
       }
+    }
+
+    function cartKey(type, id) { return type + ":" + id; }
+
+    function findCartItem(key) {
+      const [type, id] = key.split(":");
+      if (type === "coffin") return COFFINS.find((x) => x.id === id);
+      if (type === "hoengdae") return HOENGDAES.find((x) => x.id === id);
+      return PRODUCTS.find((x) => x.id === id);
     }
 
     function renderMain() {
@@ -101,6 +119,52 @@
         return;
       }
 
+      if (ACTIVE_CAT === "coffin") {
+        const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
+        let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
+        if (COFFINS.length === 0 && HOENGDAES.length === 0) {
+          html += '<div class="state">등록된 관·횡대가 없습니다.</div>';
+        } else {
+          if (COFFINS.length > 0) {
+            html += '<h4 style="margin:0 0 10px">관</h4><div class="prod-grid">';
+            COFFINS.forEach((c) => {
+              html += `
+                <div class="prod-card">
+                  ${c.imageUrl ? `<img src="${mEsc(c.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                  <div class="prod-card-body">
+                    <b>${mEsc(c.name)}</b>
+                    <small>어깨 ${mEsc(c.shoulder || "-")} · 높이 ${c.height != null ? c.height : "-"} · 길이 ${c.length != null ? c.length : "-"}㎜</small>
+                    <div class="prod-meta"><span class="price">${won(c.price)} / ${mEsc(c.unit)}</span></div>
+                    <button class="btn btn-sm btn-primary" data-add="coffin:${c.id}">담기</button>
+                  </div>
+                </div>`;
+            });
+            html += "</div>";
+          }
+          if (HOENGDAES.length > 0) {
+            html += '<h4 style="margin:18px 0 10px">횡대</h4><div class="prod-grid">';
+            HOENGDAES.forEach((h) => {
+              html += `
+                <div class="prod-card">
+                  ${h.imageUrl ? `<img src="${mEsc(h.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                  <div class="prod-card-body">
+                    <b>${mEsc(h.name)}</b>
+                    <small>세로 ${h.vertical != null ? h.vertical : "-"} · 가로 ${h.horizontal != null ? h.horizontal : "-"} · 두께 ${h.thickness != null ? h.thickness : "-"}㎜</small>
+                    <div class="prod-meta"><span class="price">${won(h.price)} / ${mEsc(h.unit)}</span></div>
+                    <button class="btn btn-sm btn-primary" data-add="hoengdae:${h.id}">담기</button>
+                  </div>
+                </div>`;
+            });
+            html += "</div>";
+          }
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
       const items = PRODUCTS.filter((p) => p.catKey === ACTIVE_CAT);
       const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
       let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
@@ -119,7 +183,7 @@
                   <span class="price">${won(p.price)} / ${mEsc(p.unit)}</span>
                   ${p.settlementType === "postpaid" ? '<span class="tag pending">발인 전 수기 정산</span>' : ""}
                 </div>
-                <button class="btn btn-sm btn-primary" data-add="${p.id}">담기</button>
+                <button class="btn btn-sm btn-primary" data-add="product:${p.id}">담기</button>
               </div>
             </div>`;
         });
@@ -141,12 +205,12 @@
       } catch (e) { mToast(e.message); }
     }
 
-    function addToCart(id) {
-      cart.set(id, (cart.get(id) || 0) + 1);
+    function addToCart(key) {
+      cart.set(key, (cart.get(key) || 0) + 1);
       renderCart(); mToast("예약 목록에 담았습니다.");
     }
-    function setQty(id, qty) {
-      if (qty <= 0) cart.delete(id); else cart.set(id, qty);
+    function setQty(key, qty) {
+      if (qty <= 0) cart.delete(key); else cart.set(key, qty);
       renderCart();
     }
 
@@ -159,18 +223,18 @@
         sumArea.innerHTML = ""; btn.disabled = true; return;
       }
       let supply = 0, vat = 0, html = "";
-      cart.forEach((qty, id) => {
-        const p = PRODUCTS.find((x) => x.id === id);
+      cart.forEach((qty, key) => {
+        const p = findCartItem(key);
         if (!p) return;
         const isPostpaid = p.settlementType === "postpaid";
         const line = isPostpaid ? 0 : p.price * qty;
         supply += line;
-        if (!isPostpaid && p.taxable) vat += Math.round(line * 0.1);
+        if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
         html += `
           <div class="cart-item">
-            <span class="nm">${mEsc(p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${id}">삭제</span></span>
+            <span class="nm">${mEsc(p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
             <span class="qtybox">
-              <button data-minus="${id}">−</button><span>${qty}</span><button data-plus="${id}">+</button>
+              <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
             </span>
             <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? "정산" : won(line)}</span>
           </div>`;
@@ -191,7 +255,12 @@
 
     async function placeOrder() {
       if (cart.size === 0) return;
-      const items = Array.from(cart.entries()).map(([productId, qty]) => ({ productId, qty }));
+      const items = Array.from(cart.entries()).map(([key, qty]) => {
+        const [type, id] = key.split(":");
+        if (type === "coffin") return { itemType: "coffin", itemRefId: id, qty };
+        if (type === "hoengdae") return { itemType: "hoengdae", itemRefId: id, qty };
+        return { itemType: "product", productId: id, qty };
+      });
       const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";
       const btn = document.getElementById("orderBtn");
       btn.disabled = true; btn.textContent = "예약 처리 중…";
