@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>빈소 이용 등록 | 상주 전용 서비스</title>
+  <link rel="stylesheet" href="../../assets/css/member.css" />
+  <style>
+    .hall-grid { display: grid; gap: 12px; margin-bottom: 20px; }
+    .hall-pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
+    .hall-pick:hover { border-color: var(--gold); }
+    .hall-pick.selected { border-color: var(--navy); background: #f4f7fb; }
+    .hall-pick.disabled { opacity: .65; cursor: not-allowed; }
+    .hall-pick .info b { display: block; margin-bottom: 4px; }
+    .hall-pick .info small { display: block; color: var(--gray); font-size: 13px; line-height: 1.5; }
+    .m-form { display: grid; gap: 14px; }
+    .m-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .m-form-row { grid-template-columns: 1fr; } }
+    .m-form label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
+    .m-form input, .m-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+    .m-form input[type="date"], .m-form input[type="time"] { min-height: 42px; }
+    .m-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header id="mHeader"></header>
+  <div class="m-wrap">
+    <h1 class="m-title">빈소 이용 등록</h1>
+    <p class="m-lead">빈소 규격을 선택하고 고인·발인 정보를 입력해 주세요. 접수 후 관리자 확인·승인되면 빈소가 배정됩니다.</p>
+    <div id="hallArea" class="card"><div class="state">불러오는 중…</div></div>
+  </div>
+
+  <script src="../../assets/js/member.js"></script>
+  <script>
+    let ME = null;
+    let HALLS = [];
+    let SUMMARY = null;
+    let PENDING = null;
+    let USAGE = null;
+    let SELECTED_HALL_ID = "";
+
+    function toDateInputValue(s) {
+      const m = String(s || "").trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return "";
+      const p = (n) => String(n).padStart(2, "0");
+      return `${m[1]}-${p(m[2])}-${p(m[3])}`;
+    }
+    function toTimeInputValue(s) {
+      const m = String(s || "").trim().match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return "";
+      const p = (n) => String(n).padStart(2, "0");
+      return `${p(m[1])}:${p(m[2])}`;
+    }
+
+    function formValues(prefix) {
+      return {
+        deceasedName: document.getElementById(prefix + "_deceasedName").value.trim(),
+        chiefMourner: document.getElementById(prefix + "_chiefMourner").value.trim(),
+        relationship: document.getElementById(prefix + "_relationship").value.trim(),
+        age: document.getElementById(prefix + "_age").value.trim(),
+        enshrinedAt: document.getElementById(prefix + "_enshrinedAt").value.trim(),
+        funeralDate: document.getElementById(prefix + "_funeralDate").value.trim(),
+        funeralTime: document.getElementById(prefix + "_funeralTime").value.trim(),
+        burialSite: document.getElementById(prefix + "_burialSite").value.trim(),
+      };
+    }
+
+    function usageFormHtml(prefix, data) {
+      data = data || {};
+      return `
+        <div class="m-form-row">
+          <div><label for="${prefix}_deceasedName">고인명 *</label><input id="${prefix}_deceasedName" value="${mEsc(data.deceasedName || "")}" /></div>
+          <div><label for="${prefix}_chiefMourner">상주 *</label><input id="${prefix}_chiefMourner" value="${mEsc(data.chiefMourner || ME.name || "")}" /></div>
+        </div>
+        <div class="m-form-row">
+          <div><label for="${prefix}_relationship">고인과의 관계</label><input id="${prefix}_relationship" value="${mEsc(data.relationship || "")}" placeholder="예: 장남" /></div>
+          <div><label for="${prefix}_age">향년</label><input id="${prefix}_age" value="${mEsc(data.age || "")}" placeholder="예: 향년 84세" /></div>
+        </div>
+        <div class="m-form-row">
+          <div><label for="${prefix}_funeralDate">발인 일자 *</label><input type="date" id="${prefix}_funeralDate" value="${mEsc(toDateInputValue(data.funeralDate))}" /></div>
+          <div><label for="${prefix}_funeralTime">발인 시각</label><input type="time" id="${prefix}_funeralTime" value="${mEsc(toTimeInputValue(data.funeralTime))}" step="60" /></div>
+        </div>
+        <div class="m-form-row">
+          <div><label for="${prefix}_enshrinedAt">입관/안치</label><input id="${prefix}_enshrinedAt" value="${mEsc(data.enshrinedAt || "")}" placeholder="예: 2026-07-19 14:00" /></div>
+          <div><label for="${prefix}_burialSite">장지</label><input id="${prefix}_burialSite" value="${mEsc(data.burialSite || "")}" /></div>
+        </div>`;
+    }
+
+    function hallPickList(selectedId) {
+      if (!HALLS.length) return '<div class="state">현재 신청 가능한 빈소가 없습니다.</div>';
+      return `<div class="hall-grid">${HALLS.map((h) => {
+        const can = h.canRequestNow !== false;
+        const sel = String(h.id) === String(selectedId) ? " selected" : "";
+        const dis = can ? "" : " disabled";
+        const spec = h.specLabel ? `<small>${mEsc(h.specLabel)}</small>` : "";
+        return `
+          <div class="hall-pick${sel}${dis}" data-pick="${h.id}" data-can="${can ? "1" : "0"}">
+            <div class="info">
+              <b>${mEsc(h.name || h.hallNumber)}</b>
+              ${spec}
+              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}</small>
+              <small>${mEsc(h.feature || "")}</small>
+              ${h.availableLabel ? `<small style="color:${can ? "var(--navy)" : "#b45309"}">${mEsc(h.availableLabel)}</small>` : ""}
+            </div>
+          </div>`;
+      }).join("")}</div>`;
+    }
+
+    function bindHallPick() {
+      document.querySelectorAll("[data-pick]").forEach((el) => {
+        el.addEventListener("click", () => {
+          if (el.getAttribute("data-can") !== "1") return;
+          SELECTED_HALL_ID = el.getAttribute("data-pick");
+          document.querySelectorAll("[data-pick]").forEach((x) => x.classList.remove("selected"));
+          el.classList.add("selected");
+        });
+      });
+    }
+
+    async function loadAll() {
+      const [avail, reqs, usageRes] = await Promise.all([
+        mApi("/hall-requests/available"),
+        mApi("/hall-requests/mine"),
+        mApi("/hall-usages/mine"),
+      ]);
+      HALLS = avail.items || [];
+      SUMMARY = avail;
+      PENDING = (reqs.items || []).find((r) => r.status === "pending") || null;
+      USAGE = usageRes.usage || null;
+      if (PENDING && PENDING.hall) SELECTED_HALL_ID = PENDING.hall.id;
+    }
+
+    function render() {
+      const area = document.getElementById("hallArea");
+      if (USAGE && USAGE.status === "active") {
+        area.innerHTML = `
+          <div class="card-head">배정된 빈소</div>
+          <div class="card-body">
+            <div class="notice-box">빈소가 배정되었습니다. 발인 정보를 수정할 수 있습니다.</div>
+            <p style="margin:0 0 14px"><b>${mEsc(USAGE.hall ? USAGE.hall.name : "-")}</b>${USAGE.hall && USAGE.hall.specLabel ? " · " + mEsc(USAGE.hall.specLabel) : ""}${USAGE.hall && USAGE.hall.feature ? " · " + mEsc(USAGE.hall.feature) : ""}</p>
+            <div class="m-form">${usageFormHtml("u", USAGE)}</div>
+            <div class="m-actions">
+              <button class="btn btn-primary" id="saveUsage">이용 정보 저장</button>
+              <a class="btn" href="/pages/member/shop.html">장례 예약으로 이동</a>
+            </div>
+          </div>`;
+        document.getElementById("saveUsage").addEventListener("click", saveUsage);
+        return;
+      }
+
+      if (PENDING) {
+        SELECTED_HALL_ID = PENDING.hall ? PENDING.hall.id : SELECTED_HALL_ID;
+        area.innerHTML = `
+          <div class="card-head">빈소 신청 · 승인 대기</div>
+          <div class="card-body">
+            <div class="notice-box">신청하신 빈소 <b>${mEsc(PENDING.hall ? PENDING.hall.name : "-")}</b>는 관리자 승인 대기 중입니다. 아래 정보를 수정할 수 있습니다.</div>
+            <h4 style="margin:0 0 10px">선택 빈소</h4>
+            ${hallPickList(SELECTED_HALL_ID)}
+            <h4 style="margin:18px 0 10px">이용 정보</h4>
+            <div class="m-form">${usageFormHtml("p", PENDING)}</div>
+            <div class="m-actions">
+              <button class="btn btn-primary" id="savePending">신청 정보 저장</button>
+            </div>
+          </div>`;
+        bindHallPick();
+        document.getElementById("savePending").addEventListener("click", savePending);
+        return;
+      }
+
+      let summary = "";
+      if (SUMMARY && SUMMARY.activePhysicalCount > 0) {
+        summary = `<div class="notice-box">현재 빈소 <b>${SUMMARY.activePhysicalCount}/${SUMMARY.capacity}</b>실 이용 중`;
+        if (SUMMARY.freePhysicalSlots > 0) summary += ` · <b>${SUMMARY.freePhysicalSlots}</b>실 즉시 배정 가능`;
+        else if (SUMMARY.nextAvailableLabel) summary += ` · ${mEsc(SUMMARY.nextAvailableLabel)}`;
+        summary += "</div>";
+      }
+
+      area.innerHTML = `
+        <div class="card-head">1. 빈소 규격 선택</div>
+        <div class="card-body">
+          ${summary}
+          ${hallPickList(SELECTED_HALL_ID)}
+          <h4 style="margin:18px 0 10px">2. 이용 정보 입력</h4>
+          <div class="m-form">${usageFormHtml("n", { chiefMourner: ME.name })}</div>
+          <div class="m-actions">
+            <button class="btn btn-primary" id="submitReq">빈소 이용 신청</button>
+          </div>
+        </div>`;
+      bindHallPick();
+      document.getElementById("submitReq").addEventListener("click", submitRequest);
+    }
+
+    async function submitRequest() {
+      if (!SELECTED_HALL_ID) { mToast("빈소 규격을 선택해 주세요."); return; }
+      const body = { hallId: SELECTED_HALL_ID, ...formValues("n") };
+      if (!body.deceasedName || !body.funeralDate) { mToast("고인명과 발인 일자를 입력해 주세요."); return; }
+      try {
+        await mApi("/hall-requests", { method: "POST", body });
+        mToast("빈소 이용 신청이 접수되었습니다.");
+        await loadAll();
+        render();
+      } catch (e) { mToast(e.message); }
+    }
+
+    async function savePending() {
+      const body = formValues("p");
+      if (SELECTED_HALL_ID) body.hallId = SELECTED_HALL_ID;
+      if (!body.deceasedName || !body.funeralDate) { mToast("고인명과 발인 일자를 입력해 주세요."); return; }
+      try {
+        await mApi("/hall-requests/mine", { method: "PATCH", body });
+        mToast("신청 정보가 저장되었습니다.");
+        await loadAll();
+        render();
+      } catch (e) { mToast(e.message); }
+    }
+
+    async function saveUsage() {
+      const body = formValues("u");
+      if (!body.deceasedName || !body.funeralDate) { mToast("고인명과 발인 일자를 입력해 주세요."); return; }
+      try {
+        await mApi("/hall-usages/mine", { method: "PATCH", body });
+        mToast("이용 정보가 저장되었습니다.");
+        await loadAll();
+        render();
+      } catch (e) { mToast(e.message); }
+    }
+
+    (async function () {
+      ME = await memberHeader("hall");
+      if (!ME) return;
+      try {
+        await loadAll();
+        render();
+      } catch (e) {
+        document.getElementById("hallArea").innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>

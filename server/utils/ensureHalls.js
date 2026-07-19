@@ -2,49 +2,80 @@
 
 const Hall = require("../models/Hall");
 const HallUsage = require("../models/HallUsage");
+const HallRequest = require("../models/HallRequest");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const Memorial = require("../models/Memorial");
-const { HALL_CATALOG } = require("../constants/hallTypes");
+const { HALL_ROOMS, LEGACY_SPEC_TO_ROOM } = require("../constants/hallTypes");
 
 async function dropLegacyHallIndexes() {
-  let dropped = 0;
   try {
     const indexes = await Hall.collection.indexes();
     for (const idx of indexes) {
       const keys = Object.keys(idx.key || {});
       if (keys.includes("hallNumber")) {
         await Hall.collection.dropIndex(idx.name);
-        dropped += 1;
       }
     }
   } catch (err) {
     console.warn("[HALL] 구 인덱스 정리 실패:", err.message);
   }
-  return dropped;
 }
 
-async function migrateLegacyHalls() {
-  const legacy = await Hall.findOne({ code: { $exists: false } }).lean();
-  if (!legacy) return false;
+async function needsRoomMigration() {
+  const legacyCatalog = await Hall.findOne({ code: { $in: Object.keys(LEGACY_SPEC_TO_ROOM) } }).lean();
+  const missingSpec = await Hall.findOne({ specCode: { $exists: false } }).lean();
+  return !!(legacyCatalog || missingSpec);
+}
+
+async function remapHallReferences(oldIdToCode) {
+  const newRooms = await Hall.find({});
+  const codeToId = new Map(newRooms.map((r) => [r.code, r._id]));
+
+  const resolveRoomId = (oldHallId) => {
+    const legacyCode = oldIdToCode.get(String(oldHallId));
+    const roomCode = legacyCode ? LEGACY_SPEC_TO_ROOM[legacyCode] : null;
+    return roomCode ? codeToId.get(roomCode) : null;
+  };
+
+  const requests = await HallRequest.find({});
+  for (const req of requests) {
+    const nextId = resolveRoomId(req.hallId);
+    if (nextId) req.hallId = nextId;
+    await req.save();
+  }
+
+  const usages = await HallUsage.find({});
+  for (const usage of usages) {
+    const nextId = resolveRoomId(usage.hallId);
+    if (nextId) usage.hallId = nextId;
+    await usage.save();
+  }
+}
+
+async function migrateToRoomCatalog() {
+  if (!(await needsRoomMigration())) return false;
+
+  const oldHalls = await Hall.find({});
+  const oldIdToCode = new Map(oldHalls.map((h) => [String(h._id), h.code]));
 
   await Hall.deleteMany({});
-  await HallUsage.deleteMany({});
-  await User.updateMany({}, { $set: { hallUsageId: null }, $unset: { hallId: "" } });
-  await Order.updateMany({}, { $set: { hallUsageId: null }, $unset: { hallId: "" } });
-  await Memorial.deleteMany({});
+  await dropLegacyHallIndexes();
+  await upsertRooms();
+
+  await remapHallReferences(oldIdToCode);
   return true;
 }
 
-async function upsertCatalog() {
-  await dropLegacyHallIndexes();
-
+async function upsertRooms() {
   let created = 0;
   let updated = 0;
-  for (const item of HALL_CATALOG) {
+  for (const item of HALL_ROOMS) {
     const existing = await Hall.findOne({ code: item.code });
     if (existing) {
       existing.name = item.name;
+      existing.specCode = item.specCode;
+      existing.specLabel = item.specLabel;
       existing.areaLabel = item.areaLabel;
       existing.capacity = item.capacity;
       existing.feature = item.feature;
@@ -59,14 +90,15 @@ async function upsertCatalog() {
     }
   }
   const total = await Hall.countDocuments();
-  return { created, updated, total, migrated: false };
+  return { created, updated, total };
 }
 
 async function ensureHalls() {
-  const migrated = await migrateLegacyHalls();
-  const result = await upsertCatalog();
+  await dropLegacyHallIndexes();
+  const migrated = await migrateToRoomCatalog();
+  const result = await upsertRooms();
   result.migrated = migrated;
   return result;
 }
 
-module.exports = { ensureHalls, HALL_CATALOG };
+module.exports = { ensureHalls, HALL_ROOMS };

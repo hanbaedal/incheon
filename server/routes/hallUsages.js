@@ -5,11 +5,57 @@ const Hall = require("../models/Hall");
 const HallUsage = require("../models/HallUsage");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireFamily } = require("../middleware/auth");
 const { usageToAdminJSON } = require("../utils/hallFormat");
 const { autoCompletePastFunerals } = require("../utils/hallAvailability");
 
 const router = express.Router();
+
+const USAGE_FIELDS = [
+  "deceasedName", "chiefMourner", "relationship", "age",
+  "enshrinedAt", "funeralDate", "funeralTime", "burialSite",
+];
+
+function pickUsageBody(body) {
+  const out = {};
+  for (const k of USAGE_FIELDS) {
+    if (body && k in body) out[k] = String(body[k] == null ? "" : body[k]).trim();
+  }
+  return out;
+}
+
+function formatMemberUsage(usage) {
+  const hall = usage.hallId;
+  return {
+    id: usage._id,
+    hall: hall
+      ? {
+          id: hall._id,
+          name: hall.name,
+          hallNumber: hall.name,
+          code: hall.code,
+          specCode: hall.specCode,
+          specLabel: hall.specLabel,
+          feature: hall.feature,
+          areaLabel: hall.areaLabel,
+          capacity: hall.capacity,
+          isVirtual: hall.isVirtual,
+        }
+      : null,
+    deceasedName: usage.deceasedName,
+    chiefMourner: usage.chiefMourner,
+    relationship: usage.relationship,
+    age: usage.age,
+    enshrinedAt: usage.enshrinedAt,
+    funeralDate: usage.funeralDate,
+    funeralTime: usage.funeralTime,
+    burialSite: usage.burialSite,
+    status: usage.status,
+    familyCode: usage.familyCode,
+    createdAt: usage.createdAt,
+    updatedAt: usage.updatedAt,
+  };
+}
 
 function genFamilyCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -18,6 +64,42 @@ function genFamilyCode() {
 async function loadUsage(id) {
   return HallUsage.findById(id).populate("hallId").populate("familyUserId", "name username phone");
 }
+
+// 상주: 내 빈소 이용 정보
+router.get(
+  "/mine",
+  requireFamily,
+  asyncHandler(async (req, res) => {
+    await autoCompletePastFunerals();
+    const me = await User.findById(req.user.uid);
+    if (!me || !me.hallUsageId) return res.json({ usage: null });
+    const usage = await HallUsage.findOne({ _id: me.hallUsageId, familyUserId: me._id }).populate("hallId");
+    if (!usage) return res.json({ usage: null });
+    res.json({ usage: formatMemberUsage(usage) });
+  })
+);
+
+// 상주: 배정된 빈소 이용 정보 수정
+router.patch(
+  "/mine",
+  requireFamily,
+  asyncHandler(async (req, res) => {
+    const me = await User.findById(req.user.uid);
+    if (!me || !me.hallUsageId) return res.status(404).json({ error: "배정된 빈소 이용이 없습니다." });
+
+    const usage = await HallUsage.findOne({ _id: me.hallUsageId, familyUserId: me._id, status: "active" });
+    if (!usage) return res.status(404).json({ error: "수정할 수 있는 빈소 이용이 없습니다." });
+
+    const patch = pickUsageBody(req.body || {});
+    for (const k of USAGE_FIELDS) if (k in patch) usage[k] = patch[k];
+    if (!usage.deceasedName) return res.status(400).json({ error: "고인명을 입력해 주세요." });
+    if (!usage.funeralDate) return res.status(400).json({ error: "발인 일자를 선택해 주세요." });
+
+    await usage.save();
+    await usage.populate("hallId");
+    res.json({ usage: formatMemberUsage(usage) });
+  })
+);
 
 // 관리자: 빈소 이용 목록
 router.get(
@@ -62,10 +144,16 @@ router.post(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const body = req.body || {};
-    if (!body.hallId) return res.status(400).json({ error: "빈소 규격을 선택해 주세요." });
+    if (!body.hallId) return res.status(400).json({ error: "빈소를 선택해 주세요." });
 
     const hall = await Hall.findById(body.hallId);
-    if (!hall || !hall.active) return res.status(404).json({ error: "빈소 규격을 찾을 수 없습니다." });
+    if (!hall || !hall.active) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
+
+    const status = body.status === "completed" || body.status === "cancelled" ? body.status : "active";
+    if (status === "active" && !hall.isVirtual) {
+      const activeOnRoom = await HallUsage.findOne({ hallId: hall._id, status: "active" });
+      if (activeOnRoom) return res.status(400).json({ error: `${hall.name}는 현재 이용 중입니다.` });
+    }
 
     let family = null;
     if (body.familyUserId) {
@@ -85,7 +173,7 @@ router.post(
       funeralDate: body.funeralDate || "",
       funeralTime: body.funeralTime || "",
       burialSite: body.burialSite || "",
-      status: body.status === "completed" || body.status === "cancelled" ? body.status : "active",
+      status,
     });
     if (usage.status === "active") usage.familyCode = genFamilyCode();
     await usage.save();
@@ -117,7 +205,7 @@ router.patch(
 
     if ("hallId" in body && body.hallId) {
       const hall = await Hall.findById(body.hallId);
-      if (!hall) return res.status(404).json({ error: "빈소 규격을 찾을 수 없습니다." });
+      if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
       usage.hallId = hall._id;
     }
 

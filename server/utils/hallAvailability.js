@@ -51,6 +51,7 @@ function buildSlotSummary(usage) {
     usageId: usage._id,
     hallName: hall ? hall.name : "",
     hallCode: hall ? hall.code : "",
+    specLabel: hall ? hall.specLabel : "",
     isVirtual: !!(hall && hall.isVirtual),
     deceasedName: usage.deceasedName || "",
     chiefMourner: usage.chiefMourner || "",
@@ -61,45 +62,36 @@ function buildSlotSummary(usage) {
   };
 }
 
-function computeNextPhysicalRelease(slots, today) {
-  if (slots.length === 0) {
+function computeRoomRelease(slot, today) {
+  if (!slot) {
     return {
       canRequestNow: true,
       availableFrom: today,
       availableLabel: "즉시 신청 가능",
       daysUntil: 0,
-      releaseUsage: null,
     };
   }
 
-  const scheduled = slots.filter((s) => s.hasSchedule && s.funeralAt);
-  const unscheduled = slots.filter((s) => !s.hasSchedule);
-
-  if (scheduled.length === 0 && unscheduled.length > 0) {
+  const scheduled = slot.hasSchedule && slot.funeralAt;
+  if (!scheduled) {
     return {
       canRequestNow: false,
       availableFrom: null,
       availableLabel: "발인일 미정 · 전화 상담 후 안내",
       daysUntil: null,
-      releaseUsage: unscheduled[0] || null,
     };
   }
 
-  scheduled.sort((a, b) => a.funeralAt - b.funeralAt);
-  const next = scheduled[0];
-  const availableFrom = startOfDay(next.funeralAt);
+  const availableFrom = startOfDay(slot.funeralAt);
   const daysUntil = diffCalendarDays(today, availableFrom);
-
   return {
-    canRequestNow: false,
+    canRequestNow: daysUntil <= 0,
     availableFrom,
     availableLabel: formatAvailabilityLabel(daysUntil, availableFrom),
     daysUntil,
-    releaseUsage: next,
   };
 }
 
-/** 발인 일시가 지난 이용 중 빈소 → 발인완료(completed) 자동 처리 */
 async function completeHallUsage(usage) {
   const familyUserId = usage.familyUserId;
   usage.status = "completed";
@@ -127,9 +119,7 @@ async function autoCompletePastFunerals(now = new Date()) {
   return { completed, checked: usages.length };
 }
 
-/**
- * 물리 빈소 3실 기준 — 이용 중 발인 일자를 역산해 다음 가능 일자 계산
- */
+/** 호실별(101·102·103·109) 발인 일자 역산 */
 async function computeHallAvailability() {
   await autoCompletePastFunerals();
   const today = startOfDay(new Date());
@@ -138,24 +128,22 @@ async function computeHallAvailability() {
     HallUsage.find({ status: "active" }).populate("hallId").sort({ funeralDate: 1, createdAt: 1 }),
   ]);
 
+  const usageByHallId = new Map();
+  for (const u of usages) {
+    const hid = u.hallId && (u.hallId._id || u.hallId);
+    if (hid) usageByHallId.set(String(hid), u);
+  }
+
   const allSlots = usages.map(buildSlotSummary);
   const physicalSlots = allSlots.filter((s) => !s.isVirtual);
   const activePhysicalCount = physicalSlots.length;
   const freePhysicalSlots = Math.max(0, PHYSICAL_HALL_CAPACITY - activePhysicalCount);
 
-  const release =
-    freePhysicalSlots > 0
-      ? {
-          canRequestNow: true,
-          availableFrom: today,
-          availableLabel: "즉시 신청 가능",
-          daysUntil: 0,
-          releaseUsage: null,
-        }
-      : computeNextPhysicalRelease(physicalSlots, today);
-
   const items = halls.map((hall) => {
     const base = hallToCatalogJSON(hall);
+    const activeOnRoom = usageByHallId.get(String(hall._id));
+    const slot = activeOnRoom ? buildSlotSummary(activeOnRoom) : null;
+
     if (hall.isVirtual) {
       return {
         ...base,
@@ -166,6 +154,8 @@ async function computeHallAvailability() {
         daysUntil: 0,
       };
     }
+
+    const release = computeRoomRelease(slot, today);
     return {
       ...base,
       usesPhysicalSlot: true,
@@ -173,20 +163,22 @@ async function computeHallAvailability() {
       availableFrom: release.availableFrom ? formatYmd(release.availableFrom) : null,
       availableLabel: release.availableLabel,
       daysUntil: release.daysUntil,
-      capacity: PHYSICAL_HALL_CAPACITY,
-      activePhysicalCount,
-      freePhysicalSlots,
     };
   });
+
+  const physicalItems = items.filter((it) => it.usesPhysicalSlot);
+  const nextBusy = physicalItems
+    .filter((it) => !it.canRequestNow && it.availableFrom)
+    .sort((a, b) => String(a.availableFrom).localeCompare(String(b.availableFrom)))[0];
 
   return {
     capacity: PHYSICAL_HALL_CAPACITY,
     activePhysicalCount,
     freePhysicalSlots,
-    canRequestPhysicalNow: release.canRequestNow,
-    nextAvailableFrom: release.availableFrom ? formatYmd(release.availableFrom) : null,
-    nextAvailableLabel: release.availableLabel,
-    daysUntilNextSlot: release.daysUntil,
+    canRequestPhysicalNow: physicalItems.some((it) => it.canRequestNow),
+    nextAvailableFrom: nextBusy ? nextBusy.availableFrom : (freePhysicalSlots > 0 ? formatYmd(today) : null),
+    nextAvailableLabel: nextBusy ? nextBusy.availableLabel : (freePhysicalSlots > 0 ? "즉시 신청 가능" : null),
+    daysUntilNextSlot: nextBusy ? nextBusy.daysUntil : 0,
     activeUsages: allSlots.map((s) => ({
       ...s,
       funeralAt: s.funeralAt ? s.funeralAt.toISOString() : null,

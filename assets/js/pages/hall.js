@@ -27,7 +27,7 @@ onSiteReady(function () {
                 ? "오늘 발인"
                 : `${u.daysUntilRelease}일 후 발인`;
           return `<tr>
-            <td><b>${escHtml(u.hallName)}</b></td>
+            <td><b>${escHtml(u.hallName)}</b>${u.specLabel ? `<br><small>${escHtml(u.specLabel)}</small>` : ""}</td>
             <td>${escHtml(u.deceasedName) || "-"}</td>
             <td class="nowrap">${escHtml(u.funeralDate) || "-"} ${escHtml(u.funeralTime)}</td>
             <td>${rel}</td>
@@ -36,7 +36,7 @@ onSiteReady(function () {
         .join("");
       if (rows) {
         head += `<table class="tbl" style="margin-top:12px"><thead><tr>
-          <th>규격</th><th>고인</th><th>발인</th><th>예상 공실</th>
+          <th>빈소</th><th>고인</th><th>발인</th><th>예상 공실</th>
         </tr></thead><tbody>${rows}</tbody></table>`;
       }
     }
@@ -49,7 +49,7 @@ onSiteReady(function () {
     const rows = items
       .map(
         (h) => `<tr>
-          <td><b>${escHtml(h.hallNumber)}</b></td>
+          <td><b>${escHtml(h.hallNumber)}</b>${h.specLabel ? `<br><small>${escHtml(h.specLabel)}</small>` : ""}</td>
           <td>${h.status === "in-use" ? '<span class="st st-use">사용중</span>' : '<span class="st st-free">비어있음</span>'}</td>
           <td>${escHtml(h.deceasedName) || "-"}</td>
           <td>${escHtml(h.chiefMourner) || "-"}</td>
@@ -67,7 +67,7 @@ onSiteReady(function () {
   if (searchArea) {
     searchArea.innerHTML = `
       <div class="btn-row" style="margin-bottom:16px">
-        <input id="hq" placeholder="고인명 또는 상주명, 빈소 규격 검색" style="flex:1;min-width:200px;padding:11px 13px;border:1px solid var(--line);border-radius:8px" />
+        <input id="hq" placeholder="고인명, 상주명, 빈소(101호 등) 검색" style="flex:1;min-width:200px;padding:11px 13px;border:1px solid var(--line);border-radius:8px" />
         <button class="pill-btn" id="hqBtn" style="background:var(--navy);color:#fff;border-color:var(--navy)">검색</button>
       </div>
       <div id="hqResult"><div class="dyn-loading">현재 사용 중인 빈소를 불러옵니다…</div></div>`;

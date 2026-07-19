@@ -3,11 +3,13 @@
 const mongoose = require("mongoose");
 const { hallToCatalogJSON, hallToAdminJSON } = require("../utils/hallFormat");
 
-/** 빈소 규격 마스터 (35/50/80평형, 무빈소) */
+/** 빈소 마스터 — 호실(101·102·103·109) + 규격 */
 const hallSchema = new mongoose.Schema(
   {
     code: { type: String, required: true, unique: true, trim: true },
     name: { type: String, required: true, trim: true },
+    specCode: { type: String, required: true, trim: true, index: true },
+    specLabel: { type: String, trim: true, default: "" },
     areaLabel: { type: String, trim: true, default: "" },
     capacity: { type: String, trim: true, default: "" },
     feature: { type: String, trim: true, default: "" },

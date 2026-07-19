@@ -154,7 +154,7 @@ const NAV_MENU = [
   { id: "dashboard", label: "대시보드", view: "dashboard" },
   { id: "ops", label: "운영", badgeId: "navHallReqBadge",
     items: [
-      { view: "halls", label: "빈소 규격" },
+      { view: "halls", label: "빈소 목록" },
       { view: "hallUsages", label: "빈소 이용" },
       { view: "hallRegister", label: "빈소 이용 등록" },
       { view: "families", label: "상주 계정" },
@@ -315,7 +315,7 @@ function setNavBadge(id, count) {
 /* ---------- 라우터 ---------- */
 const VIEWS = {
   dashboard: { title: "대시보드", render: renderDashboard },
-  halls: { title: "빈소 규격", render: renderHalls },
+  halls: { title: "빈소 목록", render: renderHalls },
   hallUsages: { title: "빈소 이용", render: renderHallUsages },
   hallRegister: { title: "빈소 이용 등록", render: renderHallRegister },
   families: { title: "상주 계정 관리", render: renderFamilies },
@@ -466,18 +466,19 @@ async function renderDashboard() {
     </div>`;
 }
 
-/* ---------- 빈소 규격(카탈로그) ---------- */
+/* ---------- 빈소 목록(호실 마스터) ---------- */
 async function renderHalls() {
   const d = await api("/halls/admin/all");
   content.innerHTML = `
-    <p class="muted" style="margin:0 0 14px">35·50·80평형 및 무빈소 규격입니다. 상주는 이 목록에서 빈소를 선택해 이용 신청합니다.</p>
+    <p class="muted" style="margin:0 0 14px">101·102·103·109호 빈소와 규격(35·50·80평형, 무빈소)입니다. 상주는 호실을 선택해 이용 신청합니다.</p>
     <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">등록된 빈소 규격이 없습니다.</div>' : `
+      ${d.items.length === 0 ? '<div class="empty">등록된 빈소가 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>구분</th><th>평형/면적</th><th>수용 인원</th><th>특징</th><th>상태</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>호실</th><th>규격</th><th>면적</th><th>수용 인원</th><th>특징</th><th>상태</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((h) => `
           <tr>
             <td><b>${esc(h.name)}</b>${h.isVirtual ? ' <span class="tag gray">무빈소</span>' : ""}</td>
+            <td>${esc(h.specLabel) || "-"}</td>
             <td>${esc(h.areaLabel) || "-"}</td>
             <td>${esc(h.capacity) || "-"}</td>
             <td>${esc(h.feature) || "-"}</td>
@@ -494,9 +495,12 @@ async function renderHalls() {
 }
 
 function hallCatalogForm(h) {
-  openModal("빈소 규격 수정", `
+  openModal("빈소 수정", `
     <div class="field-row">
-      <div class="field"><label>구분명</label><input id="f_name" value="${esc(h.name || "")}" /></div>
+      <div class="field"><label>호실명</label><input id="f_name" value="${esc(h.name || "")}" /></div>
+      <div class="field"><label>규격</label><input value="${esc(h.specLabel || "")}" disabled /></div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>신청 가능</label><select id="f_active"><option value="true" ${h.active ? "selected" : ""}>가능</option><option value="false" ${!h.active ? "selected" : ""}>중지</option></select></div>
     </div>
     <div class="field-row">
@@ -514,7 +518,7 @@ function hallCatalogForm(h) {
         feature: val("f_feature"),
         active: val("f_active") === "true",
       };
-      if (!body.name) { toast("구분명을 입력하세요."); return; }
+      if (!body.name) { toast("호실명을 입력하세요."); return; }
       try {
         await api("/halls/" + h.id, { method: "PATCH", body });
         closeModal(); toast("저장되었습니다."); route();
@@ -545,11 +549,11 @@ async function renderHallUsages() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 빈소 이용이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>상태</th><th>빈소 규격</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>상태</th><th>빈소</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((u) => `
           <tr>
             <td>${statusTag(u.status)}</td>
-            <td><b>${u.hall ? esc(u.hall.name) : "-"}</b></td>
+            <td><b>${u.hall ? esc(u.hall.name) : "-"}</b>${u.hall && u.hall.specLabel ? `<br><small class="muted">${esc(u.hall.specLabel)}</small>` : ""}</td>
             <td>${esc(u.deceasedName) || "-"}</td>
             <td>${esc(u.chiefMourner) || (u.family ? esc(u.family.name) : "-")}</td>
             <td class="nowrap">${esc(u.funeralDate) || "-"} ${esc(u.funeralTime)}</td>
@@ -589,7 +593,7 @@ async function hallUsageForm(u) {
       api("/users/admin/all"),
     ]);
     catalogOptions = catalog.items.map((h) => {
-      const label = esc(h.name) + (h.feature ? " · " + esc(h.feature) : "");
+      const label = esc(h.name) + (h.specLabel ? " · " + esc(h.specLabel) : "") + (h.feature ? " · " + esc(h.feature) : "");
       const sel = e.hall && e.hall.id === h.id ? "selected" : "";
       return `<option value="${h.id}" ${sel}>${label}</option>`;
     }).join("");
@@ -601,7 +605,7 @@ async function hallUsageForm(u) {
 
   openModal(u ? "빈소 이용 수정" : "빈소 이용 등록", `
     <div class="field-row">
-      <div class="field"><label>빈소 규격 *</label><select id="f_hallId">${catalogOptions}</select></div>
+      <div class="field"><label>빈소 *</label><select id="f_hallId">${catalogOptions}</select></div>
       <div class="field"><label>상태</label><select id="f_status">${opt("active", "이용중", e.status || "active")}${opt("completed", "발인완료", e.status)}${opt("cancelled", "취소", e.status)}</select></div>
     </div>
     <div class="field-row">
@@ -634,7 +638,7 @@ async function hallUsageForm(u) {
         burialSite: val("f_burialSite"),
         familyUserId: val("f_familyUserId") || null,
       };
-      if (!body.hallId) { toast("빈소 규격을 선택하세요."); return; }
+      if (!body.hallId) { toast("빈소를 선택하세요."); return; }
       try {
         if (u) await api("/hall-usages/" + u.id, { method: "PATCH", body });
         else await api("/hall-usages", { method: "POST", body });
@@ -915,13 +919,14 @@ async function renderHallRequests() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">빈소 신청이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>상태</th><th>상주</th><th>연락처</th><th>신청 빈소</th><th>신청일</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>상태</th><th>상주</th><th>신청 빈소</th><th>고인</th><th>발인</th><th>신청일</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((r) => `
           <tr>
             <td>${statusTag(r.status)}</td>
             <td>${r.family ? esc(r.family.name) + " (" + esc(r.family.username) + ")" : "-"}</td>
-            <td class="nowrap">${r.family ? esc(r.family.phone) || "-" : "-"}</td>
-            <td class="nowrap">${r.hall ? esc(r.hall.name) + (r.hall.feature ? " · " + esc(r.hall.feature) : "") : "-"}</td>
+            <td class="nowrap">${r.hall ? `<b>${esc(r.hall.name)}</b>${r.hall.specLabel ? " · " + esc(r.hall.specLabel) : ""}${r.hall.feature ? "<br><small class=\"muted\">" + esc(r.hall.feature) + "</small>" : ""}` : "-"}</td>
+            <td>${esc(r.deceasedName) || "-"}</td>
+            <td class="nowrap">${esc(r.funeralDate) || "-"} ${esc(r.funeralTime)}</td>
             <td class="nowrap">${fmtDay(r.createdAt)}</td>
             <td class="actions">
               ${r.status === "pending" ? `

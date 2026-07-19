@@ -52,7 +52,7 @@ const RESERVE_CATS = [
   { key: "hearse", label: "운구·차량", type: "hearse" },
 ];
 
-/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' */
+/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' | 'hall' */
 async function memberHeader(active) {
   let me;
   try { me = (await mApi("/auth/me")).user; }
@@ -66,6 +66,7 @@ async function memberHeader(active) {
     host.innerHTML = `
       <div class="brand"><strong>상주 전용 서비스</strong><span>인천병원장례식장 (인천중앙병원장례식장)</span></div>
       <nav class="m-nav">
+        <a href="/pages/member/hall.html" class="${active === "hall" ? "active" : ""}">빈소 이용</a>
         <a href="/pages/member/shop.html" class="${active === "shop" ? "active" : ""}">장례 예약</a>
         <a href="/pages/member/orders.html" class="${active === "orders" ? "active" : ""}">내 예약</a>
         <a href="/" target="_blank">홈페이지</a>

@@ -36,7 +36,7 @@ router.get(
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
     const halls = await Hall.find({
-      $or: [{ name: rx }, { feature: rx }, { code: rx }],
+      $or: [{ name: rx }, { specLabel: rx }, { feature: rx }, { code: rx }],
     }).select("_id");
     const hallIds = halls.map((h) => h._id);
 
@@ -79,7 +79,7 @@ router.patch(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const hall = await Hall.findById(req.params.id);
-    if (!hall) return res.status(404).json({ error: "빈소 규격을 찾을 수 없습니다." });
+    if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
 
     const allowed = ["name", "areaLabel", "capacity", "feature", "sortOrder", "active"];
     for (const k of allowed) if (k in (req.body || {})) hall[k] = req.body[k];

@@ -18,7 +18,10 @@
     <div class="shop-grid">
       <div id="mainArea" class="card"><div class="state">불러오는 중…</div></div>
       <div class="card cart">
-        <div class="card-head">예약 요약</div>
+        <div class="card-head card-head-split" id="cartHead">
+          <span>예약 요약</span>
+          <span class="cart-hall-name" id="cartHallName"></span>
+        </div>
         <div class="card-body">
           <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
           <div id="cartSum"></div>
@@ -76,6 +79,7 @@
     let HALLS = [];
     let HALL_SUMMARY = null;
     let MY_HALL_REQ = null;
+    let MY_USAGE = null;
     const cart = new Map();
 
     (async function () {
@@ -107,6 +111,7 @@
         HEARSE_ITEMS = hearseRes.items;
         await loadHallData();
         renderMain();
+        renderCart();
       } catch (e) {
         document.getElementById("mainArea").innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
       }
@@ -130,16 +135,78 @@
 
     async function loadHallData() {
       try {
-        const d = await mApi("/hall-requests/available");
-        HALLS = d.items || [];
-        HALL_SUMMARY = d;
-        const mine = (await mApi("/hall-requests/mine")).items;
-        MY_HALL_REQ = mine.find((r) => r.status === "pending") || mine.find((r) => r.status === "approved") || null;
+        const [avail, mine, usageRes, meRes] = await Promise.all([
+          mApi("/hall-requests/available"),
+          mApi("/hall-requests/mine"),
+          mApi("/hall-usages/mine"),
+          mApi("/auth/me"),
+        ]);
+        ME = meRes.user;
+        HALLS = avail.items || [];
+        HALL_SUMMARY = avail;
+        MY_USAGE = usageRes.usage || null;
+        MY_HALL_REQ = mine.items.find((r) => r.status === "pending")
+          || mine.items.find((r) => r.status === "approved")
+          || null;
       } catch (e) {
         HALLS = [];
         HALL_SUMMARY = null;
         MY_HALL_REQ = null;
+        MY_USAGE = null;
       }
+    }
+
+    function getHallDisplayName() {
+      if (MY_USAGE && MY_USAGE.status === "active" && MY_USAGE.hall) {
+        const h = MY_USAGE.hall;
+        return h.name + (h.specLabel ? " (" + h.specLabel + ")" : "");
+      }
+      if (MY_HALL_REQ && MY_HALL_REQ.hall) {
+        const h = MY_HALL_REQ.hall;
+        const name = h.name || h.hallNumber || "";
+        return name + (h.specLabel ? " (" + h.specLabel + ")" : "");
+      }
+      return "";
+    }
+
+    function updateCartHead() {
+      const el = document.getElementById("cartHallName");
+      if (el) el.textContent = getHallDisplayName();
+    }
+
+    function hallSummaryHtml() {
+      const hallName = getHallDisplayName();
+      if (MY_USAGE && MY_USAGE.status === "active") {
+        const sub = [
+          MY_USAGE.deceasedName ? "故 " + MY_USAGE.deceasedName : "",
+          MY_USAGE.funeralDate ? "발인 " + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
+        ].filter(Boolean).join(" · ");
+        return `
+          <div class="cart-item cart-hall">
+            <span class="nm">
+              <b>빈소</b>
+              ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
+              <br><small style="color:var(--ok);font-weight:600">배정 완료</small>
+            </span>
+            <span class="cart-hall-right nowrap">${mEsc(hallName) || "—"}</span>
+          </div>`;
+      }
+      if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
+        const sub = [
+          MY_HALL_REQ.deceasedName ? "故 " + MY_HALL_REQ.deceasedName : "",
+          MY_HALL_REQ.funeralDate ? "발인 " + MY_HALL_REQ.funeralDate : "",
+        ].filter(Boolean).join(" · ");
+        return `
+          <div class="cart-item cart-hall">
+            <span class="nm">
+              <b>빈소</b>
+              ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
+              <br><small style="color:#b8860b;font-weight:600">승인 대기</small>
+            </span>
+            <span class="cart-hall-right nowrap">${mEsc(hallName) || "—"}</span>
+          </div>`;
+      }
+      return "";
     }
 
     function cartKey(type, id) { return type + ":" + id; }
@@ -163,45 +230,16 @@
       if (ACTIVE_CAT === "hall") {
         let html = '<div class="card-head">빈소선택</div><div class="card-body">';
         if (ME.hallUsageId) {
-          html += `<div class="notice-box">배정된 빈소가 있습니다. 아래 카테고리에서 장례 서비스를 예약해 주세요.</div>`;
+          html += `<div class="notice-box">배정된 빈소가 있습니다. <a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600">빈소 이용</a>에서 정보를 확인하거나 아래에서 장례 서비스를 예약해 주세요.</div>`;
         } else if (MY_HALL_REQ) {
           const st = MY_HALL_REQ.status === "pending" ? "승인 대기 중" : (MY_HALL_REQ.status === "approved" ? "승인 완료" : "거절됨");
-          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}</div>`;
-        }
-        if (!ME.hallUsageId && (!MY_HALL_REQ || MY_HALL_REQ.status === "rejected")) {
-          if (HALLS.length === 0) {
-            html += '<div class="state">현재 신청 가능한 빈소 규격이 없습니다.</div>';
-          } else {
-            if (HALL_SUMMARY && HALL_SUMMARY.activePhysicalCount > 0) {
-              html += `<div class="notice-box" style="margin-bottom:12px">현재 빈소 <b>${HALL_SUMMARY.activePhysicalCount}/${HALL_SUMMARY.capacity}</b>실 이용 중`;
-              if (HALL_SUMMARY.freePhysicalSlots > 0) {
-                html += ` · <b>${HALL_SUMMARY.freePhysicalSlots}</b>실 즉시 배정 가능`;
-              } else if (HALL_SUMMARY.nextAvailableLabel) {
-                html += ` · ${mEsc(HALL_SUMMARY.nextAvailableLabel)}`;
-              }
-              html += "</div>";
-            }
-            html += '<p style="margin:0 0 12px;color:var(--gray);font-size:14px">발인 일정을 기준으로 이용 가능 일자를 안내합니다. 아래에서 규격을 선택해 신청해 주세요.</p>';
-            HALLS.forEach((h) => {
-              const can = h.canRequestNow !== false;
-              const avail = h.availableLabel ? `<small style="color:${can ? "var(--navy)" : "#b45309"}">${mEsc(h.availableLabel)}</small>` : "";
-              html += `
-                <div class="prod">
-                  <div class="info">
-                    <b>${mEsc(h.name || h.hallNumber)}</b>
-                    <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}</small>
-                    <small>${mEsc(h.feature || "")}</small>
-                    ${avail}
-                  </div>
-                  <button class="btn btn-sm btn-primary" data-hall="${h.id}" ${can ? "" : "disabled"}>${can ? "신청" : "대기"}</button>
-                </div>`;
-            });
-          }
+          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}<br><a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600;margin-top:6px;display:inline-block">빈소 이용 등록 보기</a></div>`;
+        } else {
+          html += `<div class="notice-box">빈소 규격 선택과 고인·발인 정보 입력은 <a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600">빈소 이용 등록</a> 메뉴에서 진행해 주세요.</div>`;
+          html += `<div class="m-actions" style="margin-top:12px"><a class="btn btn-primary" href="/pages/member/hall.html">빈소 이용 등록하기</a></div>`;
         }
         html += "</div>";
         area.innerHTML = html;
-        area.querySelectorAll("[data-hall]").forEach((b) =>
-          b.addEventListener("click", () => requestHall(b.getAttribute("data-hall"))));
         return;
       }
 
@@ -516,15 +554,6 @@
         b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
     }
 
-    async function requestHall(hallId) {
-      if (!confirm("선택한 빈소를 신청하시겠습니까?")) return;
-      try {
-        await mApi("/hall-requests", { method: "POST", body: { hallId } });
-        mToast("빈소 신청이 접수되었습니다.");
-        await loadHallData();
-        renderMain();
-      } catch (e) { mToast(e.message); }
-    }
 
     function addToCart(key) {
       cart.set(key, (cart.get(key) || 0) + 1);
@@ -536,42 +565,64 @@
     }
 
     function renderCart() {
+      updateCartHead();
       const area = document.getElementById("cartArea");
       const sumArea = document.getElementById("cartSum");
       const btn = document.getElementById("orderBtn");
-      if (cart.size === 0) {
+      const hallHtml = hallSummaryHtml();
+
+      if (cart.size === 0 && !hallHtml) {
         area.innerHTML = '<div class="cart-empty">담긴 항목이 없습니다.</div>';
-        sumArea.innerHTML = ""; btn.disabled = true; return;
+        sumArea.innerHTML = "";
+        btn.disabled = true;
+        return;
       }
-      let supply = 0, vat = 0, html = "";
-      cart.forEach((qty, key) => {
-        const p = findCartItem(key);
-        if (!p) return;
-        const isPostpaid = p.settlementType === "postpaid";
-        const line = isPostpaid ? 0 : p.price * qty;
-        supply += line;
-        if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
-        html += `
-          <div class="cart-item">
-            <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
-            <span class="qtybox">
-              <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
-            </span>
-            <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? "정산" : won(line)}</span>
-          </div>`;
-      });
+
+      let supply = 0, vat = 0, html = hallHtml;
+      if (cart.size === 0) {
+        html += '<div class="cart-empty" style="padding:14px 0 4px">장례 물품·서비스를 선택해 담아 주세요.</div>';
+      } else {
+        cart.forEach((qty, key) => {
+          const p = findCartItem(key);
+          if (!p) return;
+          const isPostpaid = p.settlementType === "postpaid";
+          const line = isPostpaid ? 0 : p.price * qty;
+          supply += line;
+          if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
+          html += `
+            <div class="cart-item">
+              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
+              <span class="qtybox">
+                <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
+              </span>
+              <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? "정산" : won(line)}</span>
+            </div>`;
+        });
+      }
+
       area.innerHTML = html;
-      sumArea.innerHTML = `
-        <div class="cart-sum">
-          <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
-          <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
-          <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
-          <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다.</p>
-        </div>`;
-      btn.disabled = false;
-      area.querySelectorAll("[data-plus]").forEach((b) => b.addEventListener("click", () => setQty(b.getAttribute("data-plus"), (cart.get(b.getAttribute("data-plus")) || 0) + 1)));
-      area.querySelectorAll("[data-minus]").forEach((b) => b.addEventListener("click", () => setQty(b.getAttribute("data-minus"), (cart.get(b.getAttribute("data-minus")) || 0) - 1)));
-      area.querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => setQty(b.getAttribute("data-rm"), 0)));
+      if (cart.size === 0) {
+        sumArea.innerHTML = hallHtml
+          ? '<p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 빈소 배정 후 물품·서비스를 예약해 주세요.</p>'
+          : "";
+        btn.disabled = true;
+      } else {
+        sumArea.innerHTML = `
+          <div class="cart-sum">
+            <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
+            <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
+            <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
+            <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다.</p>
+          </div>`;
+        btn.disabled = false;
+      }
+
+      area.querySelectorAll("[data-plus]").forEach((b) =>
+        b.addEventListener("click", () => setQty(b.getAttribute("data-plus"), (cart.get(b.getAttribute("data-plus")) || 0) + 1)));
+      area.querySelectorAll("[data-minus]").forEach((b) =>
+        b.addEventListener("click", () => setQty(b.getAttribute("data-minus"), (cart.get(b.getAttribute("data-minus")) || 0) - 1)));
+      area.querySelectorAll("[data-rm]").forEach((b) =>
+        b.addEventListener("click", () => setQty(b.getAttribute("data-rm"), 0)));
     }
 
     async function placeOrder() {
