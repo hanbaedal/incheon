@@ -10,17 +10,14 @@
 <body>
   <div id="pageContent">
     <h2 class="page-title"><span class="bar"></span>서식 자료실</h2>
-    <p class="page-lead">장례 및 행정 처리에 필요한 서식과 신고 안내입니다.</p>
+    <p class="page-lead">장례와 관련된 행정업무에 필요한 각종 서식을 다운로드하실 수 있습니다.</p>
 
     <div class="block">
-      <h3>자료실</h3>
+      <h3>관련서식</h3>
       <table class="tbl">
         <thead><tr><th>서식명</th><th>용도</th><th>다운로드</th></tr></thead>
-        <tbody>
-          <tr><td>사망신고서</td><td>사망 후 30일 이내 관할 주민센터 신고</td><td><a href="#" style="color:var(--gold);font-weight:600;">받기</a></td></tr>
-          <tr><td>매장·화장 신고서</td><td>매장/화장 시 관할 지자체 신고</td><td><a href="#" style="color:var(--gold);font-weight:600;">받기</a></td></tr>
-          <tr><td>장례 위임장</td><td>장례 절차 대리 진행 위임</td><td><a href="#" style="color:var(--gold);font-weight:600;">받기</a></td></tr>
-          <tr><td>부고 양식</td><td>부고 문안 작성 양식</td><td><a href="#" style="color:var(--gold);font-weight:600;">받기</a></td></tr>
+        <tbody id="formsTableBody">
+          <tr><td colspan="3">불러오는 중…</td></tr>
         </tbody>
       </table>
     </div>
@@ -32,58 +29,16 @@
         <li>신고 장소: 고인의 주소지 또는 사망지 관할 시·구·읍·면</li>
         <li>필요 서류: 사망진단서(검안서), 신고인 신분증, 가족관계 확인 서류</li>
       </ul>
-      <p class="note" style="margin-top:16px;"><strong>안내</strong> &nbsp;위 다운로드 링크는 예시이며, 실제 파일은 자료 등록 시 제공됩니다.</p>
+      <p class="note" style="margin-top:16px;"><strong>안내</strong> &nbsp;서식 파일은 관리자가 등록하면 즉시 다운로드할 수 있습니다. 문의: <strong>032-524-4444</strong></p>
     </div>
   </div>
 
   <script>
     window.SITE_BASE = "../../";
     window.SITE_PAGE = { section: "info", sub: "forms" };
-    window.PAGE_I18N = {
-      zh: `
-    <h2 class="page-title"><span class="bar"></span>表格资料室</h2>
-    <p class="page-lead">殡葬及行政办理所需的表格与申报指南。</p>
-    <div class="block">
-      <h3>资料室</h3>
-      <table class="tbl"><thead><tr><th>表格名称</th><th>用途</th><th>下载</th></tr></thead><tbody>
-        <tr><td>死亡申报书</td><td>死亡后30日内向管辖居民中心申报</td><td><a href="#" style="color:var(--gold);font-weight:600;">下载</a></td></tr>
-        <tr><td>土葬·火葬申报书</td><td>土葬/火葬时向管辖地方政府申报</td><td><a href="#" style="color:var(--gold);font-weight:600;">下载</a></td></tr>
-        <tr><td>殡葬委托书</td><td>委托代办殡葬程序</td><td><a href="#" style="color:var(--gold);font-weight:600;">下载</a></td></tr>
-        <tr><td>讣告样式</td><td>讣告文案撰写样式</td><td><a href="#" style="color:var(--gold);font-weight:600;">下载</a></td></tr>
-      </tbody></table>
-    </div>
-    <div class="block">
-      <h3>死亡申报指南</h3>
-      <ul class="dot">
-        <li>申报期限：自知晓死亡事实之日起<strong>1个月内</strong></li>
-        <li>申报地点：逝者住所地或死亡地管辖市·区·邑·面</li>
-        <li>所需文件：死亡诊断书(检案书)、申报人身份证、家庭关系证明文件</li>
-      </ul>
-      <p class="note" style="margin-top:16px;"><strong>提示</strong> &nbsp;以上下载链接为示例，实际文件将于资料登记后提供。</p>
-    </div>`,
-      en: `
-    <h2 class="page-title"><span class="bar"></span>Documents</h2>
-    <p class="page-lead">Forms and reporting guidance for funeral and administrative procedures.</p>
-    <div class="block">
-      <h3>Downloads</h3>
-      <table class="tbl"><thead><tr><th>Form</th><th>Use</th><th>Download</th></tr></thead><tbody>
-        <tr><td>Death Report</td><td>Report to the local office within 30 days</td><td><a href="#" style="color:var(--gold);font-weight:600;">Get</a></td></tr>
-        <tr><td>Burial/Cremation Report</td><td>Report to the local government</td><td><a href="#" style="color:var(--gold);font-weight:600;">Get</a></td></tr>
-        <tr><td>Power of Attorney</td><td>Delegate the funeral procedure</td><td><a href="#" style="color:var(--gold);font-weight:600;">Get</a></td></tr>
-        <tr><td>Obituary Template</td><td>Template for writing an obituary</td><td><a href="#" style="color:var(--gold);font-weight:600;">Get</a></td></tr>
-      </tbody></table>
-    </div>
-    <div class="block">
-      <h3>Death Report Guide</h3>
-      <ul class="dot">
-        <li>Deadline: within <strong>1 month</strong> of learning of the death</li>
-        <li>Where: the deceased's address or the place of death jurisdiction</li>
-        <li>Documents: death certificate, reporter's ID, family relation documents</li>
-      </ul>
-      <p class="note" style="margin-top:16px;"><strong>Note</strong> &nbsp;The download links above are samples; actual files are provided once uploaded.</p>
-    </div>`,
-    };
   </script>
+  <script src="../../assets/js/forms-public.js"></script>
+  <script>loadFormsIntoTable("formsTableBody", false);</script>
   <script src="../../assets/js/site.js"></script>
 </body>
 </html>

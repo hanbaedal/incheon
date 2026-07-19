@@ -7,6 +7,7 @@ const Product = require("./models/Product");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureAdmin } = require("./utils/ensureAdmin");
 const { ensureHalls } = require("./utils/ensureHalls");
+const { ensureFuneralForms } = require("./utils/ensureFuneralForms");
 
 async function seedAdmin() {
   const r = await ensureAdmin();
@@ -63,6 +64,12 @@ async function seedHalls() {
   console.log(`+ 빈소 규격 ${r.total}건 (신규 ${r.created})`);
 }
 
+async function seedFuneralForms() {
+  const r = await ensureFuneralForms();
+  if (r.created) console.log(`+ 관련서식 ${r.total}건 (신규 ${r.created})`);
+  else console.log(`- 관련서식 ${r.total}건 존재 (시드 건너뜀)`);
+}
+
 async function main() {
   await connectDB();
   console.log("[SEED] 시작");
@@ -71,6 +78,7 @@ async function main() {
   await seedAmcCatalog();
   await seedNotice();
   await seedHalls();
+  await seedFuneralForms();
   console.log("[SEED] 완료");
   await disconnectDB();
   process.exit(0);

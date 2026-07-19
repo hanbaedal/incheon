@@ -6,6 +6,7 @@ const { createApp } = require("./app");
 const { ensureAdmin } = require("./utils/ensureAdmin");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureHalls } = require("./utils/ensureHalls");
+const { ensureFuneralForms } = require("./utils/ensureFuneralForms");
 const { autoCompletePastFunerals } = require("./utils/hallAvailability");
 
 async function main() {
@@ -49,6 +50,13 @@ async function main() {
     }
   } catch (err) {
     console.error("[HALL] 빈소 규격 등록 실패:", err.message);
+  }
+
+  try {
+    const r = await ensureFuneralForms();
+    if (r.created > 0) console.log(`[FORMS] 관련서식 기본 목록 ${r.created}건 등록`);
+  } catch (err) {
+    console.error("[FORMS] 관련서식 등록 실패:", err.message);
   }
 
   try {

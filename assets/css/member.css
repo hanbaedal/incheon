@@ -267,7 +267,15 @@ a.link-gold { color: var(--gold); font-weight: 600; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* 카드 */
-.shop-grid { display: grid; grid-template-columns: 1fr 340px; gap: 22px; align-items: start; }
+.shop-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 660px); gap: 22px; align-items: start; }
+
+.shop-side {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 1fr);
+  gap: 18px;
+  position: sticky;
+  top: 86px;
+}
 
 .card {
   background: rgba(255, 255, 255, 0.88);
@@ -309,8 +317,125 @@ a.link-gold { color: var(--gold); font-weight: 600; }
 .prod .price { font-weight: 700; color: var(--navy); white-space: nowrap; }
 
 /* 장바구니 */
-.cart { position: sticky; top: 86px; }
+.cart { position: static; }
 .cart .card-head { background: linear-gradient(90deg, var(--pastel-peach) 0%, var(--pastel-yellow) 100%); }
+
+/* 장례 안내 패널 (예약 요약 오른쪽) */
+.info-panel .card-head {
+  background: linear-gradient(90deg, var(--pastel-blue) 0%, var(--pastel-mint) 100%);
+}
+
+.info-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.info-tab {
+  padding: 11px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.info-tab:hover {
+  color: var(--navy);
+  background: var(--pastel-lavender);
+}
+
+.info-tab.active {
+  color: var(--navy);
+  border-bottom-color: #818cf8;
+  background: linear-gradient(180deg, var(--pastel-sky) 0%, #fff 100%);
+}
+
+.info-panel-body { padding: 14px 16px 16px; }
+
+.info-panel-lead {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--gray);
+  line-height: 1.55;
+}
+
+.info-panel-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--gray);
+  line-height: 1.55;
+}
+
+.info-panel-note a { color: var(--navy); font-weight: 600; }
+
+.info-scroll {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.info-tbl { font-size: 12.5px; }
+.info-tbl th, .info-tbl td { padding: 8px 10px; }
+.info-tbl thead th { font-size: 12px; }
+.info-tbl .right { text-align: right; }
+
+.info-link {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pastel-lavender);
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.info-link:hover { background: var(--pastel-blue); }
+
+.info-facility-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.info-facility-list a {
+  display: block;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.info-facility-list a:hover {
+  border-color: #c4b5fd;
+  background: var(--pastel-lavender);
+}
+
+.info-facility-list b {
+  display: block;
+  color: var(--navy);
+  font-size: 13.5px;
+  margin-bottom: 3px;
+}
+
+.info-facility-list span {
+  display: block;
+  color: var(--gray);
+  font-size: 12px;
+  line-height: 1.45;
+}
 
 .cart-item {
   display: flex;
@@ -678,7 +803,8 @@ a.link-gold { color: var(--gold); font-weight: 600; }
 
 @media (max-width: 820px) {
   .shop-grid { grid-template-columns: 1fr; }
-  .cart { position: static; }
+  .shop-side { position: static; grid-template-columns: 1fr; }
+  .info-scroll { max-height: none; }
   .m-nav a { padding: 7px 10px; font-size: 12.5px; }
   .m-nav .who { display: none; }
   .m-title { font-size: 21px; }

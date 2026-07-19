@@ -24,6 +24,7 @@ router.use("/dress-items", require("./dressItems"));
 router.use("/hearse-items", require("./hearseItems"));
 router.use("/orders", require("./orders"));
 router.use("/images", require("./images"));
+router.use("/forms", require("./forms"));
 router.use("/hall-usages", require("./hallUsages"));
 router.use("/hall-requests", require("./hallRequests"));
 

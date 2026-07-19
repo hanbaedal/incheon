@@ -17,21 +17,33 @@
 
     <div class="shop-grid">
       <div id="mainArea" class="card"><div class="state">불러오는 중…</div></div>
-      <div class="card cart">
-        <div class="card-head card-head-split" id="cartHead">
-          <span>예약 요약</span>
-          <span class="cart-hall-name" id="cartHallName"></span>
+      <div class="shop-side">
+        <div class="card cart">
+          <div class="card-head card-head-split" id="cartHead">
+            <span>예약 요약</span>
+            <span class="cart-hall-name" id="cartHallName"></span>
+          </div>
+          <div class="card-body">
+            <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
+            <div id="cartSum"></div>
+            <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled>예약 제출</button>
+          </div>
         </div>
-        <div class="card-body">
-          <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
-          <div id="cartSum"></div>
-          <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled>예약 제출</button>
+        <div class="card info-panel">
+          <div class="card-head">장례 안내</div>
+          <div class="info-tabs">
+            <button type="button" class="info-tab active" data-info-tab="forms">관련서식</button>
+            <button type="button" class="info-tab" data-info-tab="facility">장사시설안내</button>
+          </div>
+          <div class="card-body info-panel-body" id="infoPanelBody"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="../../assets/js/forms-public.js"></script>
   <script src="../../assets/js/member.js"></script>
+  <script src="../../assets/js/member-info.js"></script>
   <script>
     let ME = null;
     let PRODUCTS = [];
@@ -90,6 +102,7 @@
       if (urlCat === "hall") ACTIVE_CAT = "hall";
       ME = await memberHeader("shop");
       if (!ME) return;
+      initMemberInfoPanel("forms");
       renderTabs();
       try {
         const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes] = await Promise.all([

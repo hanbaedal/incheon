@@ -219,6 +219,7 @@ const NAV_MENU = [
   { id: "board", label: "게시·문의", badgeId: "navInqBadge",
     items: [
       { view: "notices", label: "알림 소식" },
+      { view: "funeralForms", label: "관련서식" },
       { view: "inquiries", label: "온라인 문의" },
       { view: "memorials", label: "추모글 관리" },
     ],
@@ -346,6 +347,7 @@ const VIEWS = {
   prodHearseLimousine: { title: "고급리무진 관리", render: () => renderHearseItems("limousine") },
   orders: { title: "주문 관리", render: renderOrders },
   notices: { title: "알림 소식", render: renderNotices },
+  funeralForms: { title: "관련서식 관리", render: renderFuneralForms },
   inquiries: { title: "온라인 문의", render: renderInquiries },
   memorials: { title: "추모글 관리", render: renderMemorials },
 };
@@ -431,6 +433,22 @@ async function uploadImage(file) {
   if (res.status === 401) { location.href = ADMIN_LOGIN_URL; throw new Error("unauthorized"); }
   if (!res.ok) throw new Error((data && data.error) || "이미지 업로드에 실패했습니다.");
   return data.image;
+}
+
+async function uploadFormFile(formId, file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/forms/" + formId + "/file", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "X-Session-Scope": "admin" },
+    body: fd,
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (res.status === 401) { location.href = ADMIN_LOGIN_URL; throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error((data && data.error) || "파일 업로드에 실패했습니다.");
+  return data.form;
 }
 
 /* ---------- 대시보드 ---------- */
@@ -720,6 +738,109 @@ function noticeForm(n) {
       try {
         if (n) await api("/notices/" + n.id, { method: "PATCH", body });
         else await api("/notices", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+/* ---------- 관련서식 ---------- */
+async function renderFuneralForms() {
+  const d = await api("/forms/admin/all");
+  content.innerHTML = `
+    <p class="orders-lead">관련서식 파일(PDF·HWP·DOC·XLS·ZIP, 최대 15MB)은 MongoDB에 저장됩니다. 등록 후 상주 장례 예약·홈페이지 서식 자료실에서 다운로드할 수 있습니다.</p>
+    <div class="toolbar"><button class="btn btn-primary" id="addForm">+ 서식 등록</button></div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 서식이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>순서</th><th>서식명</th><th>파일</th><th>공개</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((f) => `
+          <tr>
+            <td>${f.sortOrder}</td>
+            <td><b>${esc(f.name)}</b>${f.description ? `<br><small class="muted">${esc(f.description)}</small>` : ""}</td>
+            <td class="nowrap">${f.hasFile
+              ? `<a href="${esc(f.downloadUrl)}" target="_blank" rel="noopener">${esc(f.filename || "다운로드")}</a>`
+              : '<span class="tag pending">미등록</span>'}</td>
+            <td>${f.active ? '<span class="tag free">공개</span>' : '<span class="tag gray">비공개</span>'}</td>
+            <td class="actions right">
+              <button class="btn btn-sm btn-primary" data-upload="${esc(f.id)}">파일</button>
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(f))}'>수정</button>
+              ${f.hasFile ? `<button class="btn btn-sm" data-rmfile="${esc(f.id)}">파일삭제</button>` : ""}
+              <button class="btn btn-sm btn-danger" data-del="${esc(f.id)}" data-name="${esc(f.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+
+  document.getElementById("addForm").addEventListener("click", () => funeralFormModal(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => funeralFormModal(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-upload]").forEach((b) =>
+    b.addEventListener("click", () => funeralFormUploadOnly(b.getAttribute("data-upload"))));
+  content.querySelectorAll("[data-rmfile]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("서식 파일", "첨부 파일", async () => {
+      await api("/forms/" + b.getAttribute("data-rmfile") + "/file", { method: "DELETE" });
+      toast("파일이 삭제되었습니다."); route();
+    })));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("관련서식", b.getAttribute("data-name"), async () => {
+      await api("/forms/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function funeralFormUploadOnly(formId) {
+  openModal("서식 파일 업로드", `
+    <div class="field">
+      <label>파일 *</label>
+      <input type="file" id="f_formfile" accept=".pdf,.hwp,.hwpx,.doc,.docx,.xls,.xlsx,.zip" />
+      <p class="muted" style="margin:8px 0 0;font-size:12px">PDF·HWP·DOC·XLS·ZIP (최대 15MB)</p>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "업로드", cls: "btn-primary", onClick: async () => {
+      const fileEl = document.getElementById("f_formfile");
+      if (!fileEl || !fileEl.files || !fileEl.files[0]) { toast("파일을 선택해 주세요."); return; }
+      try {
+        await uploadFormFile(formId, fileEl.files[0]);
+        closeModal(); toast("파일이 등록되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+function funeralFormModal(f) {
+  const e = f || {};
+  openModal(f ? "관련서식 수정" : "관련서식 등록", `
+    <div class="field-row">
+      <div class="field"><label>서식명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field" style="max-width:120px"><label>표시 순서</label><input type="number" id="f_sort" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><input id="f_desc" value="${esc(e.description || "")}" placeholder="용도 안내 (선택)" /></div>
+    <div class="field"><label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 공개 (다운로드 허용)</label></div>
+    ${f ? "" : `
+    <div class="field">
+      <label>파일 (선택)</label>
+      <input type="file" id="f_formfile" accept=".pdf,.hwp,.hwpx,.doc,.docx,.xls,.xlsx,.zip" />
+    </div>`}
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"),
+        description: val("f_desc"),
+        sortOrder: Number(val("f_sort")) || 0,
+        active: checked("f_active"),
+      };
+      if (!body.name) { toast("서식명을 입력해 주세요."); return; }
+      try {
+        let saved;
+        if (f) saved = (await api("/forms/" + f.id, { method: "PATCH", body })).form;
+        else saved = (await api("/forms", { method: "POST", body })).form;
+        const fileEl = document.getElementById("f_formfile");
+        if (fileEl && fileEl.files && fileEl.files[0]) {
+          await uploadFormFile(saved.id, fileEl.files[0]);
+        }
         closeModal(); toast("저장되었습니다."); route();
       } catch (err) { toast(err.message); }
     } },
