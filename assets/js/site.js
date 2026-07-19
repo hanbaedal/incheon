@@ -99,6 +99,7 @@
           ],
         },
         { key: "food", href: "pages/service/food.html", label: { ko: "접객 음식", zh: "待客餐饮", en: "Catering" } },
+        { key: "consumables", href: "pages/service/consumables.html", label: { ko: "공산품류", zh: "日用消费品", en: "Consumables" } },
         { key: "flower", href: "pages/service/flower.html", label: { ko: "근조 화환", zh: "花圈花篮", en: "Wreaths" } },
         { key: "photo", href: "pages/service/photo.html", label: { ko: "영정 사진", zh: "遗照制作", en: "Portrait Photo" } },
         { key: "dress", href: "pages/service/dress.html", label: { ko: "상복 대여", zh: "丧服租赁", en: "Mourning Attire" } },

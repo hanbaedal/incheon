@@ -494,3 +494,11 @@ p { margin: 0 0 1em; }
   display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px;
   background: #fdf3e0; color: #b8860b; font-size: 12px; font-weight: 600;
 }
+.service-prod-login-notice {
+  background: #fbf7ef; border: 1px solid #ecdcbf; border-radius: 12px; padding: 20px 22px;
+  text-align: center;
+}
+.service-prod-login-notice h3 { margin: 0 0 10px; color: var(--navy); font-size: 17px; }
+.service-prod-login-notice p { margin: 0 0 16px; color: var(--gray); font-size: 14px; line-height: 1.7; }
+.service-prod-reserve-hint { margin: 14px 0 0; font-size: 13px; color: var(--gray); }
+.service-prod-reserve-hint a { color: var(--gold); font-weight: 600; }

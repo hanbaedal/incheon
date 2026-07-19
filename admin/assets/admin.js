@@ -158,6 +158,7 @@ const CAT_KEYS = [
   { key: "shroud", label: "수의(壽衣)" },
   { key: "etc", label: "염습·부속 용품" },
   { key: "food", label: "접객 음식" },
+  { key: "consumables", label: "공산품류" },
   { key: "flower", label: "근조 화환" },
   { key: "photo", label: "영정 사진" },
   { key: "dress", label: "상복 대여" },
