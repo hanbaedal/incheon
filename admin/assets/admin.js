@@ -616,7 +616,10 @@ async function decideHallRequest(id, status) {
 async function renderCoffins() {
   const d = await api("/coffins/admin/all");
   content.innerHTML = `
-    <div class="toolbar"><button class="btn btn-primary" id="addCoffin">+ 관 등록</button></div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addCoffin">+ 관 등록</button>
+      <button class="btn" id="syncAmcCoffins">AMC 관 규격표 불러오기</button>
+    </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 관이 없습니다.</div>' : `
       <table class="grid">
@@ -639,6 +642,13 @@ async function renderCoffins() {
       </table>`}
     </div></div>`;
   document.getElementById("addCoffin").addEventListener("click", () => coffinForm(null));
+  document.getElementById("syncAmcCoffins").addEventListener("click", async () => {
+    try {
+      const d = await api("/coffins/admin/sync-amc", { method: "POST", body: {} });
+      toast(d.message || "AMC 관 규격표를 불러왔습니다.");
+      route();
+    } catch (err) { toast(err.message); }
+  });
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => coffinForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>

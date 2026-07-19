@@ -1,0 +1,27 @@
+"use strict";
+
+module.exports = [
+  { name: "명정", spec: "명주 100%", sortOrder: 1 },
+  { name: "관보", spec: "면/폴리", sortOrder: 2 },
+  { name: "결관포", spec: "소창 20마/필", sortOrder: 3 },
+  { name: "부의록", spec: "상품", sortOrder: 4 },
+  { name: "양초", spec: "초대", sortOrder: 5 },
+  { name: "예단특", spec: "1조(천)", sortOrder: 6 },
+  { name: "보공", spec: "10개묶음", sortOrder: 7 },
+  { name: "습신", spec: "본견", sortOrder: 8 },
+  { name: "위폐(향나무)", spec: "향나무", sortOrder: 9 },
+  { name: "한지", spec: "20매", sortOrder: 10 },
+  { name: "탈지면", spec: "50g", sortOrder: 11 },
+  { name: "완장", spec: "혼용사", sortOrder: 12 },
+  { name: "사진리본", spec: "검정", sortOrder: 13 },
+  { name: "베게", spec: "면", sortOrder: 14 },
+  { name: "장갑(장의용)", spec: "면", sortOrder: 15 },
+  { name: "근조리본", spec: "폴리", sortOrder: 16 },
+  { name: "칠성판", spec: "오동나무", sortOrder: 17 },
+  { name: "차량리본", spec: "1대분", sortOrder: 18 },
+  { name: "혼백", spec: "종이", sortOrder: 19 },
+  { name: "축문", spec: "책", sortOrder: 20 },
+  { name: "만복향", spec: "고급향", sortOrder: 21 },
+  { name: "염보", spec: "면/인견", sortOrder: 22 },
+  { name: "수시복건", spec: "공단/천연펄프", sortOrder: 23 },
+];
