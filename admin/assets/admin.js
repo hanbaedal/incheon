@@ -1564,7 +1564,7 @@ async function renderOrders() {
             <td>${tag(o.status)}</td>
             <td class="nowrap">${fmtDay(o.createdAt)}</td>
             <td class="actions">
-              ${o.family && o.family.id ? `<a class="btn btn-sm" href="/pages/member/doc.html?type=summary&familyUserId=${esc(o.family.id)}&from=admin" target="_blank">집계</a>` : ""}
+              ${o.family && o.family.id ? `<a class="btn btn-sm" href="/pages/member/doc.html?type=order&aggregate=1&familyUserId=${esc(o.family.id)}&from=admin" target="_blank">집계</a>` : ""}
               <button class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
             </td>
           </tr>`).join("")}</tbody>
@@ -1625,7 +1625,7 @@ function orderDetail(o) {
       </select>
     </div>
     <div class="toolbar" style="margin-top:8px">
-      ${o.family && o.family.id ? `<a class="btn btn-sm btn-primary" href="/pages/member/doc.html?type=summary&familyUserId=${o.family.id}&from=admin" target="_blank">발인 집계서</a>` : ""}
+      ${o.family && o.family.id ? `<a class="btn btn-sm btn-primary" href="/pages/member/doc.html?type=order&aggregate=1&familyUserId=${o.family.id}&from=admin" target="_blank">주문서 합계</a>` : ""}
       <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}&from=admin" target="_blank">주문서</a>
       <a class="btn btn-sm" href="/pages/member/doc.html?type=statement&id=${o.id}&from=admin" target="_blank">거래명세서</a>
       <a class="btn btn-sm" href="/pages/member/doc.html?type=tax&id=${o.id}&from=admin" target="_blank">세금계산서</a>

@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex" />
   <title>내 주문 | 상주 전용 서비스</title>
   <link rel="stylesheet" href="../../assets/css/member.css" />
+  <style id="docInlineStyle"></style>
 </head>
 <body>
   <header id="mHeader"></header>
@@ -13,13 +14,31 @@
     <h1 class="m-title">내 예약 내역</h1>
     <p class="m-lead">예약하신 내역과 처리 상태를 확인하실 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
     <div id="okBox"></div>
-    <div id="sumArea"></div>
     <div id="ordArea" class="card"><div class="state">주문 내역을 불러오는 중…</div></div>
   </div>
 
+  <div id="docModal" class="doc-modal-back" aria-hidden="true">
+    <div class="doc-modal" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
+      <div class="doc-modal-head">
+        <h3 id="docModalTitle">문서</h3>
+        <button type="button" class="doc-modal-x" id="docModalClose" aria-label="닫기">×</button>
+      </div>
+      <div class="doc-modal-body" id="docModalBody"></div>
+      <div class="doc-modal-foot">
+        <button type="button" class="btn" id="docModalClose2">닫기</button>
+        <button type="button" class="btn btn-primary" id="docModalPrint">인쇄</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../../assets/js/member.js"></script>
+  <script src="../../assets/js/order-doc.js"></script>
   <script>
+    document.getElementById("docInlineStyle").textContent = DOC_STYLES;
+
     let ME = null;
+    let SUMMARY = null;
+    let modalHtml = "";
 
     (async function () {
       ME = await memberHeader("orders");
@@ -30,25 +49,68 @@
         document.getElementById("okBox").innerHTML =
           `<div class="notice-box" style="background:#e8f5ee;border-color:#bfe2cd;color:#256b4c">예약이 정상 접수되었습니다. (예약번호 ${mEsc(ok)})</div>`;
       }
+      bindModal();
       await load();
     })();
 
+    function bindModal() {
+      const back = document.getElementById("docModal");
+      const close = () => {
+        back.classList.remove("open");
+        back.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      };
+      document.getElementById("docModalClose").addEventListener("click", close);
+      document.getElementById("docModalClose2").addEventListener("click", close);
+      back.addEventListener("click", (e) => { if (e.target === back) close(); });
+      document.getElementById("docModalPrint").addEventListener("click", () => {
+        printDocHtml(modalHtml, document.getElementById("docModalTitle").textContent);
+      });
+    }
+
+    function openDocModal(title, html) {
+      modalHtml = html;
+      document.getElementById("docModalTitle").textContent = title;
+      document.getElementById("docModalBody").innerHTML = html;
+      const back = document.getElementById("docModal");
+      back.classList.add("open");
+      back.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    async function showOrderDoc(orderId) {
+      const data = await mApi("/orders/" + orderId);
+      const html = buildOrderDocHtml(data.order, "order");
+      openDocModal("주문서 · " + data.order.orderNumber, html);
+    }
+
+    async function showAggregateDoc(type) {
+      if (!SUMMARY) SUMMARY = await mApi("/orders/mine/summary");
+      if (!SUMMARY.orderCount) {
+        mToast("집계할 주문이 없습니다.");
+        return;
+      }
+      const labels = { order: "주문서 합계", statement: "거래명세서", tax: "세금계산서" };
+      const html = buildAggregateDocHtml(SUMMARY, type);
+      openDocModal(labels[type] || "문서", html);
+    }
+
     async function load() {
       const area = document.getElementById("ordArea");
-      const sumArea = document.getElementById("sumArea");
       try {
         const [listRes, sumRes] = await Promise.all([
           mApi("/orders/mine"),
           mApi("/orders/mine/summary"),
         ]);
+        SUMMARY = sumRes;
         const items = listRes.items;
-        if (sumRes && sumRes.orderCount > 0) renderSummary(sumArea, sumRes);
-        else sumArea.innerHTML = "";
 
         if (items.length === 0) {
           area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">장례 예약하기 →</a></div>';
           return;
         }
+
+        const hasSummary = SUMMARY && SUMMARY.orderCount > 0;
         area.innerHTML = `
           <div class="card-head">건별 예약 내역</div>
           <div class="card-body" style="padding:0">
@@ -62,67 +124,41 @@
                 <td><span class="tag ${o.status}">${MEMBER_STATUS[o.status] || o.status}</span></td>
                 <td class="nowrap">${mFmtDay(o.createdAt)}</td>
                 <td class="right nowrap">
-                  <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}" target="_blank">주문서</a>
+                  <button type="button" class="btn btn-sm" data-order-id="${mEsc(o.id)}">주문서</button>
                 </td>
               </tr>`).join("")}</tbody>
-          </table></div>`;
+          </table>
+          ${hasSummary ? `
+          <div class="doc-actions">
+            <p class="doc-actions-lead">발인 정산 · 취소 제외 ${SUMMARY.orderCount}건 합계</p>
+            <div class="doc-actions-btns">
+              <button type="button" class="btn btn-primary" data-agg="order">주문서 합계</button>
+              <button type="button" class="btn" data-agg="statement">거래명세서</button>
+              <button type="button" class="btn" data-agg="tax">세금계산서</button>
+            </div>
+          </div>` : ""}
+          </div>`;
+
+        area.querySelectorAll("[data-order-id]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            try { await showOrderDoc(btn.getAttribute("data-order-id")); }
+            catch (e) { mToast(e.message); }
+            finally { btn.disabled = false; }
+          });
+        });
+
+        area.querySelectorAll("[data-agg]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            try { await showAggregateDoc(btn.getAttribute("data-agg")); }
+            catch (e) { mToast(e.message); }
+            finally { btn.disabled = false; }
+          });
+        });
       } catch (e) {
-        sumArea.innerHTML = "";
         area.innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
       }
-    }
-
-    function renderSummary(el, s) {
-      const hallLine = s.hall
-        ? `빈소 ${mEsc(s.hall.hallNumber)}${s.hall.deceasedName ? " · 故 " + mEsc(s.hall.deceasedName) : ""}`
-        : "";
-      const pending = s.summary.postpaidPending;
-      const pendingNote = pending.itemCount > 0
-        ? `<p class="muted" style="font-size:13px;margin-top:10px">사후정산 ${pending.itemCount}건(예약 ${pending.reservedQty}개)은 발인 전 관리자 정산 후 금액이 확정됩니다.</p>`
-        : "";
-
-      el.innerHTML = `
-        <div class="card summary-card">
-          <div class="card-head summary-head">
-            <div>
-              <div>발인 정산 집계</div>
-              ${hallLine ? `<div class="summary-sub">${hallLine}</div>` : ""}
-            </div>
-            <a class="btn btn-primary btn-sm" href="/pages/member/doc.html?type=summary" target="_blank">집계서 출력</a>
-          </div>
-          <div class="card-body">
-            <p class="summary-lead">취소 제외 주문 ${s.orderCount}건 · 발인 시 한 번에 정산할 품목 합계입니다.</p>
-            <table class="tbl">
-              <thead><tr>
-                <th>품목</th><th>구분</th><th class="right">수량</th><th class="right">단가</th>
-                <th class="right">공급가액</th><th class="right">세액</th><th class="right">합계</th>
-              </tr></thead>
-              <tbody>${s.items.map((row) => {
-                const qtyLabel = row.settlementType === "postpaid"
-                  ? (row.pending ? `${row.reservedQty} (미정산)` : row.settledQty)
-                  : row.reservedQty;
-                const tag = row.settlementType === "postpaid"
-                  ? (row.pending ? '<span class="tag pending">사후·미정산</span>' : '<span class="tag confirmed">사후·확정</span>')
-                  : '<span class="tag confirmed">선결제</span>';
-                return `<tr>
-                  <td>${mEsc(row.name)} <span class="muted" style="font-size:12px">(${mEsc(row.unit)})</span></td>
-                  <td class="nowrap">${tag}</td>
-                  <td class="right nowrap">${qtyLabel}</td>
-                  <td class="right nowrap">${won(row.price)}</td>
-                  <td class="right nowrap">${row.pending ? "-" : won(row.supplyAmount)}</td>
-                  <td class="right nowrap">${row.pending ? "-" : won(row.vatAmount)}</td>
-                  <td class="right nowrap">${row.pending ? "-" : won(row.totalAmount)}</td>
-                </tr>`;
-              }).join("")}</tbody>
-            </table>
-            <div class="cart-sum">
-              <div class="row"><span>선결제 합계</span><span>${won(s.summary.prepaid.total)}</span></div>
-              ${s.summary.postpaidSettled.total > 0 ? `<div class="row"><span>사후정산(확정)</span><span>${won(s.summary.postpaidSettled.total)}</span></div>` : ""}
-              <div class="row total"><span>현재 확정 합계</span><span>${won(s.summary.billable.total)}</span></div>
-            </div>
-            ${pendingNote}
-          </div>
-        </div>`;
     }
   </script>
 </body>

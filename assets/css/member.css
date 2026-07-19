@@ -124,11 +124,20 @@ a { color: inherit; text-decoration: none; }
 
 .state { text-align: center; color: var(--gray); padding: 40px 0; }
 .notice-box { background: #fbf7ef; border: 1px solid #ecdcbf; color: #6b5a2f; border-radius: 10px; padding: 12px 15px; font-size: 13.5px; margin-bottom: 18px; }
-.summary-card { margin-bottom: 18px; }
-.summary-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.summary-sub { font-size: 13px; font-weight: 500; color: var(--gray); margin-top: 4px; }
-.summary-lead { font-size: 13px; color: var(--gray); margin: 0 0 12px; }
 .muted { color: var(--gray); }
+
+/* 문서 모달 */
+.doc-modal-back { position: fixed; inset: 0; background: rgba(20,25,40,.55); display: none; place-items: center; z-index: 200; padding: 16px; }
+.doc-modal-back.open { display: grid; }
+.doc-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 920px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.2); }
+.doc-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.doc-modal-head h3 { margin: 0; font-size: 17px; color: var(--navy); }
+.doc-modal-x { background: none; border: none; font-size: 24px; color: var(--gray); line-height: 1; cursor: pointer; }
+.doc-modal-body { padding: 0; overflow: auto; background: #e9e8e4; }
+.doc-modal-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
+.doc-actions { padding: 18px; border-top: 1px solid var(--line); background: #fafbfc; }
+.doc-actions-lead { margin: 0 0 12px; font-size: 13px; color: var(--gray); }
+.doc-actions-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* 토스트 */
 .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
