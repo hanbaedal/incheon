@@ -135,6 +135,167 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   location.href = ADMIN_LOGIN_URL;
 });
 
+/* ---------- 네비게이션 (상단 메가 메뉴) ---------- */
+const NAV_MENU = [
+  { id: "dashboard", label: "대시보드", view: "dashboard" },
+  { id: "ops", label: "운영", badgeId: "navHallReqBadge",
+    items: [
+      { view: "halls", label: "빈소 관리" },
+      { view: "families", label: "상주 계정" },
+      { view: "hallRequests", label: "빈소 신청" },
+    ],
+  },
+  {
+    id: "goods", label: "장례 물품",
+    items: [
+      { view: "prodCoffin", label: "관" },
+      { view: "prodHoengdae", label: "횡대" },
+      { view: "prodShroud", label: "수의" },
+      { view: "prodAccessory", label: "부속물품" },
+    ],
+  },
+  {
+    id: "service", label: "접객·서비스",
+    groups: [
+      {
+        label: "접객 음식",
+        items: [
+          { view: "prodFoodMeal", label: "식사류" },
+          { view: "prodFoodAnju", label: "안주류" },
+          { view: "prodFoodTteok", label: "떡류" },
+          { view: "prodFoodFruit", label: "과일류" },
+          { view: "prodFoodJesa", label: "제사상" },
+          { view: "prodFoodBeverage", label: "식음료류" },
+          { view: "prodFoodConsumables", label: "공산품류" },
+        ],
+      },
+      {
+        label: "근조 화환",
+        items: [
+          { view: "prodFlowerAltar", label: "제단장식" },
+          { view: "prodFlowerBasket", label: "근조바구니" },
+          { view: "prodFlowerWreath", label: "조문용 조화" },
+          { view: "prodFlowerChrys", label: "헌화용 국화" },
+          { view: "prodFlowerCoffin", label: "관장식" },
+          { view: "prodFlowerVehicle", label: "차량장식" },
+        ],
+      },
+      {
+        label: "영정 사진",
+        items: [
+          { view: "prodPhotoPortrait", label: "영정" },
+          { view: "prodPhotoFrame", label: "액자" },
+          { view: "prodPhotoId", label: "증명사진" },
+          { view: "prodPhotoInstant", label: "즉석사진" },
+        ],
+      },
+      {
+        label: "상복·운구",
+        items: [
+          { view: "prodDress", label: "상복 대여" },
+          { view: "prodHearseCadillac", label: "캐딜락" },
+          { view: "prodHearseLimousine", label: "고급리무진" },
+        ],
+      },
+    ],
+  },
+  { id: "orders", label: "주문·정산", view: "orders", badgeId: "navOrderBadge" },
+  { id: "board", label: "게시·문의", badgeId: "navInqBadge",
+    items: [
+      { view: "notices", label: "알림 소식" },
+      { view: "inquiries", label: "온라인 문의" },
+      { view: "memorials", label: "추모글 관리" },
+    ],
+  },
+];
+
+function navFlatItems(sec) {
+  if (sec.items) return sec.items;
+  if (sec.groups) return sec.groups.flatMap((g) => g.items);
+  if (sec.view) return [{ view: sec.view, label: sec.label }];
+  return [];
+}
+
+function navSectionForView(viewKey) {
+  for (const sec of NAV_MENU) {
+    if (sec.view === viewKey) return sec;
+    if (navFlatItems(sec).some((it) => it.view === viewKey)) return sec;
+  }
+  return NAV_MENU[0];
+}
+
+function navDefaultView(sec) {
+  if (sec.view) return sec.view;
+  const flat = navFlatItems(sec);
+  return flat[0] ? flat[0].view : "dashboard";
+}
+
+function subNavLinkHtml(it, activeView) {
+  const badge = it.badgeId ? `<span class="nav-badge" id="${it.badgeId}"></span>` : "";
+  return `<a href="#${it.view}" class="${activeView === it.view ? "active" : ""}">${esc(it.label)}${badge}</a>`;
+}
+
+function renderSubNav(sec, activeView) {
+  const subNav = document.getElementById("subNav");
+  if (!sec || (sec.view && !sec.items && !sec.groups)) {
+    subNav.hidden = true;
+    subNav.innerHTML = "";
+    return;
+  }
+  if (sec.groups) {
+    subNav.innerHTML = sec.groups.map((g) => `
+      <div class="sub-nav-group">
+        <span class="sub-nav-label">${esc(g.label)}</span>
+        ${g.items.map((it) => subNavLinkHtml(it, activeView)).join("")}
+      </div>`).join("");
+    subNav.hidden = false;
+    return;
+  }
+  if (sec.items && sec.items.length > 0) {
+    subNav.innerHTML = `<div class="sub-nav-group">${sec.items.map((it) => subNavLinkHtml(it, activeView)).join("")}</div>`;
+    subNav.hidden = false;
+    return;
+  }
+  subNav.hidden = true;
+  subNav.innerHTML = "";
+}
+
+function syncNav(viewKey) {
+  const sec = navSectionForView(viewKey);
+  document.querySelectorAll(".main-nav-item").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-nav-id") === sec.id);
+  });
+  renderSubNav(sec, viewKey);
+}
+
+function initNav() {
+  const mainNav = document.getElementById("mainNav");
+  mainNav.innerHTML = NAV_MENU.map((sec) => {
+    const badge = sec.badgeId ? `<span class="nav-badge" id="${sec.badgeId}"></span>` : "";
+    return `<button type="button" class="main-nav-item" data-nav-id="${sec.id}">${esc(sec.label)}${badge}</button>`;
+  }).join("");
+  mainNav.querySelectorAll(".main-nav-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const sec = NAV_MENU.find((s) => s.id === btn.getAttribute("data-nav-id"));
+      if (!sec) return;
+      const target = navDefaultView(sec);
+      if (location.hash !== "#" + target) location.hash = target;
+      else syncNav(target);
+    });
+  });
+}
+
+function setNavBadge(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (count > 0) {
+    el.textContent = count;
+    el.classList.add("show");
+  } else {
+    el.classList.remove("show");
+  }
+}
+
 /* ---------- 라우터 ---------- */
 const VIEWS = {
   dashboard: { title: "대시보드", render: renderDashboard },
@@ -178,9 +339,7 @@ function currentView() {
 }
 async function route() {
   const key = currentView();
-  document.querySelectorAll("#sideNav a").forEach((a) => {
-    a.classList.toggle("active", a.getAttribute("data-view") === key);
-  });
+  syncNav(key);
   document.getElementById("viewTitle").textContent = VIEWS[key].title;
   content.innerHTML = '<div class="empty">불러오는 중…</div>';
   try { await VIEWS[key].render(); }
@@ -194,27 +353,21 @@ window.addEventListener("hashchange", route);
 async function refreshInquiryBadge() {
   try {
     const d = await api("/inquiries/admin/all?status=pending");
-    const badge = document.getElementById("navInqBadge");
-    if (d.items.length > 0) { badge.style.display = "grid"; badge.textContent = d.items.length; }
-    else badge.style.display = "none";
+    setNavBadge("navInqBadge", d.items.length);
   } catch (e) {}
 }
 
 async function refreshOrderBadge() {
   try {
     const d = await api("/orders/admin/all?status=pending");
-    const badge = document.getElementById("navOrderBadge");
-    if (d.items.length > 0) { badge.style.display = "grid"; badge.textContent = d.items.length; }
-    else badge.style.display = "none";
+    setNavBadge("navOrderBadge", d.items.length);
   } catch (e) {}
 }
 
 async function refreshHallReqBadge() {
   try {
     const d = await api("/hall-requests/admin/all?status=pending");
-    const badge = document.getElementById("navHallReqBadge");
-    if (d.items.length > 0) { badge.style.display = "grid"; badge.textContent = d.items.length; }
-    else badge.style.display = "none";
+    setNavBadge("navHallReqBadge", d.items.length);
   } catch (e) {}
 }
 
@@ -1791,5 +1944,6 @@ function confirmDelete(kind, name, onOk) {
 
 /* ---------- 시작 ---------- */
 (async function () {
+  initNav();
   if (await guard()) route();
 })();
