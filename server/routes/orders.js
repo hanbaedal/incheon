@@ -8,6 +8,10 @@ const Hoengdae = require("../models/Hoengdae");
 const Shroud = require("../models/Shroud");
 const Accessory = require("../models/Accessory");
 const FoodItem = require("../models/FoodItem");
+const FlowerItem = require("../models/FlowerItem");
+const PhotoItem = require("../models/PhotoItem");
+const DressItem = require("../models/DressItem");
+const HearseItem = require("../models/HearseItem");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
@@ -16,12 +20,16 @@ const { nextOrderNumber } = require("../utils/orderNumber");
 const router = express.Router();
 
 function resolveItemType(it) {
-  if (["coffin", "hoengdae", "shroud", "accessory", "foodItem"].includes(it.itemType)) return it.itemType;
+  if (["coffin", "hoengdae", "shroud", "accessory", "foodItem", "flowerItem", "photoItem", "dressItem", "hearseItem"].includes(it.itemType)) return it.itemType;
   if (it.coffinId) return "coffin";
   if (it.hoengdaeId) return "hoengdae";
   if (it.shroudId) return "shroud";
   if (it.accessoryId) return "accessory";
   if (it.foodItemId) return "foodItem";
+  if (it.flowerItemId) return "flowerItem";
+  if (it.photoItemId) return "photoItem";
+  if (it.dressItemId) return "dressItem";
+  if (it.hearseItemId) return "hearseItem";
   return "product";
 }
 
@@ -31,6 +39,10 @@ function resolveRefId(it, itemType) {
   if (itemType === "shroud") return it.itemRefId || it.shroudId;
   if (itemType === "accessory") return it.itemRefId || it.accessoryId;
   if (itemType === "foodItem") return it.itemRefId || it.foodItemId;
+  if (itemType === "flowerItem") return it.itemRefId || it.flowerItemId;
+  if (itemType === "photoItem") return it.itemRefId || it.photoItemId;
+  if (itemType === "dressItem") return it.itemRefId || it.dressItemId;
+  if (itemType === "hearseItem") return it.itemRefId || it.hearseItemId;
   return it.productId;
 }
 
@@ -83,6 +95,10 @@ router.post(
     const shroudIds = [];
     const accessoryIds = [];
     const foodItemIds = [];
+    const flowerItemIds = [];
+    const photoItemIds = [];
+    const dressItemIds = [];
+    const hearseItemIds = [];
     for (const it of items) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
@@ -92,16 +108,24 @@ router.post(
       else if (itemType === "shroud") shroudIds.push(refId);
       else if (itemType === "accessory") accessoryIds.push(refId);
       else if (itemType === "foodItem") foodItemIds.push(refId);
+      else if (itemType === "flowerItem") flowerItemIds.push(refId);
+      else if (itemType === "photoItem") photoItemIds.push(refId);
+      else if (itemType === "dressItem") dressItemIds.push(refId);
+      else if (itemType === "hearseItem") hearseItemIds.push(refId);
       else productIds.push(refId);
     }
 
-    const [products, coffins, hoengdaes, shrouds, accessories, foodItems] = await Promise.all([
+    const [products, coffins, hoengdaes, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems] = await Promise.all([
       productIds.length ? Product.find({ _id: { $in: productIds }, active: true }) : [],
       coffinIds.length ? Coffin.find({ _id: { $in: coffinIds }, active: true }) : [],
       hoengdaeIds.length ? Hoengdae.find({ _id: { $in: hoengdaeIds }, active: true }) : [],
       shroudIds.length ? Shroud.find({ _id: { $in: shroudIds }, active: true }) : [],
       accessoryIds.length ? Accessory.find({ _id: { $in: accessoryIds }, active: true }) : [],
       foodItemIds.length ? FoodItem.find({ _id: { $in: foodItemIds }, active: true }) : [],
+      flowerItemIds.length ? FlowerItem.find({ _id: { $in: flowerItemIds }, active: true }) : [],
+      photoItemIds.length ? PhotoItem.find({ _id: { $in: photoItemIds }, active: true }) : [],
+      dressItemIds.length ? DressItem.find({ _id: { $in: dressItemIds }, active: true }) : [],
+      hearseItemIds.length ? HearseItem.find({ _id: { $in: hearseItemIds }, active: true }) : [],
     ]);
     const productMap = new Map(products.map((p) => [String(p._id), p]));
     const coffinMap = new Map(coffins.map((c) => [String(c._id), c]));
@@ -109,6 +133,10 @@ router.post(
     const shroudMap = new Map(shrouds.map((s) => [String(s._id), s]));
     const accessoryMap = new Map(accessories.map((a) => [String(a._id), a]));
     const foodItemMap = new Map(foodItems.map((f) => [String(f._id), f]));
+    const flowerItemMap = new Map(flowerItems.map((f) => [String(f._id), f]));
+    const photoItemMap = new Map(photoItems.map((p) => [String(p._id), p]));
+    const dressItemMap = new Map(dressItems.map((d) => [String(d._id), d]));
+    const hearseItemMap = new Map(hearseItems.map((h) => [String(h._id), h]));
 
     const orderItems = [];
     for (const it of items) {
@@ -136,6 +164,22 @@ router.post(
         const f = foodItemMap.get(String(refId));
         if (!f) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 음식 품목이 포함되어 있습니다." });
         orderItems.push(orderItemFromFood(f, qty));
+      } else if (itemType === "flowerItem") {
+        const fl = flowerItemMap.get(String(refId));
+        if (!fl) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 화환 품목이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("flowerItem", fl, "flower", qty));
+      } else if (itemType === "photoItem") {
+        const ph = photoItemMap.get(String(refId));
+        if (!ph) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 사진 품목이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("photoItem", ph, "photo", qty));
+      } else if (itemType === "dressItem") {
+        const dr = dressItemMap.get(String(refId));
+        if (!dr) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상복 품목이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("dressItem", dr, "dress", qty));
+      } else if (itemType === "hearseItem") {
+        const hr = hearseItemMap.get(String(refId));
+        if (!hr) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 운구·차량 품목이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("hearseItem", hr, "hearse", qty));
       } else {
         const p = productMap.get(String(refId));
         if (!p) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상품이 포함되어 있습니다." });

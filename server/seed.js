@@ -19,12 +19,11 @@ async function seedProducts() {
     console.log(`- 상품 ${count}건 존재 (시드 건너뜀)`);
     return;
   }
-  const samples = [
-    { category: "근조 화환", catKey: "flower", name: "3단 근조화환", description: "조문객용 3단 근조화환", price: 90000, unit: "개", sortOrder: 1 },
-    { category: "영정 사진", catKey: "photo", name: "영정사진 (14R)", description: "고인 영정사진 제작 및 액자", price: 80000, unit: "점", sortOrder: 1 },
-    { category: "상복 대여", catKey: "dress", name: "남성 상복 대여", description: "상·하의 세트 대여", price: 30000, unit: "벌", sortOrder: 1 },
-    { category: "운구·차량", catKey: "hearse", name: "리무진 운구차", description: "발인 운구 리무진", price: 400000, unit: "대", sortOrder: 1 },
-  ];
+  const samples = [];
+  if (samples.length === 0) {
+    console.log("- 샘플 상품 없음 (시드 건너뜀)");
+    return;
+  }
   await Product.insertMany(samples);
   console.log(`+ 샘플 상품 ${samples.length}건 생성`);
 }
@@ -36,6 +35,10 @@ async function seedAmcCatalog() {
   console.log(`+ 수의 ${r.shrouds.total}건 (신규 ${r.shrouds.created})`);
   console.log(`+ 부속물품 ${r.accessories.total}건 (신규 ${r.accessories.created})`);
   console.log(`+ 접객 음식 ${r.foodItems.total}건 (신규 ${r.foodItems.created})`);
+  console.log(`+ 근조 화환 ${r.flowerItems.total}건 (신규 ${r.flowerItems.created})`);
+  console.log(`+ 영정 사진 ${r.photoItems.total}건 (신규 ${r.photoItems.created})`);
+  console.log(`+ 상복 대여 ${r.dressItems.total}건 (신규 ${r.dressItems.created})`);
+  console.log(`+ 운구·차량 ${r.hearseItems.total}건 (신규 ${r.hearseItems.created})`);
 }
 
 async function seedNotice() {

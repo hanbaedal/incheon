@@ -5,11 +5,19 @@ const Hoengdae = require("../models/Hoengdae");
 const Shroud = require("../models/Shroud");
 const Accessory = require("../models/Accessory");
 const FoodItem = require("../models/FoodItem");
+const FlowerItem = require("../models/FlowerItem");
+const PhotoItem = require("../models/PhotoItem");
+const DressItem = require("../models/DressItem");
+const HearseItem = require("../models/HearseItem");
 const COFFIN_SAMPLES = require("../constants/coffinSamples");
 const HOENGDAE_SAMPLES = require("../constants/hoengdaeSamples");
 const SHROUD_SAMPLES = require("../constants/shroudSamples");
 const ACCESSORY_SAMPLES = require("../constants/accessorySamples");
 const FOOD_SAMPLES = require("../constants/foodSamples");
+const FLOWER_SAMPLES = require("../constants/flowerSamples");
+const PHOTO_SAMPLES = require("../constants/photoSamples");
+const DRESS_SAMPLES = require("../constants/dressSamples");
+const HEARSE_SAMPLES = require("../constants/hearseSamples");
 const { upsertByName } = require("./catalogUpsert");
 
 const DEFAULTS = {
@@ -47,13 +55,124 @@ async function upsertFoodItems() {
   return { created, updated, total: FOOD_SAMPLES.length };
 }
 
+async function upsertFlowerItems() {
+  let created = 0;
+  let updated = 0;
+  for (const sample of FLOWER_SAMPLES) {
+    const unit = sample.unit || "개";
+    const setFields = {
+      flowerCategory: sample.flowerCategory,
+      name: sample.name,
+      spec: sample.spec || "",
+      description: sample.description || "",
+      sortOrder: sample.sortOrder || 0,
+      unit,
+    };
+    if (sample.price != null) setFields.price = sample.price;
+    const r = await FlowerItem.updateOne(
+      { flowerCategory: sample.flowerCategory, name: sample.name },
+      {
+        $set: setFields,
+        $setOnInsert: { active: true, taxable: true, price: sample.price != null ? sample.price : 0 },
+      },
+      { upsert: true, runValidators: true }
+    );
+    if (r.upsertedCount) created++;
+    else if (r.modifiedCount) updated++;
+  }
+  return { created, updated, total: FLOWER_SAMPLES.length };
+}
+
+async function upsertPhotoItems() {
+  let created = 0;
+  let updated = 0;
+  for (const sample of PHOTO_SAMPLES) {
+    const unit = sample.unit || "개";
+    const r = await PhotoItem.updateOne(
+      { photoCategory: sample.photoCategory, subGroup: sample.subGroup || "", name: sample.name },
+      {
+        $set: {
+          photoCategory: sample.photoCategory,
+          name: sample.name,
+          subGroup: sample.subGroup || "",
+          spec: sample.spec || "",
+          description: sample.description || "",
+          sortOrder: sample.sortOrder || 0,
+          unit,
+        },
+        $setOnInsert: { active: true, taxable: true, price: 0 },
+      },
+      { upsert: true, runValidators: true }
+    );
+    if (r.upsertedCount) created++;
+    else if (r.modifiedCount) updated++;
+  }
+  return { created, updated, total: PHOTO_SAMPLES.length };
+}
+
+async function upsertDressItems() {
+  let created = 0;
+  let updated = 0;
+  for (const sample of DRESS_SAMPLES) {
+    const unit = sample.unit || "1개";
+    const r = await DressItem.updateOne(
+      { dressCategory: sample.dressCategory, name: sample.name, spec: sample.spec || "" },
+      {
+        $set: {
+          dressCategory: sample.dressCategory,
+          name: sample.name,
+          spec: sample.spec || "",
+          description: sample.description || "",
+          sortOrder: sample.sortOrder || 0,
+          unit,
+        },
+        $setOnInsert: { active: true, taxable: true, price: 0 },
+      },
+      { upsert: true, runValidators: true }
+    );
+    if (r.upsertedCount) created++;
+    else if (r.modifiedCount) updated++;
+  }
+  return { created, updated, total: DRESS_SAMPLES.length };
+}
+
+async function upsertHearseItems() {
+  let created = 0;
+  let updated = 0;
+  for (const sample of HEARSE_SAMPLES) {
+    const unit = sample.unit || "1대";
+    const r = await HearseItem.updateOne(
+      { hearseCategory: sample.hearseCategory, name: sample.name, spec: sample.spec || "" },
+      {
+        $set: {
+          hearseCategory: sample.hearseCategory,
+          name: sample.name,
+          spec: sample.spec || "",
+          description: sample.description || "",
+          sortOrder: sample.sortOrder || 0,
+          unit,
+        },
+        $setOnInsert: { active: true, taxable: true, price: 0 },
+      },
+      { upsert: true, runValidators: true }
+    );
+    if (r.upsertedCount) created++;
+    else if (r.modifiedCount) updated++;
+  }
+  return { created, updated, total: HEARSE_SAMPLES.length };
+}
+
 async function ensureAmcCatalog() {
   const coffins = await upsertByName(Coffin, COFFIN_SAMPLES, DEFAULTS.coffin);
   const hoengdae = await upsertByName(Hoengdae, HOENGDAE_SAMPLES, DEFAULTS.hoengdae);
   const shrouds = await upsertByName(Shroud, SHROUD_SAMPLES, DEFAULTS.shroud);
   const accessories = await upsertByName(Accessory, ACCESSORY_SAMPLES, DEFAULTS.accessory);
   const foodItems = await upsertFoodItems();
-  return { coffins, hoengdae, shrouds, accessories, foodItems };
+  const flowerItems = await upsertFlowerItems();
+  const photoItems = await upsertPhotoItems();
+  const dressItems = await upsertDressItems();
+  const hearseItems = await upsertHearseItems();
+  return { coffins, hoengdae, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems };
 }
 
-module.exports = { ensureAmcCatalog, upsertByName, upsertFoodItems };
+module.exports = { ensureAmcCatalog, upsertByName, upsertFoodItems, upsertFlowerItems, upsertPhotoItems, upsertDressItems, upsertHearseItems };

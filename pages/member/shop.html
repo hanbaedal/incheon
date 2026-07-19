@@ -37,7 +37,15 @@
     let SHROUDS = [];
     let ACCESSORIES = [];
     let FOOD_ITEMS = [];
+    let FLOWER_ITEMS = [];
+    let PHOTO_ITEMS = [];
+    let DRESS_ITEMS = [];
+    let HEARSE_ITEMS = [];
     let ACTIVE_FOOD_CAT = "meal";
+    let ACTIVE_FLOWER_CAT = "altar";
+    let ACTIVE_PHOTO_CAT = "portrait";
+    let ACTIVE_DRESS_CAT = "women";
+    let ACTIVE_HEARSE_CAT = "cadillac";
     const FOOD_SUB_CATS = [
       { key: "meal", label: "식사류" },
       { key: "anju", label: "안주류" },
@@ -46,6 +54,33 @@
       { key: "jesa", label: "제사상" },
       { key: "beverage", label: "식음료류" },
       { key: "consumables", label: "공산품류" },
+    ];
+    const FLOWER_SUB_CATS = [
+      { key: "altar", label: "제단장식" },
+      { key: "basket", label: "근조바구니" },
+      { key: "wreath", label: "조문용 조화" },
+      { key: "chrysanthemum", label: "헌화용 국화" },
+      { key: "coffin", label: "관장식" },
+      { key: "vehicle", label: "차량장식" },
+    ];
+    const PHOTO_SUB_CATS = [
+      { key: "portrait", label: "영정" },
+      { key: "frame", label: "액자" },
+      { key: "idphoto", label: "증명사진" },
+      { key: "instant", label: "즉석사진" },
+    ];
+    const DRESS_SUB_CATS = [
+      { key: "women", label: "여성예복" },
+      { key: "shirt", label: "와이셔츠" },
+      { key: "belt", label: "벨트" },
+      { key: "socks", label: "양말" },
+      { key: "shoes", label: "구두" },
+      { key: "tie", label: "넥타이" },
+      { key: "undershirt", label: "런닝셔츠" },
+    ];
+    const HEARSE_SUB_CATS = [
+      { key: "cadillac", label: "캐딜락" },
+      { key: "limousine", label: "고급리무진" },
     ];
     let ACTIVE_CAT = "hall";
     let HALLS = [];
@@ -57,13 +92,17 @@
       if (!ME) return;
       renderTabs();
       try {
-        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes] = await Promise.all([
+        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes] = await Promise.all([
           mApi("/products"),
           mApi("/coffins"),
           mApi("/hoengdae"),
           mApi("/shrouds"),
           mApi("/accessories"),
           mApi("/food-items"),
+          mApi("/flower-items"),
+          mApi("/photo-items"),
+          mApi("/dress-items"),
+          mApi("/hearse-items"),
         ]);
         PRODUCTS = prodRes.items;
         COFFINS = coffinRes.items;
@@ -71,6 +110,10 @@
         SHROUDS = shroudRes.items;
         ACCESSORIES = accessoryRes.items;
         FOOD_ITEMS = foodRes.items;
+        FLOWER_ITEMS = flowerRes.items;
+        PHOTO_ITEMS = photoRes.items;
+        DRESS_ITEMS = dressRes.items;
+        HEARSE_ITEMS = hearseRes.items;
         await loadHallData();
         renderMain();
       } catch (e) {
@@ -87,6 +130,10 @@
         b.addEventListener("click", () => {
           ACTIVE_CAT = b.getAttribute("data-cat");
           if (ACTIVE_CAT === "food") ACTIVE_FOOD_CAT = "meal";
+          if (ACTIVE_CAT === "flower") ACTIVE_FLOWER_CAT = "altar";
+          if (ACTIVE_CAT === "photo") ACTIVE_PHOTO_CAT = "portrait";
+          if (ACTIVE_CAT === "dress") ACTIVE_DRESS_CAT = "women";
+          if (ACTIVE_CAT === "hearse") ACTIVE_HEARSE_CAT = "cadillac";
           renderTabs(); renderMain();
         }));
     }
@@ -111,6 +158,10 @@
       if (type === "shroud") return SHROUDS.find((x) => x.id === id);
       if (type === "accessory") return ACCESSORIES.find((x) => x.id === id);
       if (type === "foodItem") return FOOD_ITEMS.find((x) => x.id === id);
+      if (type === "flowerItem") return FLOWER_ITEMS.find((x) => x.id === id);
+      if (type === "photoItem") return PHOTO_ITEMS.find((x) => x.id === id);
+      if (type === "dressItem") return DRESS_ITEMS.find((x) => x.id === id);
+      if (type === "hearseItem") return HEARSE_ITEMS.find((x) => x.id === id);
       return PRODUCTS.find((x) => x.id === id);
     }
 
@@ -286,6 +337,147 @@
         return;
       }
 
+      if (ACTIVE_CAT === "flower") {
+        const items = FLOWER_ITEMS.filter((f) => f.flowerCategory === ACTIVE_FLOWER_CAT);
+        const sub = FLOWER_SUB_CATS.find((c) => c.key === ACTIVE_FLOWER_CAT);
+        let html = `<div class="card-head">근조 화환 · ${mEsc(sub ? sub.label : ACTIVE_FLOWER_CAT)}</div><div class="card-body">`;
+        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += FLOWER_SUB_CATS.map((c) =>
+          `<button type="button" class="reserve-tab ${c.key === ACTIVE_FLOWER_CAT ? "active" : ""}" data-flcat="${c.key}">${mEsc(c.label)}</button>`
+        ).join("");
+        html += "</div>";
+        if (items.length === 0) {
+          html += '<div class="state">등록된 품목이 없습니다.</div>';
+        } else {
+          html += '<div class="prod-grid">';
+          items.forEach((f) => {
+            html += `
+              <div class="prod-card">
+                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                <div class="prod-card-body">
+                  <b>${mEsc(f.name)}</b>
+                  <small>${mEsc(f.description) || "&nbsp;"}</small>
+                  <div class="prod-meta"><span class="price">${won(f.price)} / ${mEsc(f.unit)}</span></div>
+                  <button class="btn btn-sm btn-primary" data-add="flowerItem:${f.id}">담기</button>
+                </div>
+              </div>`;
+          });
+          html += "</div>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-flcat]").forEach((b) =>
+          b.addEventListener("click", () => { ACTIVE_FLOWER_CAT = b.getAttribute("data-flcat"); renderMain(); }));
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
+      if (ACTIVE_CAT === "photo") {
+        const items = PHOTO_ITEMS.filter((p) => p.photoCategory === ACTIVE_PHOTO_CAT);
+        const sub = PHOTO_SUB_CATS.find((c) => c.key === ACTIVE_PHOTO_CAT);
+        let html = `<div class="card-head">영정 사진 · ${mEsc(sub ? sub.label : ACTIVE_PHOTO_CAT)}</div><div class="card-body">`;
+        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += PHOTO_SUB_CATS.map((c) =>
+          `<button type="button" class="reserve-tab ${c.key === ACTIVE_PHOTO_CAT ? "active" : ""}" data-phcat="${c.key}">${mEsc(c.label)}</button>`
+        ).join("");
+        html += "</div>";
+        if (items.length === 0) {
+          html += '<div class="state">등록된 품목이 없습니다.</div>';
+        } else {
+          html += '<div class="prod-grid">';
+          items.forEach((p) => {
+            const label = p.subGroup ? `${p.subGroup} ${p.name}` : p.name;
+            html += `
+              <div class="prod-card">
+                ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                <div class="prod-card-body">
+                  <b>${mEsc(label)}</b>
+                  <small>${mEsc(p.spec || p.description || "&nbsp;")}</small>
+                  <div class="prod-meta"><span class="price">${won(p.price)} / ${mEsc(p.unit)}</span></div>
+                  <button class="btn btn-sm btn-primary" data-add="photoItem:${p.id}">담기</button>
+                </div>
+              </div>`;
+          });
+          html += "</div>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-phcat]").forEach((b) =>
+          b.addEventListener("click", () => { ACTIVE_PHOTO_CAT = b.getAttribute("data-phcat"); renderMain(); }));
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
+      if (ACTIVE_CAT === "dress") {
+        const items = DRESS_ITEMS.filter((d) => d.dressCategory === ACTIVE_DRESS_CAT);
+        const sub = DRESS_SUB_CATS.find((c) => c.key === ACTIVE_DRESS_CAT);
+        let html = `<div class="card-head">상복 대여 · ${mEsc(sub ? sub.label : ACTIVE_DRESS_CAT)}</div><div class="card-body">`;
+        html += '<div class="reserve-tabs" style="margin-bottom:14px;flex-wrap:wrap">';
+        html += DRESS_SUB_CATS.map((c) =>
+          `<button type="button" class="reserve-tab ${c.key === ACTIVE_DRESS_CAT ? "active" : ""}" data-drcat="${c.key}">${mEsc(c.label)}</button>`
+        ).join("");
+        html += "</div>";
+        if (items.length === 0) {
+          html += '<div class="state">등록된 품목이 없습니다.</div>';
+        } else {
+          html += '<table class="tbl" style="width:100%"><thead><tr><th>품목</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          items.forEach((d) => {
+            html += `
+              <tr>
+                <th>${mEsc(d.name)}</th>
+                <td>${mEsc(d.spec || "-")}</td>
+                <td>${mEsc(d.unit || "1개")}</td>
+                <td class="nowrap">${won(d.price)}</td>
+                <td><button class="btn btn-sm btn-primary" data-add="dressItem:${d.id}">담기</button></td>
+              </tr>`;
+          });
+          html += "</tbody></table>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-drcat]").forEach((b) =>
+          b.addEventListener("click", () => { ACTIVE_DRESS_CAT = b.getAttribute("data-drcat"); renderMain(); }));
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
+      if (ACTIVE_CAT === "hearse") {
+        const items = HEARSE_ITEMS.filter((h) => h.hearseCategory === ACTIVE_HEARSE_CAT);
+        const sub = HEARSE_SUB_CATS.find((c) => c.key === ACTIVE_HEARSE_CAT);
+        let html = `<div class="card-head">운구·차량 · ${mEsc(sub ? sub.label : ACTIVE_HEARSE_CAT)}</div><div class="card-body">`;
+        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += HEARSE_SUB_CATS.map((c) =>
+          `<button type="button" class="reserve-tab ${c.key === ACTIVE_HEARSE_CAT ? "active" : ""}" data-hrcat="${c.key}">${mEsc(c.label)}</button>`
+        ).join("");
+        html += "</div>";
+        if (items.length === 0) {
+          html += '<div class="state">등록된 차량이 없습니다.</div>';
+        } else {
+          html += '<table class="tbl" style="width:100%"><thead><tr><th>차량</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          items.forEach((h) => {
+            html += `
+              <tr>
+                <th>${mEsc(h.name)}</th>
+                <td>${mEsc(h.spec || "-")}</td>
+                <td>${mEsc(h.unit || "1대")}</td>
+                <td class="nowrap">${won(h.price)}</td>
+                <td><button class="btn btn-sm btn-primary" data-add="hearseItem:${h.id}">담기</button></td>
+              </tr>`;
+          });
+          html += "</tbody></table>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-hrcat]").forEach((b) =>
+          b.addEventListener("click", () => { ACTIVE_HEARSE_CAT = b.getAttribute("data-hrcat"); renderMain(); }));
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
       const items = PRODUCTS.filter((p) => p.catKey === ACTIVE_CAT);
       const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
       let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
@@ -383,6 +575,10 @@
         if (type === "shroud") return { itemType: "shroud", itemRefId: id, qty };
         if (type === "accessory") return { itemType: "accessory", itemRefId: id, qty };
         if (type === "foodItem") return { itemType: "foodItem", itemRefId: id, qty };
+        if (type === "flowerItem") return { itemType: "flowerItem", itemRefId: id, qty };
+        if (type === "photoItem") return { itemType: "photoItem", itemRefId: id, qty };
+        if (type === "dressItem") return { itemType: "dressItem", itemRefId: id, qty };
+        if (type === "hearseItem") return { itemType: "hearseItem", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
       const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";

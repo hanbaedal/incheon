@@ -107,10 +107,25 @@ const VIEWS = {
   prodFoodJesa: { title: "제사상 관리", render: () => renderFoodItems("jesa") },
   prodFoodBeverage: { title: "식음료류 관리", render: () => renderFoodItems("beverage") },
   prodFoodConsumables: { title: "공산품류 관리", render: () => renderFoodItems("consumables") },
-  prodFlower: { title: "근조 화환 관리", render: () => renderProductsByCat("flower") },
-  prodPhoto: { title: "영정 사진 관리", render: () => renderProductsByCat("photo") },
-  prodDress: { title: "상복 대여 관리", render: () => renderProductsByCat("dress") },
-  prodHearse: { title: "운구·차량 관리", render: () => renderProductsByCat("hearse") },
+  prodFlowerAltar: { title: "제단장식 관리", render: () => renderFlowerItems("altar") },
+  prodFlowerBasket: { title: "근조바구니 관리", render: () => renderFlowerItems("basket") },
+  prodFlowerWreath: { title: "조문용 조화 관리", render: () => renderFlowerItems("wreath") },
+  prodFlowerChrys: { title: "헌화용 국화 관리", render: () => renderFlowerItems("chrysanthemum") },
+  prodFlowerCoffin: { title: "관장식 관리", render: () => renderFlowerItems("coffin") },
+  prodFlowerVehicle: { title: "차량장식 관리", render: () => renderFlowerItems("vehicle") },
+  prodPhotoPortrait: { title: "영정 관리", render: () => renderPhotoItems("portrait") },
+  prodPhotoFrame: { title: "액자 관리", render: () => renderPhotoItems("frame") },
+  prodPhotoId: { title: "증명사진 관리", render: () => renderPhotoItems("idphoto") },
+  prodPhotoInstant: { title: "즉석사진 관리", render: () => renderPhotoItems("instant") },
+  prodDressWomen: { title: "여성예복 관리", render: () => renderDressItems("women") },
+  prodDressShirt: { title: "와이셔츠 관리", render: () => renderDressItems("shirt") },
+  prodDressBelt: { title: "벨트 관리", render: () => renderDressItems("belt") },
+  prodDressSocks: { title: "양말 관리", render: () => renderDressItems("socks") },
+  prodDressShoes: { title: "구두 관리", render: () => renderDressItems("shoes") },
+  prodDressTie: { title: "넥타이 관리", render: () => renderDressItems("tie") },
+  prodDressUndershirt: { title: "런닝셔츠 관리", render: () => renderDressItems("undershirt") },
+  prodHearseCadillac: { title: "캐딜락 관리", render: () => renderHearseItems("cadillac") },
+  prodHearseLimousine: { title: "고급리무진 관리", render: () => renderHearseItems("limousine") },
   orders: { title: "주문 관리", render: renderOrders },
   notices: { title: "알림 소식", render: renderNotices },
   inquiries: { title: "온라인 문의", render: renderInquiries },
@@ -167,25 +182,26 @@ async function refreshHallReqBadge() {
 /* 금액 표시 */
 function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
 
-const CAT_KEYS = [
-  { key: "flower", label: "근조 화환" },
-  { key: "photo", label: "영정 사진" },
-  { key: "dress", label: "상복 대여" },
-  { key: "hearse", label: "운구·차량" },
-];
-const PRODUCT_SPEC_FIELDS = {
-  flower: [{ key: "size", label: "단수/크기" }],
-  photo: [{ key: "size", label: "액자 규격" }],
-  dress: [
-    { key: "gender", label: "남/여" },
-    { key: "size", label: "사이즈" },
-  ],
-  hearse: [{ key: "vehicle", label: "차량 종류" }],
-};
+const CAT_KEYS = [];
+const PRODUCT_SPEC_FIELDS = {};
 const SETTLEMENT_LABELS = { prepaid: "선결제", postpaid: "사후정산" };
 const FOOD_CATEGORY_LABELS = {
   meal: "식사류", anju: "안주류", tteok: "떡류", fruit: "과일류",
   jesa: "제사상", beverage: "식음료류", consumables: "공산품류",
+};
+const FLOWER_CATEGORY_LABELS = {
+  altar: "제단장식", basket: "근조바구니", wreath: "조문용 조화",
+  chrysanthemum: "헌화용 국화", coffin: "관장식", vehicle: "차량장식",
+};
+const PHOTO_CATEGORY_LABELS = {
+  portrait: "영정", frame: "액자", idphoto: "증명사진", instant: "즉석사진",
+};
+const DRESS_CATEGORY_LABELS = {
+  women: "여성예복", shirt: "와이셔츠", belt: "벨트", socks: "양말",
+  shoes: "구두", tie: "넥타이", undershirt: "런닝셔츠",
+};
+const HEARSE_CATEGORY_LABELS = {
+  cadillac: "캐딜락", limousine: "고급리무진",
 };
 
 async function uploadImage(file) {
@@ -1068,6 +1084,387 @@ function foodItemForm(f, foodCategory) {
       try {
         if (f) await api("/food-items/" + f.id, { method: "PATCH", body });
         else await api("/food-items", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderFlowerItems(flowerCategory) {
+  const label = FLOWER_CATEGORY_LABELS[flowerCategory] || flowerCategory;
+  const d = await api("/flower-items/admin/all?flowerCategory=" + encodeURIComponent(flowerCategory));
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addFlower">+ ${esc(label)} 등록</button>
+      ${flowerCategory === "altar" ? '<button class="btn" id="syncAmcFlower">AMC 화원표 불러오기</button>' : ""}
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품명</th><th>규격</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((f) => `
+          <tr>
+            <td><b>${esc(f.name)}</b>${f.imageUrl ? `<br><img src="${esc(f.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="nowrap">${esc(f.spec || "-")}</td>
+            <td class="right nowrap">${won(f.price)} / ${esc(f.unit)}</td>
+            <td>${f.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(f))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${f.id}" data-name="${esc(f.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addFlower").addEventListener("click", () => flowerItemForm(null, flowerCategory));
+  const syncBtn = document.getElementById("syncAmcFlower");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      try {
+        const r = await api("/flower-items/admin/sync-amc", { method: "POST", body: {} });
+        toast(r.message || "AMC 화원표를 불러왔습니다.");
+        route();
+      } catch (err) { toast(err.message); }
+    });
+  }
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => flowerItemForm(JSON.parse(b.getAttribute("data-edit")), flowerCategory)));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+      await api("/flower-items/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function flowerItemForm(f, flowerCategory) {
+  const e = f || {};
+  const cat = flowerCategory || e.flowerCategory || "altar";
+  const label = FLOWER_CATEGORY_LABELS[cat] || cat;
+  openModal(f ? label + " 수정" : label + " 등록", `
+    <input type="hidden" id="f_flowerCategory" value="${esc(cat)}" />
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" placeholder="예: 5호" /></div>
+      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        flowerCategory: val("f_flowerCategory"), name: val("f_name"), spec: val("f_spec"),
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (f && f.imageId) body.imageId = f.imageId;
+      try {
+        if (f) await api("/flower-items/" + f.id, { method: "PATCH", body });
+        else await api("/flower-items", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderPhotoItems(photoCategory) {
+  const label = PHOTO_CATEGORY_LABELS[photoCategory] || photoCategory;
+  const d = await api("/photo-items/admin/all?photoCategory=" + encodeURIComponent(photoCategory));
+  const showSubGroup = photoCategory === "portrait" || photoCategory === "frame";
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addPhoto">+ ${esc(label)} 등록</button>
+      ${photoCategory === "portrait" ? '<button class="btn" id="syncAmcPhoto">AMC 사진실표 불러오기</button>' : ""}
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품명</th>${showSubGroup ? "<th>구분</th>" : ""}<th>규격</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((p) => `
+          <tr>
+            <td><b>${esc(p.name)}</b>${p.imageUrl ? `<br><img src="${esc(p.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            ${showSubGroup ? `<td class="nowrap">${esc(p.subGroup || "-")}</td>` : ""}
+            <td class="nowrap">${esc(p.spec || p.name)}</td>
+            <td class="right nowrap">${won(p.price)} / ${esc(p.unit)}</td>
+            <td>${p.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(p))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${p.id}" data-name="${esc(p.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addPhoto").addEventListener("click", () => photoItemForm(null, photoCategory));
+  const syncBtn = document.getElementById("syncAmcPhoto");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      try {
+        const r = await api("/photo-items/admin/sync-amc", { method: "POST", body: {} });
+        toast(r.message || "AMC 사진실표를 불러왔습니다.");
+        route();
+      } catch (err) { toast(err.message); }
+    });
+  }
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => photoItemForm(JSON.parse(b.getAttribute("data-edit")), photoCategory)));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+      await api("/photo-items/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function photoItemForm(p, photoCategory) {
+  const e = p || {};
+  const cat = photoCategory || e.photoCategory || "portrait";
+  const label = PHOTO_CATEGORY_LABELS[cat] || cat;
+  openModal(p ? label + " 수정" : label + " 등록", `
+    <input type="hidden" id="f_photoCategory" value="${esc(cat)}" />
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" placeholder="예: 8×10" /></div>
+      <div class="field"><label>구분</label><input id="f_subGroup" value="${esc(e.subGroup || "")}" placeholder="칼라/액자, 원목액자 등" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" placeholder="3×4cm 등" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        photoCategory: val("f_photoCategory"), name: val("f_name"), subGroup: val("f_subGroup"),
+        spec: val("f_spec"), price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (p && p.imageId) body.imageId = p.imageId;
+      try {
+        if (p) await api("/photo-items/" + p.id, { method: "PATCH", body });
+        else await api("/photo-items", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderDressItems(dressCategory) {
+  const label = DRESS_CATEGORY_LABELS[dressCategory] || dressCategory;
+  const d = await api("/dress-items/admin/all?dressCategory=" + encodeURIComponent(dressCategory));
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addDress">+ ${esc(label)} 등록</button>
+      ${dressCategory === "women" ? '<button class="btn" id="syncAmcDress">AMC 예복표 불러오기</button>' : ""}
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품목</th><th>규격</th><th>수량</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((it) => `
+          <tr>
+            <td><b>${esc(it.name)}</b>${it.imageUrl ? `<br><img src="${esc(it.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="nowrap">${esc(it.spec || "-")}</td>
+            <td class="nowrap">${esc(it.unit)}</td>
+            <td class="right nowrap">${won(it.price)}</td>
+            <td>${it.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(it))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${it.id}" data-name="${esc(it.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addDress").addEventListener("click", () => dressItemForm(null, dressCategory));
+  const syncBtn = document.getElementById("syncAmcDress");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      try {
+        const r = await api("/dress-items/admin/sync-amc", { method: "POST", body: {} });
+        toast(r.message || "AMC 예복표를 불러왔습니다.");
+        route();
+      } catch (err) { toast(err.message); }
+    });
+  }
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => dressItemForm(JSON.parse(b.getAttribute("data-edit")), dressCategory)));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+      await api("/dress-items/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function dressItemForm(it, dressCategory) {
+  const e = it || {};
+  const cat = dressCategory || e.dressCategory || "women";
+  const label = DRESS_CATEGORY_LABELS[cat] || cat;
+  openModal(it ? label + " 수정" : label + " 등록", `
+    <input type="hidden" id="f_dressCategory" value="${esc(cat)}" />
+    <div class="field-row">
+      <div class="field"><label>품목 *</label><input id="f_name" value="${esc(e.name || label)}" /></div>
+      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" placeholder="치수별, 95~110 등" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>수량(단위)</label><input id="f_unit" value="${esc(e.unit || "1벌")}" placeholder="1벌, 1켤레, 1개" /></div>
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        dressCategory: val("f_dressCategory"), name: val("f_name"), spec: val("f_spec"),
+        unit: val("f_unit") || "1개", price: Number(val("f_price")) || 0,
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품목을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (it && it.imageId) body.imageId = it.imageId;
+      try {
+        if (it) await api("/dress-items/" + it.id, { method: "PATCH", body });
+        else await api("/dress-items", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderHearseItems(hearseCategory) {
+  const label = HEARSE_CATEGORY_LABELS[hearseCategory] || hearseCategory;
+  const d = await api("/hearse-items/admin/all?hearseCategory=" + encodeURIComponent(hearseCategory));
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addHearse">+ ${esc(label)} 등록</button>
+      ${hearseCategory === "cadillac" ? '<button class="btn" id="syncAmcHearse">AMC 운구차표 불러오기</button>' : ""}
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 차량이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>차량</th><th>규격</th><th>수량</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((it) => `
+          <tr>
+            <td><b>${esc(it.name)}</b>${it.imageUrl ? `<br><img src="${esc(it.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="nowrap">${esc(it.spec || "-")}</td>
+            <td class="nowrap">${esc(it.unit)}</td>
+            <td class="right nowrap">${won(it.price)}</td>
+            <td>${it.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(it))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${it.id}" data-name="${esc(it.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addHearse").addEventListener("click", () => hearseItemForm(null, hearseCategory));
+  const syncBtn = document.getElementById("syncAmcHearse");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      try {
+        const r = await api("/hearse-items/admin/sync-amc", { method: "POST", body: {} });
+        toast(r.message || "AMC 운구차표를 불러왔습니다.");
+        route();
+      } catch (err) { toast(err.message); }
+    });
+  }
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => hearseItemForm(JSON.parse(b.getAttribute("data-edit")), hearseCategory)));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+      await api("/hearse-items/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function hearseItemForm(it, hearseCategory) {
+  const e = it || {};
+  const cat = hearseCategory || e.hearseCategory || "cadillac";
+  const label = HEARSE_CATEGORY_LABELS[cat] || cat;
+  openModal(it ? label + " 수정" : label + " 등록", `
+    <input type="hidden" id="f_hearseCategory" value="${esc(cat)}" />
+    <div class="field-row">
+      <div class="field"><label>차량명 *</label><input id="f_name" value="${esc(e.name || label)}" /></div>
+      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" placeholder="운구 + 동승 2~3인 등" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>수량(단위)</label><input id="f_unit" value="${esc(e.unit || "1대")}" placeholder="1대" /></div>
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        hearseCategory: val("f_hearseCategory"), name: val("f_name"), spec: val("f_spec"),
+        unit: val("f_unit") || "1대", price: Number(val("f_price")) || 0,
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("차량명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (it && it.imageId) body.imageId = it.imageId;
+      try {
+        if (it) await api("/hearse-items/" + it.id, { method: "PATCH", body });
+        else await api("/hearse-items", { method: "POST", body });
         closeModal(); toast("저장되었습니다."); route();
       } catch (err) { toast(err.message); }
     } },

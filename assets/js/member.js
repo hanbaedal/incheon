@@ -46,10 +46,10 @@ const RESERVE_CATS = [
   { key: "shroud", label: "장례 물품 · 수의", type: "shroud" },
   { key: "etc", label: "장례 물품 · 부속물품", type: "accessory" },
   { key: "food", label: "접객 음식", type: "food" },
-  { key: "flower", label: "근조 화환", type: "product" },
-  { key: "photo", label: "영정 사진", type: "product" },
-  { key: "dress", label: "상복 대여", type: "product" },
-  { key: "hearse", label: "운구·차량", type: "product" },
+  { key: "flower", label: "근조 화환", type: "flower" },
+  { key: "photo", label: "영정 사진", type: "photo" },
+  { key: "dress", label: "상복 대여", type: "dress" },
+  { key: "hearse", label: "운구·차량", type: "hearse" },
 ];
 
 /* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' */

@@ -180,6 +180,22 @@
     meal: "식사류", anju: "안주류", tteok: "떡류", fruit: "과일류",
     jesa: "제사상", beverage: "식음료류", consumables: "공산품류",
   };
+  const FLOWER_LABELS = {
+    altar: "제단장식", basket: "근조바구니", wreath: "조문용 조화",
+    chrysanthemum: "헌화용 국화", coffin: "관장식", vehicle: "차량장식",
+  };
+  const PHOTO_LABELS = {
+    portrait: "영정", frame: "액자", idphoto: "증명사진", instant: "즉석사진",
+  };
+  const DRESS_LABELS = {
+    women: "여성예복", shirt: "와이셔츠", belt: "벨트", socks: "양말",
+    shoes: "구두", tie: "넥타이", undershirt: "런닝셔츠",
+  };
+  const DRESS_CAT_ORDER = ["women", "shirt", "belt", "socks", "shoes", "tie", "undershirt"];
+  const HEARSE_LABELS = {
+    cadillac: "캐딜락", limousine: "고급리무진",
+  };
+  const HEARSE_CAT_ORDER = ["cadillac", "limousine"];
 
   async function renderFoodCatalog(host, filterCats) {
     const res = await fetch("/api/food-items");
@@ -234,6 +250,116 @@
     host.innerHTML = html || '<div class="service-prod-empty">등록된 접객 음식이 없습니다.</div>';
   }
 
+  async function renderFlowerCatalog(host, filterCats) {
+    const res = await fetch("/api/flower-items");
+    const all = ((await res.json()).items) || [];
+    const cats = filterCats || Object.keys(FLOWER_LABELS);
+    const loggedIn = await isMemberLoggedIn();
+    let html = "";
+
+    cats.forEach((cat) => {
+      const items = all.filter((f) => f.flowerCategory === cat);
+      if (items.length === 0) return;
+      html += `<div class="block"><h3>${esc(FLOWER_LABELS[cat] || cat)}</h3>`;
+      html += `<table class="tbl"><thead><tr><th>품명</th>${loggedIn ? "<th>가격</th>" : ""}</tr></thead><tbody>`;
+      html += items.map((f) => `
+        <tr>
+          <th>${esc(f.name)}</th>
+          ${loggedIn ? `<td class="nowrap">${won(f.price)} / ${esc(f.unit)}</td>` : ""}
+        </tr>`).join("");
+      html += "</tbody></table></div>";
+    });
+
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 근조 화환이 없습니다.</div>';
+  }
+
+  async function renderPhotoCatalog(host, filterCats) {
+    const res = await fetch("/api/photo-items");
+    const all = ((await res.json()).items) || [];
+    const cats = filterCats || Object.keys(PHOTO_LABELS);
+    const loggedIn = await isMemberLoggedIn();
+    let html = "";
+
+    cats.forEach((cat) => {
+      const items = all.filter((p) => p.photoCategory === cat);
+      if (items.length === 0) return;
+      const tableCat = cat === "portrait" || cat === "frame";
+      html += `<div class="block"><h3>${esc(PHOTO_LABELS[cat] || cat)}</h3>`;
+      html += `<table class="tbl"><thead><tr>`;
+      if (tableCat) html += `<th>구분</th><th>규격</th>`;
+      else html += `<th>구분</th><th>규격</th>`;
+      if (loggedIn) html += `<th>가격</th>`;
+      html += `</tr></thead><tbody>`;
+      html += items.map((p) => {
+        const spec = p.spec || p.name;
+        if (tableCat) {
+          return `<tr><th>${esc(p.subGroup || "-")}</th><td>${esc(p.name)}</td>${loggedIn ? `<td class="nowrap">${won(p.price)} / ${esc(p.unit)}</td>` : ""}</tr>`;
+        }
+        return `<tr><th>${esc(p.name)}</th><td>${esc(spec)}</td>${loggedIn ? `<td class="nowrap">${won(p.price)} / ${esc(p.unit)}</td>` : ""}</tr>`;
+      }).join("");
+      html += "</tbody></table></div>";
+    });
+
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 영정 사진 정보가 없습니다.</div>';
+  }
+
+  async function renderDressCatalog(host) {
+    const res = await fetch("/api/dress-items");
+    const all = ((await res.json()).items) || [];
+    const loggedIn = await isMemberLoggedIn();
+    let html = "";
+
+    if (all.length > 0) {
+      const sorted = DRESS_CAT_ORDER.flatMap((cat) =>
+        all.filter((d) => d.dressCategory === cat)
+      ).concat(all.filter((d) => !DRESS_CAT_ORDER.includes(d.dressCategory)));
+      html += `<div class="block"><h3>상복 대여 품목</h3>`;
+      html += `<table class="tbl"><thead><tr><th>품목</th><th>규격</th><th>수량</th>${loggedIn ? "<th>가격</th>" : ""}</tr></thead><tbody>`;
+      html += sorted.map((d) => `
+        <tr>
+          <th>${esc(d.name)}</th>
+          <td>${esc(d.spec || "-")}</td>
+          <td>${esc(d.unit || "1개")}</td>
+          ${loggedIn ? `<td class="nowrap">${won(d.price)}</td>` : ""}
+        </tr>`).join("");
+      html += "</tbody></table></div>";
+    }
+
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 상복 대여 품목이 없습니다.</div>';
+  }
+
+  async function renderHearseCatalog(host) {
+    const res = await fetch("/api/hearse-items");
+    const all = ((await res.json()).items) || [];
+    const loggedIn = await isMemberLoggedIn();
+    let html = "";
+
+    HEARSE_CAT_ORDER.forEach((cat) => {
+      const items = all.filter((h) => h.hearseCategory === cat);
+      if (items.length === 0) return;
+      html += `<div class="block"><h3>${esc(HEARSE_LABELS[cat] || cat)}</h3>`;
+      html += `<table class="tbl"><thead><tr><th>차량</th><th>규격</th><th>수량</th>${loggedIn ? "<th>가격</th>" : ""}</tr></thead><tbody>`;
+      html += items.map((h) => `
+        <tr>
+          <th>${esc(h.name)}</th>
+          <td>${esc(h.spec || "-")}</td>
+          <td>${esc(h.unit || "1대")}</td>
+          ${loggedIn ? `<td class="nowrap">${won(h.price)}</td>` : ""}
+        </tr>`).join("");
+      html += "</tbody></table></div>";
+    });
+
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 운구·차량 정보가 없습니다.</div>';
+  }
+
   async function loadProducts(catKey) {
     const host = document.getElementById("serviceProducts");
     if (!host || !catKey) return;
@@ -268,6 +394,46 @@
         await renderFoodCatalog(host, catKey === "consumables" ? ["beverage", "consumables"] : null);
       } catch (e) {
         host.innerHTML = '<div class="service-prod-empty">접객 음식 정보를 불러올 수 없습니다.</div>';
+      }
+      return;
+    }
+
+    if (catKey === "flower") {
+      host.innerHTML = '<div class="service-prod-loading">근조 화환 정보를 불러오는 중…</div>';
+      try {
+        await renderFlowerCatalog(host);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">근조 화환 정보를 불러올 수 없습니다.</div>';
+      }
+      return;
+    }
+
+    if (catKey === "photo") {
+      host.innerHTML = '<div class="service-prod-loading">영정 사진 정보를 불러오는 중…</div>';
+      try {
+        await renderPhotoCatalog(host);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">영정 사진 정보를 불러올 수 없습니다.</div>';
+      }
+      return;
+    }
+
+    if (catKey === "dress") {
+      host.innerHTML = '<div class="service-prod-loading">상복 대여 정보를 불러오는 중…</div>';
+      try {
+        await renderDressCatalog(host);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">상복 대여 정보를 불러올 수 없습니다.</div>';
+      }
+      return;
+    }
+
+    if (catKey === "hearse") {
+      host.innerHTML = '<div class="service-prod-loading">운구·차량 정보를 불러오는 중…</div>';
+      try {
+        await renderHearseCatalog(host);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">운구·차량 정보를 불러올 수 없습니다.</div>';
       }
       return;
     }
