@@ -1,11 +1,11 @@
 "use strict";
 
 const DOC_SUPPLIER = {
-  name: "근로복지공단 인천병원 장례식장",
+  name: "인천병원장례식장 (인천중앙병원장례식장)",
   ceo: "",
   bizNo: "",
-  address: "인천광역시 부평구 무네미로 446",
-  phone: "032-205-1100",
+  address: "인천광역시 부평구 무네미로 446 (구산동, 인천중앙병원)",
+  phone: "032-524-4444",
 };
 
 const DOC_TITLES = {

@@ -64,7 +64,7 @@ async function memberHeader(active) {
   if (host) {
     host.className = "m-header";
     host.innerHTML = `
-      <div class="brand"><strong>상주 전용 서비스</strong><span>근로복지공단 인천병원 장례식장</span></div>
+      <div class="brand"><strong>상주 전용 서비스</strong><span>인천병원장례식장 (인천중앙병원장례식장)</span></div>
       <nav class="m-nav">
         <a href="/pages/member/shop.html" class="${active === "shop" ? "active" : ""}">장례 예약</a>
         <a href="/pages/member/orders.html" class="${active === "orders" ? "active" : ""}">내 예약</a>

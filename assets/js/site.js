@@ -26,21 +26,21 @@
 
   var SITE = {
     name: {
-      ko: "근로복지공단 인천병원 장례식장",
-      zh: "劳动福祉公团仁川医院殡仪馆",
-      en: "KCOMWEL Incheon Hospital Funeral Hall",
+      ko: "인천병원장례식장",
+      zh: "仁川医院殡仪馆",
+      en: "Incheon Hospital Funeral Hall",
     },
-    nameEn: "INCHEON HOSPITAL FUNERAL HALL",
-    tel: "032-205-1100",
+    nameEn: "인천중앙병원장례식장",
+    tel: "032-524-4444",
     tel24: {
-      ko: "24시간 상담 : 032-205-1100",
-      zh: "24小时咨询 : 032-205-1100",
-      en: "24h Consultation : 032-205-1100",
+      ko: "24시간 상담 : 032-524-4444",
+      zh: "24小时咨询 : 032-524-4444",
+      en: "24h Consultation : 032-524-4444",
     },
     address: {
-      ko: "인천 부평구 무네미로 446 (구산동 47-3), 우편번호 21417",
-      zh: "仁川富平区无内美路446 (九山洞47-3), 邮编 21417",
-      en: "446 Munaemi-ro, Bupyeong-gu, Incheon 21417, Korea",
+      ko: "인천광역시 부평구 무네미로 446 (구산동, 인천중앙병원)",
+      zh: "仁川广域市富平区无内美路446 (九山洞, 仁川中央医院)",
+      en: "446 Munaemi-ro, Bupyeong-gu, Incheon (Gusan-dong, Incheon Central Hospital)",
     },
     email: "funeral@kcomwel.or.kr",
   };
@@ -56,9 +56,9 @@
     consultTitle: { ko: "장례 상담", zh: "殡葬咨询", en: "Consultation" },
     consultDesc: { ko: "연중무휴 24시간 운영", zh: "全年无休 24小时", en: "Open 24/7, year-round" },
     footerCopy: {
-      ko: "근로복지공단 인천병원 장례식장. All rights reserved.",
-      zh: "劳动福祉公团仁川医院殡仪馆. 版权所有.",
-      en: "KCOMWEL Incheon Hospital Funeral Hall. All rights reserved.",
+      ko: "인천병원장례식장(인천중앙병원장례식장). All rights reserved.",
+      zh: "仁川医院殡仪馆(仁川中央医院殡仪馆). 版权所有.",
+      en: "Incheon Hospital Funeral Hall (Incheon Central Hospital). All rights reserved.",
     },
     langLabel: { ko: "언어", zh: "语言", en: "Language" },
   };
@@ -386,9 +386,10 @@
 
     if (PAGE.home) {
       if (content) body.insertBefore(content, null);
-      body.appendChild(buildFooter());
-      wireHeaderScroll();
-      return;
+    body.appendChild(buildFooter());
+    wireHeaderScroll();
+    if (typeof window.initHomeGuide === "function") window.initHomeGuide();
+    return;
     }
 
     var sec = findSection(PAGE.section);
