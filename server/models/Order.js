@@ -8,6 +8,7 @@ const orderItemSchema = new mongoose.Schema(
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     itemRefId: { type: mongoose.Schema.Types.ObjectId, default: null },
     catKey: { type: String, default: "" },
+    foodCategory: { type: String, default: "" }, // foodItem: beverage | consumables 등
     name: { type: String, required: true },
     unit: { type: String, default: "개" },
     price: { type: Number, required: true, min: 0 }, // 단가(공급가)

@@ -96,6 +96,12 @@ input, select, textarea { font-family: inherit; font-size: 14px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
 .panel-head h3 { margin: 0; font-size: 16px; color: var(--navy); }
 .panel-body { padding: 18px 20px; }
+.order-groups { display: flex; flex-direction: column; gap: 16px; }
+.order-family-box { margin-bottom: 0; }
+.order-family-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.order-family-head .sub { margin: 4px 0 0; font-size: 13px; color: var(--gray); font-weight: 500; }
+.order-family-foot { padding: 14px 20px; border-top: 1px solid var(--line); background: #fafbfc; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.order-family-foot .lead { margin: 0; font-size: 13px; color: var(--gray); margin-right: auto; }
 
 /* 버튼 */
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px; border-radius: 8px; border: 1px solid var(--line); background: var(--white); font-weight: 600; color: var(--ink); }

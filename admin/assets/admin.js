@@ -1536,13 +1536,45 @@ function productForm(p, fixedCatKey) {
 let orderFilter = "";
 let lastOrders = [];
 const ORDER_STATUS = { pending: "접수", confirmed: "확인", paid: "결제완료", canceled: "취소" };
+
+function groupOrdersByFamily(orders) {
+  const map = new Map();
+  for (const o of orders) {
+    const fid = (o.family && o.family.id) || String(o.familyUserId || "unknown");
+    if (!map.has(fid)) {
+      map.set(fid, { familyId: o.family && o.family.id, family: o.family, hall: o.hall, orders: [] });
+    }
+    const g = map.get(fid);
+    g.orders.push(o);
+    if (!g.hall && o.hall) g.hall = o.hall;
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const an = (a.family && a.family.name) || "";
+    const bn = (b.family && b.family.name) || "";
+    return an.localeCompare(bn, "ko");
+  });
+}
+
+function familyDocLinks(familyId, cls) {
+  if (!familyId) return "";
+  const base = `/pages/member/doc.html?familyUserId=${encodeURIComponent(familyId)}&from=admin`;
+  const c = cls || "btn btn-sm";
+  return `
+    <a class="${c}" href="${base}&type=order&aggregate=1" target="_blank">주문서 합계</a>
+    <a class="${c}" href="${base}&type=statement&aggregate=1" target="_blank">거래명세서</a>
+    <a class="${c}" href="${base}&type=tax&aggregate=1" target="_blank">세금계산서</a>`;
+}
+
 async function renderOrders() {
   const d = await api("/orders/admin/all" + (orderFilter ? "?status=" + orderFilter : ""));
   lastOrders = d.items || [];
+  const groups = groupOrdersByFamily(lastOrders);
   const tag = (s) => {
     const cls = s === "pending" ? "pending" : s === "canceled" ? "gray" : "answered";
     return `<span class="tag ${cls}">${ORDER_STATUS[s] || s}</span>`;
   };
+  const activeCount = (orders) => orders.filter((o) => o.status !== "canceled").length;
+
   content.innerHTML = `
     <div class="toolbar">
       <select id="ordStatus">
@@ -1550,26 +1582,51 @@ async function renderOrders() {
         ${Object.keys(ORDER_STATUS).map((k) => `<option value="${k}" ${orderFilter === k ? "selected" : ""}>${ORDER_STATUS[k]}</option>`).join("")}
       </select>
     </div>
-    <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">주문이 없습니다.</div>' : `
-      <table class="grid">
-        <thead><tr><th>주문번호</th><th>상주</th><th>빈소</th><th>품목</th><th class="right">합계</th><th>상태</th><th>주문일</th><th class="right">관리</th></tr></thead>
-        <tbody>${d.items.map((o) => `
-          <tr>
-            <td class="nowrap"><b>${esc(o.orderNumber)}</b></td>
-            <td class="nowrap">${o.family ? esc(o.family.name) + " (" + esc(o.family.username) + ")" : esc(o.buyer && o.buyer.name) || "-"}</td>
-            <td class="nowrap">${o.hall ? esc(o.hall.hallNumber) : "-"}</td>
-            <td>${esc(o.items[0] ? o.items[0].name : "-")}${o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}</td>
-            <td class="right nowrap">${won(o.totalAmount)}</td>
-            <td>${tag(o.status)}</td>
-            <td class="nowrap">${fmtDay(o.createdAt)}</td>
-            <td class="actions">
-              ${o.family && o.family.id ? `<a class="btn btn-sm" href="/pages/member/doc.html?type=order&aggregate=1&familyUserId=${esc(o.family.id)}&from=admin" target="_blank">집계</a>` : ""}
-              <button class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
-            </td>
-          </tr>`).join("")}</tbody>
-      </table>`}
-    </div></div>`;
+    ${groups.length === 0 ? '<div class="panel"><div class="panel-body"><div class="empty">주문이 없습니다.</div></div></div>' : `
+    <div class="order-groups">
+      ${groups.map((g) => {
+        const familyLabel = g.family
+          ? `${esc(g.family.name)} (${esc(g.family.username)})`
+          : esc("상주 미지정");
+        const hallLabel = g.hall
+          ? `빈소 ${esc(g.hall.hallNumber)}${g.hall.deceasedName ? " · 故 " + esc(g.hall.deceasedName) : ""}`
+          : "빈소 미지정";
+        const sumCount = activeCount(g.orders);
+        return `
+        <div class="panel order-family-box">
+          <div class="panel-head order-family-head">
+            <div>
+              <h3>${familyLabel}</h3>
+              <p class="sub">${hallLabel}</p>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <table class="grid">
+              <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th>주문일</th><th class="right">관리</th></tr></thead>
+              <tbody>${g.orders.map((o) => `
+                <tr>
+                  <td class="nowrap"><b>${esc(o.orderNumber)}</b></td>
+                  <td>${esc(o.items[0] ? o.items[0].name : "-")}${o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}</td>
+                  <td class="right nowrap">${won(o.totalAmount)}</td>
+                  <td>${tag(o.status)}</td>
+                  <td class="nowrap">${fmtDay(o.createdAt)}</td>
+                  <td class="actions">
+                    <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${esc(o.id)}&from=admin" target="_blank">주문서</a>
+                    <button class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
+                  </td>
+                </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+          ${sumCount > 0 && g.familyId ? `
+          <div class="order-family-foot">
+            <p class="lead">발인 정산 · 취소 제외 ${sumCount}건</p>
+            ${familyDocLinks(g.familyId)}
+          </div>` : ""}
+        </div>`;
+      }).join("")}
+    </div>`}
+  `;
 
   document.getElementById("ordStatus").addEventListener("change", (e) => { orderFilter = e.target.value; renderOrders(); });
   content.querySelectorAll("[data-order-id]").forEach((b) =>
@@ -1625,7 +1682,7 @@ function orderDetail(o) {
       </select>
     </div>
     <div class="toolbar" style="margin-top:8px">
-      ${o.family && o.family.id ? `<a class="btn btn-sm btn-primary" href="/pages/member/doc.html?type=order&aggregate=1&familyUserId=${o.family.id}&from=admin" target="_blank">주문서 합계</a>` : ""}
+      ${o.family && o.family.id ? familyDocLinks(o.family.id, "btn btn-sm") : ""}
       <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}&from=admin" target="_blank">주문서</a>
       <a class="btn btn-sm" href="/pages/member/doc.html?type=statement&id=${o.id}&from=admin" target="_blank">거래명세서</a>
       <a class="btn btn-sm" href="/pages/member/doc.html?type=tax&id=${o.id}&from=admin" target="_blank">세금계산서</a>

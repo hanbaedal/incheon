@@ -90,6 +90,12 @@ function docBuyerFromSummary(s) {
   };
 }
 
+function docAggregateQty(row) {
+  if (row.settlementType !== "postpaid") return row.reservedQty;
+  if (row.pending) return row.reservedQty;
+  return row.settledQty;
+}
+
 function docHallMemo(hall, memo) {
   if (memo) return docEsc(memo);
   if (!hall) return "-";
@@ -172,10 +178,10 @@ function buildAggregateDocHtml(s, type) {
   const pending = s.summary.postpaidPending;
   const bill = s.summary.billable;
 
+  const hidePendingMemo = type === "statement" || type === "tax";
+
   const rows = (s.items || []).map((row, i) => {
-    const qtyLabel = row.settlementType === "postpaid"
-      ? (row.pending ? `${row.reservedQty} (미정산)` : row.settledQty)
-      : row.reservedQty;
+    const qtyLabel = docAggregateQty(row);
     return `
       <tr>
         <td>${i + 1}</td>
@@ -191,7 +197,7 @@ function buildAggregateDocHtml(s, type) {
     ? "※ 본 문서는 내부 관리용 참고 자료이며, 실제 세금계산서는 국세청 전자세금계산서로 발행됩니다."
     : "본 문서는 " + docEsc(DOC_SUPPLIER.name) + "에서 발행한 내부 관리 문서입니다.";
 
-  const pendingMemo = pending.itemCount > 0
+  const pendingMemo = !hidePendingMemo && pending.itemCount > 0
     ? `<div class="memo"><b>미정산 사후정산</b> &nbsp; ${pending.itemCount}건 · 예약 수량 ${pending.reservedQty}개 (발인 전 관리자 정산 후 반영)</div>`
     : "";
 

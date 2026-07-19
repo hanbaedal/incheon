@@ -22,6 +22,8 @@ function aggregateOrders(orders) {
           price: it.price,
           settlementType: it.settlementType || "prepaid",
           catKey: it.catKey || "",
+          itemType: it.itemType || "",
+          foodCategory: it.foodCategory || "",
           reservedQty: 0,
           settledQty: 0,
           supplyAmount: 0,
@@ -32,6 +34,8 @@ function aggregateOrders(orders) {
         itemMap.set(key, row);
       }
       row.reservedQty += it.qty || 0;
+      if (it.foodCategory && !row.foodCategory) row.foodCategory = it.foodCategory;
+      if (it.itemType && !row.itemType) row.itemType = it.itemType;
       if (it.settlementType === "postpaid") {
         if (it.settled && it.finalQty != null) {
           row.settledQty += Math.max(0, it.finalQty);

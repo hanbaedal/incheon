@@ -53,6 +53,7 @@ function orderItemFromFood(ref, qty) {
     itemType: "foodItem",
     itemRefId: ref._id,
     catKey: "food",
+    foodCategory: ref.foodCategory || "",
     name: ref.name,
     unit: ref.unit || "개",
     price: ref.price,
