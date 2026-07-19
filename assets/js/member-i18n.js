@@ -217,6 +217,7 @@
     "cat.photo": { ko: "영정 사진", zh: "遗像照片", en: "Portraits" },
     "cat.dress": { ko: "상복 대여", zh: "丧服租赁", en: "Mourning attire" },
     "cat.hearse": { ko: "운구·차량", zh: "运柩·车辆", en: "Hearse" },
+    "cat.service": { ko: "서비스 항목", zh: "服务项目", en: "Service Items" },
 
     "foodSub.meal": { ko: "식사류", zh: "餐食类", en: "Meals" },
     "foodSub.anju": { ko: "안주류", zh: "下酒菜类", en: "Side dishes" },
@@ -246,6 +247,7 @@
     "prod.nonePhoto": { ko: "등록된 품목이 없습니다.", zh: "暂无登记项目。", en: "No items registered." },
     "prod.noneDress": { ko: "등록된 품목이 없습니다.", zh: "暂无登记项目。", en: "No items registered." },
     "prod.noneHearse": { ko: "등록된 차량이 없습니다.", zh: "暂无登记车辆。", en: "No vehicles registered." },
+    "prod.noneService": { ko: "등록된 서비스 항목이 없습니다.", zh: "暂无登记服务项目。", en: "No service items registered." },
     "prod.noneGeneric": { ko: "등록된 상품이 없습니다.", zh: "暂无登记商品。", en: "No products registered." },
     "prod.coffinHead": { ko: "관", zh: "棺", en: "Coffin" },
     "prod.hoengdaeHead": { ko: "횡대", zh: "横木", en: "Bier" },
@@ -260,6 +262,8 @@
     "prod.flowerHead": { ko: "근조 화환 · ", zh: "挽联花圈 · ", en: "Flowers · " },
     "prod.photoHead": { ko: "영정 사진 · ", zh: "遗像照片 · ", en: "Portraits · " },
     "prod.hearseHead": { ko: "운구·차량 · ", zh: "运柩·车辆 · ", en: "Hearse · " },
+    "prod.serviceHead": { ko: "서비스 항목", zh: "服务项目", en: "Service Items" },
+    "prod.serviceLead": { ko: "관리비·주차비·도우미 등 부대 서비스를 선택해 예약·청구합니다.", zh: "选择管理费、停车费、帮工等附加服务进行预约与结算。", en: "Select ancillary services such as management fees, parking, and assistants for reservation and billing." },
     "prod.coffinDim": { ko: "어깨 {shoulder} · 높이 {height} · 길이 {length}㎜", zh: "肩宽 {shoulder} · 高 {height} · 长 {length}㎜", en: "Shoulder {shoulder} · H {height} · L {length} mm" },
     "prod.hoengdaeDim": { ko: "세로 {v} · 가로 {h} · 두께 {t}㎜", zh: "纵 {v} · 横 {h} · 厚 {t}㎜", en: "V {v} · H {h} · T {t} mm" },
   };
@@ -331,6 +335,7 @@
       { key: "photo", label: mT("cat.photo"), type: "photo" },
       { key: "dress", label: mT("cat.dress"), type: "dress" },
       { key: "hearse", label: mT("cat.hearse"), type: "hearse" },
+      { key: "service", label: mT("cat.service"), type: "servicePrice" },
     ];
   }
 

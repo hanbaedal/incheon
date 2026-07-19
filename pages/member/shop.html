@@ -47,6 +47,7 @@
     let PHOTO_ITEMS = [];
     let DRESS_ITEMS = [];
     let HEARSE_ITEMS = [];
+    let SERVICE_PRICES = [];
     let ACTIVE_FOOD_CAT = "meal";
     let ACTIVE_FLOWER_CAT = "altar";
     let ACTIVE_PHOTO_CAT = "portrait";
@@ -68,13 +69,14 @@
     (async function () {
       const urlCat = new URLSearchParams(location.search).get("cat");
       if (urlCat === "hall") ACTIVE_CAT = "hall";
+      else if (urlCat === "service") ACTIVE_CAT = "service";
       ME = await memberHeader("shop");
       if (!ME) return;
       mApplyI18n(document);
       mPageTitle("shop.pageTitle");
       renderTabs();
       try {
-        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes] = await Promise.all([
+        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes, serviceRes] = await Promise.all([
           mApi("/products"),
           mApi("/coffins"),
           mApi("/hoengdae"),
@@ -85,6 +87,7 @@
           mApi("/photo-items"),
           mApi("/dress-items"),
           mApi("/hearse-items"),
+          mApi("/service-prices?orderable=1"),
         ]);
         PRODUCTS = prodRes.items;
         COFFINS = coffinRes.items;
@@ -96,6 +99,7 @@
         PHOTO_ITEMS = photoRes.items;
         DRESS_ITEMS = dressRes.items;
         HEARSE_ITEMS = hearseRes.items;
+        SERVICE_PRICES = serviceRes.items;
         await loadHallData();
         renderMain();
         renderCart();
@@ -250,7 +254,13 @@
       if (type === "photoItem") return PHOTO_ITEMS.find((x) => x.id === id);
       if (type === "dressItem") return DRESS_ITEMS.find((x) => x.id === id);
       if (type === "hearseItem") return HEARSE_ITEMS.find((x) => x.id === id);
+      if (type === "servicePrice") return SERVICE_PRICES.find((x) => x.id === id);
       return PRODUCTS.find((x) => x.id === id);
+    }
+
+    function servicePriceLabel(p) {
+      if (!p) return "";
+      return p.group && p.group !== p.name ? p.group + " · " + p.name : p.name;
     }
 
     function selectedHall() {
@@ -745,6 +755,31 @@
         return;
       }
 
+      if (ACTIVE_CAT === "service") {
+        let html = `<div class="card-head">${mEsc(mT("prod.serviceHead"))}</div><div class="card-body">`;
+        html += `<p class="note" style="margin-top:0">${mEsc(mT("prod.serviceLead"))}</p>`;
+        if (SERVICE_PRICES.length === 0) {
+          html += `<div class="state">${mEsc(mT("prod.noneService"))}</div>`;
+        } else {
+          html += `<table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colItem"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th><th></th></tr></thead><tbody>`;
+          SERVICE_PRICES.forEach((s) => {
+            html += `
+              <tr>
+                <th>${mEsc(servicePriceLabel(s))}${s.settlementType === "postpaid" ? ` <span class="tag pending">${mEsc(mT("shop.postpaidTag"))}</span>` : ""}</th>
+                <td>${mEsc(s.unit || "-")}</td>
+                <td class="nowrap">${won(s.price)}</td>
+                <td><button class="btn btn-sm btn-primary" data-add="servicePrice:${s.id}">${mEsc(mT("common.addToCart"))}</button></td>
+              </tr>`;
+          });
+          html += "</tbody></table>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
       const items = PRODUCTS.filter((p) => p.catKey === ACTIVE_CAT);
       const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
       let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
@@ -812,13 +847,15 @@
         cart.forEach((qty, key) => {
           const p = findCartItem(key);
           if (!p) return;
+          const [cartType] = key.split(":");
           const isPostpaid = p.settlementType === "postpaid";
           const line = isPostpaid ? 0 : p.price * qty;
           supply += line;
           if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
+          const label = cartType === "servicePrice" ? servicePriceLabel(p) : (p.spec ? p.name + " " + p.spec : p.name);
           html += `
             <div class="cart-item">
-              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? `<br><small class="status-postpaid">${mEsc(mT("shop.postpaidShort"))}</small>` : ""}<br><span class="rm" data-rm="${key}">${mEsc(mT("common.delete"))}</span></span>
+              <span class="nm">${mEsc(label)}${isPostpaid ? `<br><small class="status-postpaid">${mEsc(mT("shop.postpaidShort"))}</small>` : ""}<br><span class="rm" data-rm="${key}">${mEsc(mT("common.delete"))}</span></span>
               <span class="qtybox">
                 <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
               </span>
@@ -866,6 +903,7 @@
         if (type === "photoItem") return { itemType: "photoItem", itemRefId: id, qty };
         if (type === "dressItem") return { itemType: "dressItem", itemRefId: id, qty };
         if (type === "hearseItem") return { itemType: "hearseItem", itemRefId: id, qty };
+        if (type === "servicePrice") return { itemType: "servicePrice", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
       const memo = prompt(mT("shop.memoPrompt"), "") || "";

@@ -22,6 +22,7 @@ router.use("/flower-items", require("./flowerItems"));
 router.use("/photo-items", require("./photoItems"));
 router.use("/dress-items", require("./dressItems"));
 router.use("/hearse-items", require("./hearseItems"));
+router.use("/service-prices", require("./servicePrices"));
 router.use("/orders", require("./orders"));
 router.use("/images", require("./images"));
 router.use("/forms", require("./forms"));

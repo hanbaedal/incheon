@@ -30,12 +30,13 @@ async function main() {
     const r = await ensureAmcCatalog();
     const n =
       r.coffins.created + r.hoengdae.created + r.shrouds.created +
-      r.accessories.created + r.foodItems.created + r.flowerItems.created + r.photoItems.created + r.dressItems.created + r.hearseItems.created;
+      r.accessories.created + r.foodItems.created + r.flowerItems.created + r.photoItems.created + r.dressItems.created + r.hearseItems.created + r.servicePrices.created;
     if (n > 0) {
       console.log(
         `[CATALOG] AMC 규격표 등록 — 관 ${r.coffins.created}, 횡대 ${r.hoengdae.created}, ` +
         `수의 ${r.shrouds.created}, 부속 ${r.accessories.created}, 음식 ${r.foodItems.created}, ` +
-        `화환 ${r.flowerItems.created}, 사진 ${r.photoItems.created}, 상복 ${r.dressItems.created}, 운구 ${r.hearseItems.created}`
+        `화환 ${r.flowerItems.created}, 사진 ${r.photoItems.created}, 상복 ${r.dressItems.created}, 운구 ${r.hearseItems.created}, ` +
+        `서비스요금 ${r.servicePrices.created}`
       );
     }
   } catch (err) {

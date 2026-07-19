@@ -40,6 +40,7 @@ async function seedAmcCatalog() {
   console.log(`+ 영정 사진 ${r.photoItems.total}건 (신규 ${r.photoItems.created})`);
   console.log(`+ 상복 대여 ${r.dressItems.total}건 (신규 ${r.dressItems.created})`);
   console.log(`+ 운구·차량 ${r.hearseItems.total}건 (신규 ${r.hearseItems.created})`);
+  console.log(`+ 서비스 요금 ${r.servicePrices.total}건 (신규 ${r.servicePrices.created})`);
 }
 
 async function seedNotice() {

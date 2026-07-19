@@ -213,6 +213,12 @@ const NAV_MENU = [
           { view: "prodHearseLimousine", label: "고급리무진" },
         ],
       },
+      {
+        label: "서비스 요금",
+        items: [
+          { view: "servicePrices", label: "항목 및 가격" },
+        ],
+      },
     ],
   },
   { id: "orders", label: "주문·정산", view: "orders", badgeId: "navOrderBadge" },
@@ -345,6 +351,7 @@ const VIEWS = {
   prodDress: { title: "상복 대여 관리", render: renderDressItems },
   prodHearseCadillac: { title: "캐딜락 관리", render: () => renderHearseItems("cadillac") },
   prodHearseLimousine: { title: "고급리무진 관리", render: () => renderHearseItems("limousine") },
+  servicePrices: { title: "서비스 항목·요금 관리", render: renderServicePrices },
   orders: { title: "주문 관리", render: renderOrders },
   notices: { title: "알림 소식", render: renderNotices },
   funeralForms: { title: "관련서식 관리", render: renderFuneralForms },
@@ -1432,6 +1439,87 @@ function accessoryForm(a) {
       try {
         if (a) await api("/accessories/" + a.id, { method: "PATCH", body });
         else await api("/accessories", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderServicePrices() {
+  const d = await api("/service-prices/admin/all");
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addServicePrice">+ 서비스 항목 등록</button>
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 항목이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>구분</th><th>항목</th><th>단위</th><th class="right">요금</th><th>비고</th><th>정산</th><th>예약</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((s) => `
+          <tr>
+            <td class="nowrap">${esc(s.group)}</td>
+            <td><b>${esc(s.name)}</b></td>
+            <td class="nowrap">${esc(s.unit || "-")}</td>
+            <td class="right nowrap">${s.price > 0 ? won(s.price) : "-"}</td>
+            <td>${esc(s.note || "-")}</td>
+            <td>${SETTLEMENT_LABELS[s.settlementType] || s.settlementType}</td>
+            <td>${s.orderable ? '<span class="tag free">가능</span>' : '<span class="tag gray">안내</span>'}</td>
+            <td>${s.active ? '<span class="tag free">노출</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(s))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${s.id}" data-name="${esc(s.group + " " + s.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addServicePrice").addEventListener("click", () => servicePriceForm(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => servicePriceForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("서비스 항목", b.getAttribute("data-name"), async () => {
+      await api("/service-prices/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function servicePriceForm(s) {
+  const e = s || {};
+  const settleOpts = Object.keys(SETTLEMENT_LABELS).map((k) =>
+    `<option value="${k}" ${(e.settlementType || "prepaid") === k ? "selected" : ""}>${SETTLEMENT_LABELS[k]}</option>`).join("");
+  openModal(s ? "서비스 항목 수정" : "서비스 항목 등록", `
+    <div class="field-row">
+      <div class="field"><label>구분 *</label><input id="f_group" value="${esc(e.group || "")}" placeholder="예: 관리비, 주차비" /></div>
+      <div class="field"><label>항목 *</label><input id="f_name" value="${esc(e.name || "")}" placeholder="예: 관리비 서비스" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "-")}" /></div>
+      <div class="field"><label>요금(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정산 방식</label><select id="f_settlementType">${settleOpts}</select></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>비고</label><input id="f_note" value="${esc(e.note || "-")}" /></div>
+    <div class="field" style="display:flex;gap:18px;flex-wrap:wrap">
+      <label class="check"><input type="checkbox" id="f_orderable" ${e.orderable === false ? "" : "checked"}/> 상주 예약·청구 가능</label>
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 홈페이지 노출</label>
+    </div>
+    <p class="muted">안내 전용 행(요금 없음)은 요금 0원 + 「상주 예약·청구 가능」 해제로 설정하세요.</p>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        group: val("f_group"), name: val("f_name"), unit: val("f_unit") || "-",
+        price: Number(val("f_price")) || 0, note: val("f_note") || "-",
+        settlementType: val("f_settlementType"),
+        sortOrder: Number(val("f_sortOrder")) || 0,
+        orderable: checked("f_orderable"), taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.group || !body.name) { toast("구분과 항목명을 입력하세요."); return; }
+      try {
+        if (s) await api("/service-prices/" + s.id, { method: "PATCH", body });
+        else await api("/service-prices", { method: "POST", body });
         closeModal(); toast("저장되었습니다."); route();
       } catch (err) { toast(err.message); }
     } },
