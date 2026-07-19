@@ -41,16 +41,6 @@ router.get(
 );
 
 router.post(
-  "/admin/sync-amc",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const { upsertDressItems } = require("../utils/ensureCatalog");
-    const r = await upsertDressItems();
-    res.json({ ok: true, message: `상복 대여 ${r.total}건 동기화 (신규 ${r.created})`, ...r });
-  })
-);
-
-router.post(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {

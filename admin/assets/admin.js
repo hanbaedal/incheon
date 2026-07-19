@@ -637,7 +637,6 @@ async function renderCoffins() {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addCoffin">+ 관 등록</button>
-      <button class="btn" id="syncAmcCoffins">AMC 관 규격표 불러오기</button>
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 관이 없습니다.</div>' : `
@@ -661,13 +660,6 @@ async function renderCoffins() {
       </table>`}
     </div></div>`;
   document.getElementById("addCoffin").addEventListener("click", () => coffinForm(null));
-  document.getElementById("syncAmcCoffins").addEventListener("click", async () => {
-    try {
-      const d = await api("/coffins/admin/sync-amc", { method: "POST", body: {} });
-      toast(d.message || "AMC 관 규격표를 불러왔습니다.");
-      route();
-    } catch (err) { toast(err.message); }
-  });
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => coffinForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -993,7 +985,6 @@ async function renderFoodItems(foodCategory) {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addFood">+ ${esc(label)} 등록</button>
-      ${foodCategory === "meal" ? '<button class="btn" id="syncAmcFood">AMC 음식표 불러오기</button>' : ""}
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
@@ -1014,16 +1005,6 @@ async function renderFoodItems(foodCategory) {
       </table>`}
     </div></div>`;
   document.getElementById("addFood").addEventListener("click", () => foodItemForm(null, foodCategory));
-  const syncBtn = document.getElementById("syncAmcFood");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      try {
-        const r = await api("/food-items/admin/sync-amc", { method: "POST", body: {} });
-        toast(r.message || "AMC 음식표를 불러왔습니다.");
-        route();
-      } catch (err) { toast(err.message); }
-    });
-  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => foodItemForm(JSON.parse(b.getAttribute("data-edit")), foodCategory)));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -1093,7 +1074,6 @@ async function renderFlowerItems(flowerCategory) {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addFlower">+ ${esc(label)} 등록</button>
-      ${flowerCategory === "altar" ? '<button class="btn" id="syncAmcFlower">AMC 화원표 불러오기</button>' : ""}
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
@@ -1113,16 +1093,6 @@ async function renderFlowerItems(flowerCategory) {
       </table>`}
     </div></div>`;
   document.getElementById("addFlower").addEventListener("click", () => flowerItemForm(null, flowerCategory));
-  const syncBtn = document.getElementById("syncAmcFlower");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      try {
-        const r = await api("/flower-items/admin/sync-amc", { method: "POST", body: {} });
-        toast(r.message || "AMC 화원표를 불러왔습니다.");
-        route();
-      } catch (err) { toast(err.message); }
-    });
-  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => flowerItemForm(JSON.parse(b.getAttribute("data-edit")), flowerCategory)));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -1188,7 +1158,6 @@ async function renderPhotoItems(photoCategory) {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addPhoto">+ ${esc(label)} 등록</button>
-      ${photoCategory === "portrait" ? '<button class="btn" id="syncAmcPhoto">AMC 사진실표 불러오기</button>' : ""}
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
@@ -1209,16 +1178,6 @@ async function renderPhotoItems(photoCategory) {
       </table>`}
     </div></div>`;
   document.getElementById("addPhoto").addEventListener("click", () => photoItemForm(null, photoCategory));
-  const syncBtn = document.getElementById("syncAmcPhoto");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      try {
-        const r = await api("/photo-items/admin/sync-amc", { method: "POST", body: {} });
-        toast(r.message || "AMC 사진실표를 불러왔습니다.");
-        route();
-      } catch (err) { toast(err.message); }
-    });
-  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => photoItemForm(JSON.parse(b.getAttribute("data-edit")), photoCategory)));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -1283,7 +1242,6 @@ async function renderDressItems() {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addDress">+ 품목 등록</button>
-      <button class="btn" id="syncAmcDress">AMC 예복표 불러오기</button>
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
@@ -1304,13 +1262,6 @@ async function renderDressItems() {
       </table>`}
     </div></div>`;
   document.getElementById("addDress").addEventListener("click", () => dressItemForm(null));
-  document.getElementById("syncAmcDress").addEventListener("click", async () => {
-    try {
-      const r = await api("/dress-items/admin/sync-amc", { method: "POST", body: {} });
-      toast(r.message || "AMC 예복표를 불러왔습니다.");
-      route();
-    } catch (err) { toast(err.message); }
-  });
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => dressItemForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -1387,7 +1338,6 @@ async function renderHearseItems(hearseCategory) {
   content.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary" id="addHearse">+ ${esc(label)} 등록</button>
-      ${hearseCategory === "cadillac" ? '<button class="btn" id="syncAmcHearse">AMC 운구차표 불러오기</button>' : ""}
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 차량이 없습니다.</div>' : `
@@ -1408,16 +1358,6 @@ async function renderHearseItems(hearseCategory) {
       </table>`}
     </div></div>`;
   document.getElementById("addHearse").addEventListener("click", () => hearseItemForm(null, hearseCategory));
-  const syncBtn = document.getElementById("syncAmcHearse");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      try {
-        const r = await api("/hearse-items/admin/sync-amc", { method: "POST", body: {} });
-        toast(r.message || "AMC 운구차표를 불러왔습니다.");
-        route();
-      } catch (err) { toast(err.message); }
-    });
-  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => hearseItemForm(JSON.parse(b.getAttribute("data-edit")), hearseCategory)));
   content.querySelectorAll("[data-del]").forEach((b) =>

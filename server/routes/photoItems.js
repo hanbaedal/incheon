@@ -30,16 +30,6 @@ router.get(
 );
 
 router.post(
-  "/admin/sync-amc",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const { upsertPhotoItems } = require("../utils/ensureCatalog");
-    const r = await upsertPhotoItems();
-    res.json({ ok: true, message: `영정 사진 ${r.total}건 동기화 (신규 ${r.created})`, ...r });
-  })
-);
-
-router.post(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {

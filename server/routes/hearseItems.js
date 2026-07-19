@@ -30,16 +30,6 @@ router.get(
 );
 
 router.post(
-  "/admin/sync-amc",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const { upsertHearseItems } = require("../utils/ensureCatalog");
-    const r = await upsertHearseItems();
-    res.json({ ok: true, message: `운구·차량 ${r.total}건 동기화 (신규 ${r.created})`, ...r });
-  })
-);
-
-router.post(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {

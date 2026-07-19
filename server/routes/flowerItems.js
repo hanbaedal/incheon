@@ -30,16 +30,6 @@ router.get(
 );
 
 router.post(
-  "/admin/sync-amc",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const { upsertFlowerItems } = require("../utils/ensureCatalog");
-    const r = await upsertFlowerItems();
-    res.json({ ok: true, message: `근조 화환 ${r.total}건 동기화 (신규 ${r.created})`, ...r });
-  })
-);
-
-router.post(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {
