@@ -76,8 +76,8 @@ async function memberHeader(active) {
       await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json", "X-Session-Scope": "member" },
-        body: JSON.stringify({ scope: "member" }),
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
       });
       location.href = "/pages/member/login.html";
     });

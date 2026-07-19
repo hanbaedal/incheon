@@ -48,12 +48,7 @@ router.post(
 );
 
 router.post("/logout", (req, res) => {
-  const scope = (req.body && req.body.scope) || req.get("x-session-scope");
-  if (scope === "admin") clearSessionCookie(res, "admin");
-  else if (scope === "member" || scope === "family") clearSessionCookie(res, "family");
-  else if (req.user && req.user.role === "admin") clearSessionCookie(res, "admin");
-  else if (req.user) clearSessionCookie(res, "family");
-  else clearSessionCookie(res);
+  clearSessionCookie(res);
   res.json({ ok: true });
 });
 

@@ -13,6 +13,7 @@
     <h1 class="m-title">내 예약 내역</h1>
     <p class="m-lead">예약하신 내역과 처리 상태를 확인하실 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
     <div id="okBox"></div>
+    <div id="sumArea"></div>
     <div id="ordArea" class="card"><div class="state">주문 내역을 불러오는 중…</div></div>
   </div>
 
@@ -34,13 +35,22 @@
 
     async function load() {
       const area = document.getElementById("ordArea");
+      const sumArea = document.getElementById("sumArea");
       try {
-        const items = (await mApi("/orders/mine")).items;
+        const [listRes, sumRes] = await Promise.all([
+          mApi("/orders/mine"),
+          mApi("/orders/mine/summary"),
+        ]);
+        const items = listRes.items;
+        if (sumRes && sumRes.orderCount > 0) renderSummary(sumArea, sumRes);
+        else sumArea.innerHTML = "";
+
         if (items.length === 0) {
           area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">장례 예약하기 →</a></div>';
           return;
         }
         area.innerHTML = `
+          <div class="card-head">건별 예약 내역</div>
           <div class="card-body" style="padding:0">
           <table class="tbl">
             <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th class="nowrap">주문일</th><th class="right">문서</th></tr></thead>
@@ -57,8 +67,62 @@
               </tr>`).join("")}</tbody>
           </table></div>`;
       } catch (e) {
+        sumArea.innerHTML = "";
         area.innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
       }
+    }
+
+    function renderSummary(el, s) {
+      const hallLine = s.hall
+        ? `빈소 ${mEsc(s.hall.hallNumber)}${s.hall.deceasedName ? " · 故 " + mEsc(s.hall.deceasedName) : ""}`
+        : "";
+      const pending = s.summary.postpaidPending;
+      const pendingNote = pending.itemCount > 0
+        ? `<p class="muted" style="font-size:13px;margin-top:10px">사후정산 ${pending.itemCount}건(예약 ${pending.reservedQty}개)은 발인 전 관리자 정산 후 금액이 확정됩니다.</p>`
+        : "";
+
+      el.innerHTML = `
+        <div class="card summary-card">
+          <div class="card-head summary-head">
+            <div>
+              <div>발인 정산 집계</div>
+              ${hallLine ? `<div class="summary-sub">${hallLine}</div>` : ""}
+            </div>
+            <a class="btn btn-primary btn-sm" href="/pages/member/doc.html?type=summary" target="_blank">집계서 출력</a>
+          </div>
+          <div class="card-body">
+            <p class="summary-lead">취소 제외 주문 ${s.orderCount}건 · 발인 시 한 번에 정산할 품목 합계입니다.</p>
+            <table class="tbl">
+              <thead><tr>
+                <th>품목</th><th>구분</th><th class="right">수량</th><th class="right">단가</th>
+                <th class="right">공급가액</th><th class="right">세액</th><th class="right">합계</th>
+              </tr></thead>
+              <tbody>${s.items.map((row) => {
+                const qtyLabel = row.settlementType === "postpaid"
+                  ? (row.pending ? `${row.reservedQty} (미정산)` : row.settledQty)
+                  : row.reservedQty;
+                const tag = row.settlementType === "postpaid"
+                  ? (row.pending ? '<span class="tag pending">사후·미정산</span>' : '<span class="tag confirmed">사후·확정</span>')
+                  : '<span class="tag confirmed">선결제</span>';
+                return `<tr>
+                  <td>${mEsc(row.name)} <span class="muted" style="font-size:12px">(${mEsc(row.unit)})</span></td>
+                  <td class="nowrap">${tag}</td>
+                  <td class="right nowrap">${qtyLabel}</td>
+                  <td class="right nowrap">${won(row.price)}</td>
+                  <td class="right nowrap">${row.pending ? "-" : won(row.supplyAmount)}</td>
+                  <td class="right nowrap">${row.pending ? "-" : won(row.vatAmount)}</td>
+                  <td class="right nowrap">${row.pending ? "-" : won(row.totalAmount)}</td>
+                </tr>`;
+              }).join("")}</tbody>
+            </table>
+            <div class="cart-sum">
+              <div class="row"><span>선결제 합계</span><span>${won(s.summary.prepaid.total)}</span></div>
+              ${s.summary.postpaidSettled.total > 0 ? `<div class="row"><span>사후정산(확정)</span><span>${won(s.summary.postpaidSettled.total)}</span></div>` : ""}
+              <div class="row total"><span>현재 확정 합계</span><span>${won(s.summary.billable.total)}</span></div>
+            </div>
+            ${pendingNote}
+          </div>
+        </div>`;
     }
   </script>
 </body>

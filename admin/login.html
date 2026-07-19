@@ -2,77 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex" />
-  <title>관리자 로그인 | 근로복지공단 인천병원 장례식장</title>
-  <link rel="stylesheet" href="assets/admin.css" />
+  <meta http-equiv="refresh" content="0;url=/pages/member/login.html?next=%2Fadmin%2F" />
+  <title>로그인 이동 중…</title>
+  <script>location.replace("/pages/member/login.html?next=" + encodeURIComponent("/admin/"));</script>
 </head>
 <body>
-  <div class="login-wrap">
-    <form class="login-card" id="loginForm">
-      <h1>관리자 로그인</h1>
-      <p class="sub">근로복지공단 인천병원 장례식장 관리 콘솔</p>
-      <label for="username">아이디</label>
-      <input type="text" id="username" autocomplete="username" required />
-      <label for="password">비밀번호</label>
-      <div class="pw-wrap">
-        <input type="password" id="password" autocomplete="current-password" required />
-        <button type="button" class="pw-toggle" id="pwToggle" aria-label="비밀번호 표시"></button>
-      </div>
-      <button type="submit">로그인</button>
-      <p class="msg" id="msg"></p>
-    </form>
-  </div>
-
-  <script>
-    const form = document.getElementById("loginForm");
-    const msg = document.getElementById("msg");
-
-    // 비밀번호 표시/숨김 토글
-    (function () {
-      const EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-      const EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-      const pw = document.getElementById("password");
-      const tg = document.getElementById("pwToggle");
-      tg.innerHTML = EYE;
-      tg.addEventListener("click", function () {
-        const show = pw.type === "password";
-        pw.type = show ? "text" : "password";
-        tg.innerHTML = show ? EYE_OFF : EYE;
-        tg.setAttribute("aria-label", show ? "비밀번호 숨김" : "비밀번호 표시");
-        pw.focus();
-      });
-    })();
-
-    // 이미 로그인된 관리자면 대시보드로
-    fetch("/api/auth/me", { credentials: "same-origin", headers: { "X-Session-Scope": "admin" } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d && d.user && d.user.role === "admin") location.href = "/admin/"; })
-      .catch(() => {});
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      msg.textContent = "";
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value;
-      try {
-        const r = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Session-Scope": "admin" },
-          credentials: "same-origin",
-          body: JSON.stringify({ username, password }),
-        });
-        const d = await r.json();
-        if (!r.ok) { msg.textContent = d.error || "로그인에 실패했습니다."; return; }
-        if (d.user.role !== "admin") {
-          msg.textContent = "관리자 전용 페이지입니다.";
-          return;
-        }
-        location.href = "/admin/";
-      } catch (err) {
-        msg.textContent = "서버에 연결할 수 없습니다.";
-      }
-    });
-  </script>
+  <p><a href="/pages/member/login.html?next=%2Fadmin%2F">통합 로그인 페이지로 이동</a></p>
 </body>
 </html>

@@ -16,6 +16,7 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
 const { nextOrderNumber } = require("../utils/orderNumber");
+const { aggregateOrders } = require("../utils/orderAggregate");
 
 const router = express.Router();
 
@@ -234,6 +235,24 @@ router.get(
   })
 );
 
+// 상주: 발인 전 주문 집계
+router.get(
+  "/mine/summary",
+  requireFamily,
+  asyncHandler(async (req, res) => {
+    const orders = await Order.find({ familyUserId: req.user.uid }).sort({ createdAt: 1 });
+    const me = await User.findById(req.user.uid).populate("hallId", "hallNumber deceasedName chiefMourner");
+    const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
+    res.json({
+      ...agg,
+      family: me ? { name: me.name, username: me.username, phone: me.phone } : null,
+      hall: me && me.hallId
+        ? { hallNumber: me.hallId.hallNumber, deceasedName: me.hallId.deceasedName, chiefMourner: me.hallId.chiefMourner }
+        : null,
+    });
+  })
+);
+
 // 관리자: 전체 주문
 router.get(
   "/admin/all",
@@ -255,6 +274,27 @@ router.get(
   })
 );
 
+// 관리자: 상주별 주문 집계
+router.get(
+  "/admin/summary",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { familyUserId } = req.query || {};
+    if (!familyUserId) return res.status(400).json({ error: "상주 계정 ID가 필요합니다." });
+    const family = await User.findById(familyUserId).populate("hallId", "hallNumber deceasedName chiefMourner");
+    if (!family) return res.status(404).json({ error: "상주 계정을 찾을 수 없습니다." });
+    const orders = await Order.find({ familyUserId }).sort({ createdAt: 1 });
+    const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
+    res.json({
+      ...agg,
+      family: { id: family._id, name: family.name, username: family.username, phone: family.phone },
+      hall: family.hallId
+        ? { hallNumber: family.hallId.hallNumber, deceasedName: family.hallId.deceasedName, chiefMourner: family.hallId.chiefMourner }
+        : null,
+    });
+  })
+);
+
 // 주문 단건 (문서 출력용) — 상주는 본인 주문만, 관리자는 전체
 router.get(
   "/:id",
@@ -264,8 +304,11 @@ router.get(
       .populate("familyUserId", "name username phone")
       .populate("hallId", "hallNumber deceasedName chiefMourner");
     if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
-    if (req.user.role !== "admin" && String(order.familyUserId._id) !== req.user.uid) {
-      return res.status(403).json({ error: "본인 주문만 조회할 수 있습니다." });
+    if (req.user.role !== "admin") {
+      const ownerId = order.familyUserId && order.familyUserId._id;
+      if (!ownerId || String(ownerId) !== req.user.uid) {
+        return res.status(403).json({ error: "본인 주문만 조회할 수 있습니다." });
+      }
     }
     res.json({
       order: {

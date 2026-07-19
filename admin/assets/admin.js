@@ -1,6 +1,8 @@
 "use strict";
 /* 근로복지공단 인천병원 장례식장 - 관리자 콘솔 로직 (한글 전용) */
 
+const ADMIN_LOGIN_URL = "/pages/member/login.html?next=" + encodeURIComponent("/admin/");
+
 /* ---------- 공통 유틸 ---------- */
 async function api(path, opts) {
   opts = opts || {};
@@ -14,7 +16,7 @@ async function api(path, opts) {
   });
   let data = null;
   try { data = await res.json(); } catch (e) {}
-  if (res.status === 401) { location.href = "/admin/login.html"; throw new Error("unauthorized"); }
+  if (res.status === 401) { location.href = ADMIN_LOGIN_URL; throw new Error("unauthorized"); }
   if (!res.ok) throw new Error((data && data.error) || "요청 처리 중 오류가 발생했습니다.");
   return data;
 }
@@ -73,21 +75,21 @@ let ME = null;
 async function guard() {
   try {
     const d = await api("/auth/me");
-    if (!d.user || d.user.role !== "admin") { location.href = "/admin/login.html"; return false; }
+    if (!d.user || d.user.role !== "admin") { location.href = ADMIN_LOGIN_URL; return false; }
     ME = d.user;
     document.getElementById("whoName").textContent = ME.name + " 님";
     return true;
-  } catch (e) { location.href = "/admin/login.html"; return false; }
+  } catch (e) { location.href = ADMIN_LOGIN_URL; return false; }
 }
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await fetch("/api/auth/logout", {
     method: "POST",
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-Session-Scope": "admin" },
-    body: JSON.stringify({ scope: "admin" }),
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
   });
-  location.href = "/admin/login.html";
+  location.href = ADMIN_LOGIN_URL;
 });
 
 /* ---------- 라우터 ---------- */
@@ -212,7 +214,7 @@ async function uploadImage(file) {
   });
   let data = null;
   try { data = await res.json(); } catch (e) {}
-  if (res.status === 401) { location.href = "/admin/login.html"; throw new Error("unauthorized"); }
+  if (res.status === 401) { location.href = ADMIN_LOGIN_URL; throw new Error("unauthorized"); }
   if (!res.ok) throw new Error((data && data.error) || "이미지 업로드에 실패했습니다.");
   return data.image;
 }
@@ -1532,9 +1534,11 @@ function productForm(p, fixedCatKey) {
 
 /* ---------- 주문 관리 ---------- */
 let orderFilter = "";
+let lastOrders = [];
 const ORDER_STATUS = { pending: "접수", confirmed: "확인", paid: "결제완료", canceled: "취소" };
 async function renderOrders() {
   const d = await api("/orders/admin/all" + (orderFilter ? "?status=" + orderFilter : ""));
+  lastOrders = d.items || [];
   const tag = (s) => {
     const cls = s === "pending" ? "pending" : s === "canceled" ? "gray" : "answered";
     return `<span class="tag ${cls}">${ORDER_STATUS[s] || s}</span>`;
@@ -1560,15 +1564,20 @@ async function renderOrders() {
             <td>${tag(o.status)}</td>
             <td class="nowrap">${fmtDay(o.createdAt)}</td>
             <td class="actions">
-              <button class="btn btn-sm btn-primary" data-view='${esc(JSON.stringify(o))}'>상세</button>
+              ${o.family && o.family.id ? `<a class="btn btn-sm" href="/pages/member/doc.html?type=summary&familyUserId=${esc(o.family.id)}&from=admin" target="_blank">집계</a>` : ""}
+              <button class="btn btn-sm btn-primary" data-order-id="${esc(o.id)}">상세</button>
             </td>
           </tr>`).join("")}</tbody>
       </table>`}
     </div></div>`;
 
   document.getElementById("ordStatus").addEventListener("change", (e) => { orderFilter = e.target.value; renderOrders(); });
-  content.querySelectorAll("[data-view]").forEach((b) =>
-    b.addEventListener("click", () => orderDetail(JSON.parse(b.getAttribute("data-view")))));
+  content.querySelectorAll("[data-order-id]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const o = lastOrders.find((x) => x.id === b.getAttribute("data-order-id"));
+      if (o) orderDetail(o);
+      else toast("주문 정보를 찾을 수 없습니다.");
+    }));
 }
 
 function orderDetail(o) {
@@ -1616,9 +1625,10 @@ function orderDetail(o) {
       </select>
     </div>
     <div class="toolbar" style="margin-top:8px">
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}" target="_blank">주문서</a>
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=statement&id=${o.id}" target="_blank">거래명세서</a>
-      <a class="btn btn-sm" href="/pages/member/doc.html?type=tax&id=${o.id}" target="_blank">세금계산서</a>
+      ${o.family && o.family.id ? `<a class="btn btn-sm btn-primary" href="/pages/member/doc.html?type=summary&familyUserId=${o.family.id}&from=admin" target="_blank">발인 집계서</a>` : ""}
+      <a class="btn btn-sm" href="/pages/member/doc.html?type=order&id=${o.id}&from=admin" target="_blank">주문서</a>
+      <a class="btn btn-sm" href="/pages/member/doc.html?type=statement&id=${o.id}&from=admin" target="_blank">거래명세서</a>
+      <a class="btn btn-sm" href="/pages/member/doc.html?type=tax&id=${o.id}&from=admin" target="_blank">세금계산서</a>
     </div>
   `, [
     { label: "닫기", onClick: closeModal },
