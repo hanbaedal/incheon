@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server/server.js",
-    "seed": "node server/seed.js"
+    "seed": "node server/seed.js",
+    "seed:coffins": "node server/seedCoffins.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
