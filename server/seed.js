@@ -6,6 +6,8 @@ const Notice = require("./models/Notice");
 const Product = require("./models/Product");
 const Coffin = require("./models/Coffin");
 const Hoengdae = require("./models/Hoengdae");
+const Shroud = require("./models/Shroud");
+const Accessory = require("./models/Accessory");
 const Hall = require("./models/Hall");
 const { ensureAdmin } = require("./utils/ensureAdmin");
 
@@ -21,8 +23,6 @@ async function seedProducts() {
     return;
   }
   const samples = [
-    { category: "수의(壽衣)", catKey: "shroud", name: "삼베 수의 (국내산)", description: "국내산 삼베 원단 수의", price: 800000, unit: "벌", sortOrder: 1 },
-    { category: "염습·부속 용품", catKey: "etc", name: "염지 세트", description: "염습용 기본 부속품", price: 120000, unit: "세트", sortOrder: 1 },
     { category: "접객 음식", catKey: "food", name: "육개장 (1인)", description: "조문객 접대용 육개장", price: 9000, unit: "식", sortOrder: 1 },
     { category: "접객 음식", catKey: "food", name: "편육 모둠", description: "편육·나물 등 모둠 상차림", price: 60000, unit: "판", sortOrder: 2 },
     { category: "공산품류", catKey: "consumables", name: "생수", description: "500ml 생수 — 소비 후 발인 전 정산", price: 500, unit: "병", settlementType: "postpaid", sortOrder: 1 },
@@ -82,6 +82,65 @@ async function seedHoengdae() {
   console.log(`+ 횡대 ${samples.length}건 생성 (AMC 규격표)`);
 }
 
+async function seedShrouds() {
+  const count = await Shroud.countDocuments();
+  if (count > 0) {
+    console.log(`- 수의 ${count}건 존재 (시드 건너뜀)`);
+    return;
+  }
+  const samples = [
+    { name: "멧베 7호", material: "15수대마 100%", weaveType: "", yarnOrigin: "중국", fabricOrigin: "한국", sortOrder: 1 },
+    { name: "멧베 10호", material: "대마 100%", weaveType: "", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 2 },
+    { name: "고급한복수의", material: "실크 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "한국", sortOrder: 3 },
+    { name: "천상수의1호", material: "대마 100%", weaveType: "수제직", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 4 },
+    { name: "천상수의4호", material: "명주 50% / 대마 50%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "경북 상주시 함창 / 중국", sortOrder: 5 },
+    { name: "천상수의5호", material: "명주 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "경북 상주시 함창", sortOrder: 6 },
+    { name: "천상수의6호", material: "대마 100%", weaveType: "반수공", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 7 },
+    { name: "천상수의7호", material: "15수대마 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "한국", sortOrder: 8 },
+    { name: "천상수의8호", material: "아마 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "광주 화순일원", sortOrder: 9 },
+    { name: "천상수의9호", material: "대마 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 10 },
+    { name: "천상수의10호", material: "저마 100%", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 11 },
+    { name: "천상수의12호", material: "혼용사", weaveType: "기계직", yarnOrigin: "중국", fabricOrigin: "중국", sortOrder: 12 },
+  ];
+  await Shroud.insertMany(samples);
+  console.log(`+ 수의 ${samples.length}건 생성 (AMC 규격표)`);
+}
+
+async function seedAccessories() {
+  const count = await Accessory.countDocuments();
+  if (count > 0) {
+    console.log(`- 부속물품 ${count}건 존재 (시드 건너뜀)`);
+    return;
+  }
+  const samples = [
+    { name: "명정", spec: "명주 100%", sortOrder: 1 },
+    { name: "관보", spec: "면/폴리", sortOrder: 2 },
+    { name: "결관포", spec: "소창 20마/필", sortOrder: 3 },
+    { name: "부의록", spec: "상품", sortOrder: 4 },
+    { name: "양초", spec: "초대", sortOrder: 5 },
+    { name: "예단특", spec: "1조(천)", sortOrder: 6 },
+    { name: "보공", spec: "10개묶음", sortOrder: 7 },
+    { name: "습신", spec: "본견", sortOrder: 8 },
+    { name: "위폐(향나무)", spec: "향나무", sortOrder: 9 },
+    { name: "한지", spec: "20매", sortOrder: 10 },
+    { name: "탈지면", spec: "50g", sortOrder: 11 },
+    { name: "완장", spec: "혼용사", sortOrder: 12 },
+    { name: "사진리본", spec: "검정", sortOrder: 13 },
+    { name: "베게", spec: "면", sortOrder: 14 },
+    { name: "장갑(장의용)", spec: "면", sortOrder: 15 },
+    { name: "근조리본", spec: "폴리", sortOrder: 16 },
+    { name: "칠성판", spec: "오동나무", sortOrder: 17 },
+    { name: "차량리본", spec: "1대분", sortOrder: 18 },
+    { name: "혼백", spec: "종이", sortOrder: 19 },
+    { name: "축문", spec: "책", sortOrder: 20 },
+    { name: "만복향", spec: "고급향", sortOrder: 21 },
+    { name: "염보", spec: "면/인견", sortOrder: 22 },
+    { name: "수시복건", spec: "공단/천연펄프", sortOrder: 23 },
+  ];
+  await Accessory.insertMany(samples);
+  console.log(`+ 부속물품 ${samples.length}건 생성 (AMC 규격표)`);
+}
+
 async function seedNotice() {
   const count = await Notice.countDocuments();
   if (count > 0) {
@@ -121,6 +180,8 @@ async function main() {
   await seedProducts();
   await seedCoffins();
   await seedHoengdae();
+  await seedShrouds();
+  await seedAccessories();
   await seedNotice();
   await seedHalls();
   console.log("[SEED] 완료");

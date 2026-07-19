@@ -34,6 +34,8 @@
     let PRODUCTS = [];
     let COFFINS = [];
     let HOENGDAES = [];
+    let SHROUDS = [];
+    let ACCESSORIES = [];
     let ACTIVE_CAT = "hall";
     let HALLS = [];
     let MY_HALL_REQ = null;
@@ -44,14 +46,18 @@
       if (!ME) return;
       renderTabs();
       try {
-        const [prodRes, coffinRes, hoengdaeRes] = await Promise.all([
+        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes] = await Promise.all([
           mApi("/products"),
           mApi("/coffins"),
           mApi("/hoengdae"),
+          mApi("/shrouds"),
+          mApi("/accessories"),
         ]);
         PRODUCTS = prodRes.items;
         COFFINS = coffinRes.items;
         HOENGDAES = hoengdaeRes.items;
+        SHROUDS = shroudRes.items;
+        ACCESSORIES = accessoryRes.items;
         await loadHallData();
         renderMain();
       } catch (e) {
@@ -85,6 +91,8 @@
       const [type, id] = key.split(":");
       if (type === "coffin") return COFFINS.find((x) => x.id === id);
       if (type === "hoengdae") return HOENGDAES.find((x) => x.id === id);
+      if (type === "shroud") return SHROUDS.find((x) => x.id === id);
+      if (type === "accessory") return ACCESSORIES.find((x) => x.id === id);
       return PRODUCTS.find((x) => x.id === id);
     }
 
@@ -157,6 +165,62 @@
             });
             html += "</div>";
           }
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
+      if (ACTIVE_CAT === "shroud") {
+        const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
+        let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
+        if (SHROUDS.length === 0) {
+          html += '<div class="state">등록된 수의가 없습니다.</div>';
+        } else {
+          html += '<div class="prod-grid">';
+          SHROUDS.forEach((s) => {
+            html += `
+              <div class="prod-card">
+                ${s.imageUrl ? `<img src="${mEsc(s.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                <div class="prod-card-body">
+                  <b>${mEsc(s.name)}</b>
+                  <small>${mEsc(s.material || "")}${s.weaveType ? " · " + mEsc(s.weaveType) : ""}</small>
+                  <div class="prod-meta"><span class="price">${won(s.price)} / ${mEsc(s.unit)}</span></div>
+                  <button class="btn btn-sm btn-primary" data-add="shroud:${s.id}">담기</button>
+                </div>
+              </div>`;
+          });
+          html += "</div>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
+      if (ACTIVE_CAT === "etc") {
+        const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
+        let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
+        if (ACCESSORIES.length === 0) {
+          html += '<div class="state">등록된 부속물품이 없습니다.</div>';
+        } else {
+          html += '<div class="prod-grid">';
+          ACCESSORIES.forEach((a) => {
+            html += `
+              <div class="prod-card">
+                ${a.imageUrl ? `<img src="${mEsc(a.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                <div class="prod-card-body">
+                  <b>${mEsc(a.name)}</b>
+                  <small>${mEsc(a.spec || "&nbsp;")}</small>
+                  <div class="prod-meta"><span class="price">${won(a.price)} / ${mEsc(a.unit)}</span></div>
+                  <button class="btn btn-sm btn-primary" data-add="accessory:${a.id}">담기</button>
+                </div>
+              </div>`;
+          });
+          html += "</div>";
         }
         html += "</div>";
         area.innerHTML = html;
@@ -259,6 +323,8 @@
         const [type, id] = key.split(":");
         if (type === "coffin") return { itemType: "coffin", itemRefId: id, qty };
         if (type === "hoengdae") return { itemType: "hoengdae", itemRefId: id, qty };
+        if (type === "shroud") return { itemType: "shroud", itemRefId: id, qty };
+        if (type === "accessory") return { itemType: "accessory", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
       const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";

@@ -43,8 +43,8 @@ const MEMBER_STATUS = { pending: "접수", confirmed: "확인", paid: "결제완
 const RESERVE_CATS = [
   { key: "hall", label: "빈소선택", type: "hall" },
   { key: "coffin", label: "장례 물품 · 관·횡대", type: "product" },
-  { key: "shroud", label: "장례 물품 · 수의", type: "product" },
-  { key: "etc", label: "장례 물품 · 염습·부속", type: "product" },
+  { key: "shroud", label: "장례 물품 · 수의", type: "shroud" },
+  { key: "etc", label: "장례 물품 · 부속물품", type: "accessory" },
   { key: "food", label: "접객 음식", type: "product" },
   { key: "consumables", label: "공산품류", type: "product" },
   { key: "flower", label: "근조 화환", type: "product" },

@@ -109,6 +109,73 @@
     host.innerHTML = html || '<div class="service-prod-empty">등록된 관·횡대 정보가 없습니다.</div>';
   }
 
+  async function renderShroudSpecs(host) {
+    const res = await fetch("/api/shrouds");
+    const items = ((await res.json()).items) || [];
+    const loggedIn = await isMemberLoggedIn();
+    if (items.length === 0) {
+      host.innerHTML = '<div class="service-prod-empty">등록된 수의 정보가 없습니다.</div>';
+      return;
+    }
+    let html = `
+      <div class="block">
+        <h3>수의 규격표</h3>
+        <table class="tbl">
+          <thead>
+            <tr><th>상품명</th><th>재질구성</th><th>직조</th><th>원사 생산국</th><th>원단 생산지</th>${loggedIn ? "<th>가격</th>" : ""}</tr>
+          </thead>
+          <tbody>
+            ${items.map((s) => `
+              <tr>
+                <th>${esc(s.name)}</th>
+                <td>${esc(s.material || "-")}</td>
+                <td>${esc(s.weaveType || "-")}</td>
+                <td>${esc(s.yarnOrigin || "-")}</td>
+                <td>${esc(s.fabricOrigin || "-")}</td>
+                ${loggedIn ? `<td class="nowrap">${won(s.price)} / ${esc(s.unit)}</td>` : ""}
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html;
+  }
+
+  async function renderAccessorySpecs(host) {
+    const res = await fetch("/api/accessories");
+    const items = ((await res.json()).items) || [];
+    const loggedIn = await isMemberLoggedIn();
+    if (items.length === 0) {
+      host.innerHTML = '<div class="service-prod-empty">등록된 부속물품 정보가 없습니다.</div>';
+      return;
+    }
+    const rows = [];
+    for (let i = 0; i < items.length; i += 2) {
+      const left = items[i];
+      const right = items[i + 1];
+      rows.push(`
+        <tr>
+          <th>${esc(left.name)}</th><td>${esc(left.spec || "-")}</td>
+          ${right ? `<th>${esc(right.name)}</th><td>${esc(right.spec || "-")}</td>` : "<th></th><td></td>"}
+          ${loggedIn ? `<td class="nowrap">${won(left.price)}</td>${right ? `<td class="nowrap">${won(right.price)}</td>` : "<td></td>"}` : ""}
+        </tr>`);
+    }
+    let html = `
+      <div class="block">
+        <h3>부속물품 규격표</h3>
+        <table class="tbl">
+          <thead>
+            <tr><th>품명</th><th>규격</th><th>품명</th><th>규격</th>${loggedIn ? "<th>가격</th><th>가격</th>" : ""}</tr>
+          </thead>
+          <tbody>${rows.join("")}</tbody>
+        </table>
+      </div>`;
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html;
+  }
+
   async function loadProducts(catKey) {
     const host = document.getElementById("serviceProducts");
     if (!host || !catKey) return;
@@ -120,6 +187,20 @@
       } catch (e) {
         host.innerHTML = '<div class="service-prod-empty">관·횡대 정보를 불러올 수 없습니다.</div>';
       }
+      return;
+    }
+
+    if (catKey === "shroud") {
+      host.innerHTML = '<div class="service-prod-loading">수의 정보를 불러오는 중…</div>';
+      try { await renderShroudSpecs(host); }
+      catch (e) { host.innerHTML = '<div class="service-prod-empty">수의 정보를 불러올 수 없습니다.</div>'; }
+      return;
+    }
+
+    if (catKey === "etc") {
+      host.innerHTML = '<div class="service-prod-loading">부속물품 정보를 불러오는 중…</div>';
+      try { await renderAccessorySpecs(host); }
+      catch (e) { host.innerHTML = '<div class="service-prod-empty">부속물품 정보를 불러올 수 없습니다.</div>'; }
       return;
     }
 

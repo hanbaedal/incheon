@@ -5,6 +5,8 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Coffin = require("../models/Coffin");
 const Hoengdae = require("../models/Hoengdae");
+const Shroud = require("../models/Shroud");
+const Accessory = require("../models/Accessory");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
@@ -13,16 +15,36 @@ const { nextOrderNumber } = require("../utils/orderNumber");
 const router = express.Router();
 
 function resolveItemType(it) {
-  if (it.itemType === "coffin" || it.itemType === "hoengdae") return it.itemType;
+  if (["coffin", "hoengdae", "shroud", "accessory"].includes(it.itemType)) return it.itemType;
   if (it.coffinId) return "coffin";
   if (it.hoengdaeId) return "hoengdae";
+  if (it.shroudId) return "shroud";
+  if (it.accessoryId) return "accessory";
   return "product";
 }
 
 function resolveRefId(it, itemType) {
   if (itemType === "coffin") return it.itemRefId || it.coffinId;
   if (itemType === "hoengdae") return it.itemRefId || it.hoengdaeId;
+  if (itemType === "shroud") return it.itemRefId || it.shroudId;
+  if (itemType === "accessory") return it.itemRefId || it.accessoryId;
   return it.productId;
+}
+
+function prepaidItem(itemType, ref, catKey, qty) {
+  return {
+    itemType,
+    itemRefId: ref._id,
+    catKey,
+    name: ref.name,
+    unit: ref.unit || "개",
+    price: ref.price,
+    qty,
+    finalQty: qty,
+    settlementType: "prepaid",
+    settled: true,
+    taxable: ref.taxable,
+  };
 }
 
 // 상주: 주문(예약) 생성
@@ -38,23 +60,31 @@ router.post(
     const productIds = [];
     const coffinIds = [];
     const hoengdaeIds = [];
+    const shroudIds = [];
+    const accessoryIds = [];
     for (const it of items) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
       if (!refId) return res.status(400).json({ error: "품목 ID가 누락되었습니다." });
       if (itemType === "coffin") coffinIds.push(refId);
       else if (itemType === "hoengdae") hoengdaeIds.push(refId);
+      else if (itemType === "shroud") shroudIds.push(refId);
+      else if (itemType === "accessory") accessoryIds.push(refId);
       else productIds.push(refId);
     }
 
-    const [products, coffins, hoengdaes] = await Promise.all([
+    const [products, coffins, hoengdaes, shrouds, accessories] = await Promise.all([
       productIds.length ? Product.find({ _id: { $in: productIds }, active: true }) : [],
       coffinIds.length ? Coffin.find({ _id: { $in: coffinIds }, active: true }) : [],
       hoengdaeIds.length ? Hoengdae.find({ _id: { $in: hoengdaeIds }, active: true }) : [],
+      shroudIds.length ? Shroud.find({ _id: { $in: shroudIds }, active: true }) : [],
+      accessoryIds.length ? Accessory.find({ _id: { $in: accessoryIds }, active: true }) : [],
     ]);
     const productMap = new Map(products.map((p) => [String(p._id), p]));
     const coffinMap = new Map(coffins.map((c) => [String(c._id), c]));
     const hoengdaeMap = new Map(hoengdaes.map((h) => [String(h._id), h]));
+    const shroudMap = new Map(shrouds.map((s) => [String(s._id), s]));
+    const accessoryMap = new Map(accessories.map((a) => [String(a._id), a]));
 
     const orderItems = [];
     for (const it of items) {
@@ -65,35 +95,19 @@ router.post(
       if (itemType === "coffin") {
         const c = coffinMap.get(String(refId));
         if (!c) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 관 품목이 포함되어 있습니다." });
-        orderItems.push({
-          itemType: "coffin",
-          itemRefId: c._id,
-          catKey: "coffin",
-          name: c.name,
-          unit: c.unit || "개",
-          price: c.price,
-          qty,
-          finalQty: qty,
-          settlementType: "prepaid",
-          settled: true,
-          taxable: c.taxable,
-        });
+        orderItems.push(prepaidItem("coffin", c, "coffin", qty));
       } else if (itemType === "hoengdae") {
         const h = hoengdaeMap.get(String(refId));
         if (!h) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 횡대 품목이 포함되어 있습니다." });
-        orderItems.push({
-          itemType: "hoengdae",
-          itemRefId: h._id,
-          catKey: "coffin",
-          name: h.name,
-          unit: h.unit || "개",
-          price: h.price,
-          qty,
-          finalQty: qty,
-          settlementType: "prepaid",
-          settled: true,
-          taxable: h.taxable,
-        });
+        orderItems.push(prepaidItem("hoengdae", h, "coffin", qty));
+      } else if (itemType === "shroud") {
+        const s = shroudMap.get(String(refId));
+        if (!s) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 수의 품목이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("shroud", s, "shroud", qty));
+      } else if (itemType === "accessory") {
+        const a = accessoryMap.get(String(refId));
+        if (!a) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 부속물품이 포함되어 있습니다." });
+        orderItems.push(prepaidItem("accessory", a, "etc", qty));
       } else {
         const p = productMap.get(String(refId));
         if (!p) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상품이 포함되어 있습니다." });

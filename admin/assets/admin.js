@@ -98,8 +98,8 @@ const VIEWS = {
   hallRequests: { title: "빈소 신청", render: renderHallRequests },
   prodCoffin: { title: "관 관리", render: () => renderCoffins() },
   prodHoengdae: { title: "횡대 관리", render: () => renderHoengdae() },
-  prodShroud: { title: "수의 관리", render: () => renderProductsByCat("shroud") },
-  prodEtc: { title: "염습·부속 관리", render: () => renderProductsByCat("etc") },
+  prodShroud: { title: "수의 관리", render: () => renderShrouds() },
+  prodAccessory: { title: "부속물품 관리", render: () => renderAccessories() },
   prodFood: { title: "접객 음식 관리", render: () => renderProductsByCat("food") },
   prodConsumables: { title: "공산품류 관리", render: () => renderProductsByCat("consumables") },
   prodFlower: { title: "근조 화환 관리", render: () => renderProductsByCat("flower") },
@@ -163,8 +163,6 @@ async function refreshHallReqBadge() {
 function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
 
 const CAT_KEYS = [
-  { key: "shroud", label: "수의(壽衣)" },
-  { key: "etc", label: "염습·부속 용품" },
   { key: "food", label: "접객 음식" },
   { key: "consumables", label: "공산품류" },
   { key: "flower", label: "근조 화환" },
@@ -173,11 +171,6 @@ const CAT_KEYS = [
   { key: "hearse", label: "운구·차량" },
 ];
 const PRODUCT_SPEC_FIELDS = {
-  shroud: [
-    { key: "material", label: "원단/재질" },
-    { key: "style", label: "형식" },
-  ],
-  etc: [{ key: "kind", label: "품목 종류" }],
   food: [{ key: "serving", label: "1인/1판 기준" }],
   flower: [{ key: "size", label: "단수/크기" }],
   photo: [{ key: "size", label: "액자 규격" }],
@@ -794,6 +787,169 @@ function hoengdaeForm(h) {
       try {
         if (h) await api("/hoengdae/" + h.id, { method: "PATCH", body });
         else await api("/hoengdae", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderShrouds() {
+  const d = await api("/shrouds/admin/all");
+  content.innerHTML = `
+    <div class="toolbar"><button class="btn btn-primary" id="addShroud">+ 수의 등록</button></div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 수의가 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>상품명</th><th>재질구성</th><th>직조</th><th>원사 생산국</th><th>원단 생산지</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((s) => `
+          <tr>
+            <td><b>${esc(s.name)}</b>${s.imageUrl ? `<br><img src="${esc(s.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td>${esc(s.material || "-")}</td>
+            <td class="nowrap">${esc(s.weaveType || "-")}</td>
+            <td class="nowrap">${esc(s.yarnOrigin || "-")}</td>
+            <td>${esc(s.fabricOrigin || "-")}</td>
+            <td class="right nowrap">${won(s.price)} / ${esc(s.unit)}</td>
+            <td>${s.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(s))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${s.id}" data-name="${esc(s.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addShroud").addEventListener("click", () => shroudForm(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => shroudForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("수의", b.getAttribute("data-name"), async () => {
+      await api("/shrouds/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function shroudForm(s) {
+  const e = s || {};
+  openModal(s ? "수의 수정" : "수의 등록", `
+    <div class="field-row">
+      <div class="field"><label>상품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field"><label>재질구성</label><input id="f_material" value="${esc(e.material || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>직조</label><input id="f_weaveType" value="${esc(e.weaveType || "")}" placeholder="기계직 / 수제직 / 반수공" /></div>
+      <div class="field"><label>원사 생산국</label><input id="f_yarnOrigin" value="${esc(e.yarnOrigin || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>원단 생산지</label><input id="f_fabricOrigin" value="${esc(e.fabricOrigin || "")}" /></div>
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "벌")}" /></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"), material: val("f_material"), weaveType: val("f_weaveType"),
+        yarnOrigin: val("f_yarnOrigin"), fabricOrigin: val("f_fabricOrigin"),
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "벌",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("상품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (s && s.imageId) body.imageId = s.imageId;
+      try {
+        if (s) await api("/shrouds/" + s.id, { method: "PATCH", body });
+        else await api("/shrouds", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderAccessories() {
+  const d = await api("/accessories/admin/all");
+  content.innerHTML = `
+    <div class="toolbar"><button class="btn btn-primary" id="addAccessory">+ 부속물품 등록</button></div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 부속물품이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품명</th><th>규격</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((a) => `
+          <tr>
+            <td><b>${esc(a.name)}</b>${a.imageUrl ? `<br><img src="${esc(a.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td>${esc(a.spec || "-")}</td>
+            <td class="right nowrap">${won(a.price)} / ${esc(a.unit)}</td>
+            <td>${a.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(a))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${a.id}" data-name="${esc(a.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addAccessory").addEventListener("click", () => accessoryForm(null));
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => accessoryForm(JSON.parse(b.getAttribute("data-edit")))));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete("부속물품", b.getAttribute("data-name"), async () => {
+      await api("/accessories/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function accessoryForm(a) {
+  const e = a || {};
+  openModal(a ? "부속물품 수정" : "부속물품 등록", `
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"), spec: val("f_spec"),
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (a && a.imageId) body.imageId = a.imageId;
+      try {
+        if (a) await api("/accessories/" + a.id, { method: "PATCH", body });
+        else await api("/accessories", { method: "POST", body });
         closeModal(); toast("저장되었습니다."); route();
       } catch (err) { toast(err.message); }
     } },
