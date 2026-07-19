@@ -183,7 +183,7 @@ const mMemberModal = (function () {
 
 const RESERVE_CATS = mReserveCats();
 
-/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' */
+/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' | 'guide' */
 async function memberHeader(active) {
   let me;
   try { me = (await mApi("/auth/me")).user; }
@@ -202,6 +202,7 @@ async function memberHeader(active) {
       <nav class="m-nav">
         <a href="/pages/member/shop.html" class="${active === "shop" ? "active" : ""}">${mEsc(mT("nav.shop"))}</a>
         <a href="/pages/member/orders.html" class="${active === "orders" ? "active" : ""}">${mEsc(mT("nav.orders"))}</a>
+        <a href="/pages/member/guide.html" class="${active === "guide" ? "active" : ""}">${mEsc(mT("nav.guide"))}</a>
         <a href="/" target="_blank">${mEsc(mT("nav.homepage"))}</a>
         <span id="mLangSwitch"></span>
         <span class="who">${mEsc(me.name)}${mEsc(mT("nav.whoSuffix"))}</span>

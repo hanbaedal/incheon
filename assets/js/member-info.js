@@ -44,6 +44,34 @@ function renderMemberFacilityPanel() {
     <p class="info-panel-note" data-mi18n="info.facilityNote" data-mi18n-html="1">${mT("info.facilityNote")}</p>`;
 }
 
+function renderMemberObituaryPanel() {
+  return `
+    <p class="info-panel-lead">${mEsc(mT("info.obituaryLead"))}</p>
+    <div class="guide-block">
+      <h4 class="section-h4">${mEsc(mT("info.obituaryStepsTitle"))}</h4>
+      <ol class="guide-steps">
+        <li><strong>${mEsc(mT("info.obituaryStep1"))}</strong><span>${mEsc(mT("info.obituaryStep1d"))}</span></li>
+        <li><strong>${mEsc(mT("info.obituaryStep2"))}</strong><span>${mEsc(mT("info.obituaryStep2d"))}</span></li>
+        <li><strong>${mEsc(mT("info.obituaryStep3"))}</strong><span>${mEsc(mT("info.obituaryStep3d"))}</span></li>
+        <li><strong>${mEsc(mT("info.obituaryStep4"))}</strong><span>${mEsc(mT("info.obituaryStep4d"))}</span></li>
+      </ol>
+    </div>
+    <div class="guide-block">
+      <h4 class="section-h4">${mEsc(mT("info.obituarySampleTitle"))}</h4>
+      <div class="guide-sample">
+        <p>${mEsc(mT("info.obituarySample"))}</p>
+        <p>${mEsc(mT("info.obituarySampleHall"))}</p>
+        <p>${mEsc(mT("info.obituarySampleDate"))}</p>
+        <p>${mEsc(mT("info.obituarySampleSite"))}</p>
+        <p>${mEsc(mT("info.obituarySampleChief"))}</p>
+      </div>
+      <ul class="guide-dots">
+        <li>${mEsc(mT("info.obituaryNote1"))}</li>
+        <li>${mEsc(mT("info.obituaryNote2"))}</li>
+      </ul>
+    </div>`;
+}
+
 function initMemberInfoPanel(activeTab) {
   const body = document.getElementById("infoPanelBody");
   const tabs = document.querySelectorAll("[data-info-tab]");
@@ -52,6 +80,7 @@ function initMemberInfoPanel(activeTab) {
   async function show(tab) {
     tabs.forEach((t) => t.classList.toggle("active", t.getAttribute("data-info-tab") === tab));
     if (tab === "facility") body.innerHTML = renderMemberFacilityPanel();
+    else if (tab === "obituary") body.innerHTML = renderMemberObituaryPanel();
     else await renderMemberFormsPanel();
   }
 

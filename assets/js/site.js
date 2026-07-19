@@ -169,8 +169,6 @@
         { key: "buddhist", href: "pages/info/buddhist.html", label: { ko: "불교식", zh: "佛教式", en: "Buddhist Rite" } },
         { key: "christian", href: "pages/info/christian.html", label: { ko: "기독교식", zh: "基督教式", en: "Christian Rite" } },
         { key: "catholic", href: "pages/info/catholic.html", label: { ko: "천주교식", zh: "天主教式", en: "Catholic Rite" } },
-        { key: "forms", href: "pages/info/forms.html", label: { ko: "서식 자료실", zh: "表格资料室", en: "Documents" } },
-        { key: "obituary", href: "pages/info/obituary.html", label: { ko: "신문 부고 안내", zh: "报纸讣告", en: "Newspaper Obituary" } },
       ],
     },
     {

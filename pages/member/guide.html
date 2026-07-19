@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>장례안내 | 상주 전용 서비스</title>
+  <link rel="stylesheet" href="../../assets/css/member.css" />
+</head>
+<body>
+  <header id="mHeader"></header>
+  <div class="m-wrap">
+    <h1 class="m-title" data-mi18n="guide.title">장례 안내</h1>
+    <p class="m-lead" data-mi18n="guide.lead">관련서식 다운로드, 장사시설 안내, 신문 부고 작성 방법을 확인하실 수 있습니다.</p>
+
+    <div class="card info-panel guide-panel">
+      <div class="info-tabs">
+        <button type="button" class="info-tab active" data-info-tab="forms" data-mi18n="shop.tabForms">관련서식</button>
+        <button type="button" class="info-tab" data-info-tab="facility" data-mi18n="shop.tabFacility">장사시설안내</button>
+        <button type="button" class="info-tab" data-info-tab="obituary" data-mi18n="shop.tabObituary">신문 부고 안내</button>
+      </div>
+      <div class="card-body info-panel-body" id="infoPanelBody"></div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/member-i18n.js"></script>
+  <script src="../../assets/js/forms-public.js"></script>
+  <script src="../../assets/js/member.js"></script>
+  <script src="../../assets/js/member-info.js"></script>
+  <script>
+    (async function () {
+      const me = await memberHeader("guide");
+      if (!me) return;
+      mApplyI18n(document);
+      mPageTitle("guide.pageTitle");
+      const tab = new URLSearchParams(location.search).get("tab");
+      initMemberInfoPanel(tab === "facility" || tab === "obituary" ? tab : "forms");
+    })();
+  </script>
+</body>
+</html>

@@ -388,6 +388,27 @@ a.link-gold { color: var(--gold); font-weight: 600; }
 
 .info-panel-note a { color: var(--navy); font-weight: 600; }
 
+.guide-panel { margin-top: 4px; }
+.guide-panel .info-tabs { border-bottom: 1px solid var(--line); }
+.guide-block + .guide-block { margin-top: 18px; padding-top: 4px; }
+.guide-steps {
+  margin: 0; padding: 0; list-style: none; display: grid; gap: 10px;
+}
+.guide-steps li {
+  display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px;
+  padding: 10px 12px; background: #f7f8fb; border-radius: 8px; font-size: 13px;
+}
+.guide-steps strong { color: var(--navy); }
+.guide-steps span { color: #555; }
+.guide-sample {
+  padding: 14px 16px; background: #faf9f6; border: 1px solid var(--line);
+  border-radius: 8px; font-size: 13px; color: #464b54;
+}
+.guide-sample p { margin: 0 0 6px; }
+.guide-sample p:last-child { margin-bottom: 0; }
+.guide-dots { margin: 12px 0 0; padding-left: 18px; color: #555; font-size: 13px; }
+.guide-dots li + li { margin-top: 6px; }
+
 .info-scroll {
   max-height: 280px;
   overflow: auto;

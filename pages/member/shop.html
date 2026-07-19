@@ -29,22 +29,12 @@
             <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled data-mi18n="shop.submitOrder">예약 제출</button>
           </div>
         </div>
-        <div class="card info-panel">
-          <div class="card-head" data-mi18n="shop.infoGuide">장례 안내</div>
-          <div class="info-tabs">
-            <button type="button" class="info-tab active" data-info-tab="forms" data-mi18n="shop.tabForms">관련서식</button>
-            <button type="button" class="info-tab" data-info-tab="facility" data-mi18n="shop.tabFacility">장사시설안내</button>
-          </div>
-          <div class="card-body info-panel-body" id="infoPanelBody"></div>
-        </div>
       </div>
     </div>
   </div>
 
   <script src="../../assets/js/member-i18n.js"></script>
-  <script src="../../assets/js/forms-public.js"></script>
   <script src="../../assets/js/member.js"></script>
-  <script src="../../assets/js/member-info.js"></script>
   <script>
     let ME = null;
     let PRODUCTS = [];
@@ -82,7 +72,6 @@
       if (!ME) return;
       mApplyI18n(document);
       mPageTitle("shop.pageTitle");
-      initMemberInfoPanel("forms");
       renderTabs();
       try {
         const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes, flowerRes, photoRes, dressRes, hearseRes] = await Promise.all([
