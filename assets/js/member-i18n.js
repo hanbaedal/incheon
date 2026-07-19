@@ -94,6 +94,7 @@
     "shop.hallFeeReserved": { ko: " · 이용료 예약됨", zh: " · 使用费已预约", en: " · Hall fee reserved" },
     "shop.hallPending": { ko: "승인 대기", zh: "等待批准", en: "Pending approval" },
     "shop.hallLabel": { ko: "빈소 · ", zh: "灵堂 · ", en: "Hall · " },
+    "shop.hallFeeLocked": { ko: "빈소 이용료는 빈소 배정과 함께 포함되어 변경할 수 없습니다.", zh: "灵堂使用费随灵堂分配自动包含，无法修改。", en: "Hall usage fee is included with hall assignment and cannot be changed." },
 
     "orders.pageTitle": { ko: "내 예약 | 상주 전용 서비스", zh: "我的预约 | 丧主专用服务", en: "My Orders | Family Portal" },
     "orders.title": { ko: "내 예약 내역", zh: "我的预约记录", en: "My reservations" },

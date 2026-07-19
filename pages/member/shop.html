@@ -197,52 +197,42 @@
         const fee = resolveHallFee(MY_USAGE);
         if (fee && !fee.hallFeeOrdered) return fee;
       }
+      if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
+        const fee = resolveHallFee(MY_HALL_REQ);
+        if (fee && fee.hallFeeAmount > 0) return fee;
+      }
       return null;
     }
 
-    function hallFeeLine(fee) {
-      if (!fee) return "";
-      return `<br><small>${mEsc(mT("hall.feeLine", { days: fee.funeralDays, price: won(fee.dailyPrice) }))}</small>`;
-    }
-
-    function hallSummaryHtml() {
+    function hallCartItemHtml() {
       const hallName = getHallDisplayName();
+      let fee = null;
+      let reserved = false;
+
       if (MY_USAGE && MY_USAGE.status === "active") {
-        const fee = resolveHallFee(MY_USAGE);
-        const pending = fee && !fee.hallFeeOrdered ? fee : null;
-        const sub = [
-          MY_USAGE.deceasedName ? mT("common.deceasedPrefix") + MY_USAGE.deceasedName : "",
-          MY_USAGE.funeralDate ? mT("common.funeralPrefix") + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
-        ].filter(Boolean).join(" · ");
-        return `
-          <div class="cart-item cart-hall">
-            <span class="nm">
-              <b>${mEsc(mT("shop.hallLabel"))}${mEsc(hallName) || "—"}</b>
-              ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
-              ${hallFeeLine(fee)}
-              <br><small class="status-ok">${mEsc(mT("shop.hallAssigned"))}${fee && fee.hallFeeOrdered ? mEsc(mT("shop.hallFeeReserved")) : ""}</small>
-            </span>
-            <span class="cart-hall-right nowrap">${pending ? won(pending.hallFeeAmount) : (fee && fee.hallFeeOrdered ? mEsc(mT("common.reserved")) : "—")}</span>
-          </div>`;
+        fee = resolveHallFee(MY_USAGE);
+        if (!fee) return "";
+        reserved = !!fee.hallFeeOrdered;
+      } else if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
+        fee = resolveHallFee(MY_HALL_REQ);
+        if (!fee) return "";
+      } else {
+        return "";
       }
-      if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
-        const fee = resolveHallFee(MY_HALL_REQ);
-        const sub = [
-          MY_HALL_REQ.deceasedName ? mT("common.deceasedPrefix") + MY_HALL_REQ.deceasedName : "",
-          MY_HALL_REQ.funeralDate ? mT("common.funeralPrefix") + MY_HALL_REQ.funeralDate : "",
-        ].filter(Boolean).join(" · ");
-        return `
-          <div class="cart-item cart-hall">
-            <span class="nm">
-              <b>${mEsc(mT("shop.hallLabel"))}${mEsc(hallName) || "—"}</b>
-              ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
-              ${hallFeeLine(fee)}
-              <br><small class="status-wait">${mEsc(mT("shop.hallPending"))}</small>
-            </span>
-            <span class="cart-hall-right nowrap">${fee ? won(fee.hallFeeAmount) : "—"}</span>
-          </div>`;
-      }
-      return "";
+
+      const label = mT("shop.hallLabel") + (hallName || "—");
+      const qty = fee.funeralDays;
+      const priceText = reserved ? mEsc(mT("common.reserved")) : won(fee.hallFeeAmount);
+      const key = "hall:fee";
+
+      return `
+        <div class="cart-item">
+          <span class="nm">${mEsc(label)}<br><span class="rm" data-rm="${key}">${mEsc(mT("common.delete"))}</span></span>
+          <span class="qtybox">
+            <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
+          </span>
+          <span class="nowrap" style="min-width:78px;text-align:right">${priceText}</span>
+        </div>`;
     }
 
     function cartKey(type, id) { return type + ":" + id; }
@@ -886,6 +876,10 @@
       renderCart(); mToast(mT("shop.addedToast"));
     }
     function setQty(key, qty) {
+      if (key === "hall:fee") {
+        mToast(mT("shop.hallFeeLocked"));
+        return;
+      }
       if (qty <= 0 && key.startsWith("hallFacilityFee:") && shouldAutoFacilityFees()) {
         mToast(mT("shop.facilityAutoHint"));
         return;
@@ -902,7 +896,7 @@
       const area = document.getElementById("cartArea");
       const sumArea = document.getElementById("cartSum");
       const btn = document.getElementById("orderBtn");
-      const hallHtml = hallSummaryHtml();
+      const hallHtml = hallCartItemHtml();
       const pendingHall = getPendingHallFee();
 
       if (cart.size === 0 && !hallHtml) {
