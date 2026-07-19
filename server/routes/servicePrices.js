@@ -2,18 +2,25 @@
 
 const express = require("express");
 const ServicePrice = require("../models/ServicePrice");
+const { upsertServicePrices } = require("../utils/ensureServicePrices");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
+
+async function listServicePrices(filter) {
+  const count = await ServicePrice.countDocuments(filter);
+  if (count === 0) await upsertServicePrices();
+  const items = await ServicePrice.find(filter).sort({ sortOrder: 1, group: 1, name: 1 });
+  return items.map((s) => s.toJSONSafe());
+}
 
 router.get(
   "/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.orderable === "1") filter.orderable = true;
-    const items = await ServicePrice.find(filter).sort({ sortOrder: 1, group: 1, name: 1 });
-    res.json({ items: items.map((s) => s.toJSONSafe()) });
+    res.json({ items: await listServicePrices(filter) });
   })
 );
 
@@ -21,8 +28,7 @@ router.get(
   "/admin/all",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const items = await ServicePrice.find({}).sort({ sortOrder: 1, group: 1, name: 1 });
-    res.json({ items: items.map((s) => s.toJSONSafe()) });
+    res.json({ items: await listServicePrices({ active: true }) });
   })
 );
 
@@ -30,7 +36,6 @@ router.post(
   "/admin/sync",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const { upsertServicePrices } = require("../utils/ensureServicePrices");
     const result = await upsertServicePrices();
     const items = await ServicePrice.find({ active: true }).sort({ sortOrder: 1, group: 1, name: 1 });
     res.json({ ok: true, result, items: items.map((s) => s.toJSONSafe()) });

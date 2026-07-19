@@ -1446,21 +1446,25 @@ function accessoryForm(a) {
 }
 
 async function renderServicePrices() {
-  const d = await api("/service-prices/admin/all");
-  const emptyHint = d.items.length === 0
-    ? `<div class="notice-box">기본 항목(관리비·폐기물·도우미)이 자동 등록되지 않았습니다. 아래 <strong>기본 3건 등록</strong> 버튼을 눌러 주세요.</div>`
-    : "";
+  let d = await api("/service-prices/admin/all");
+  if (!d.items || d.items.length === 0) {
+    try {
+      const sync = await api("/service-prices/admin/sync", { method: "POST" });
+      d = { items: sync.items || [] };
+    } catch (e) {
+      /* 목록 조회만 실패한 경우 아래 안내 표시 */
+    }
+  }
   content.innerHTML = `
-    ${emptyHint}
+    <p class="muted" style="margin-bottom:12px">관리비·폐기물·도우미 <strong>3건</strong>만 등록·사용합니다. 요금 변경은 수정 버튼으로 하시면 됩니다.</p>
     <div class="toolbar">
-      <button class="btn btn-primary" id="addServicePrice">+ 서비스 항목 등록</button>
-      <button class="btn" id="syncServicePrices">기본 3건 등록</button>
+      <button class="btn" id="syncServicePrices">기본 3건 다시 맞추기</button>
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">등록된 항목이 없습니다.</div>' : `
+      ${!(d.items && d.items.length) ? '<div class="empty">등록된 항목이 없습니다. 「기본 3건 다시 맞추기」를 눌러 주세요.</div>' : `
       <table class="grid">
         <thead><tr><th>구분</th><th>항목</th><th>단위</th><th class="right">요금</th><th>비고</th><th>정산</th><th>예약</th><th>노출</th><th class="right">관리</th></tr></thead>
-        <tbody>${d.items.map((s) => `
+        <tbody>${(d.items || []).map((s) => `
           <tr>
             <td class="nowrap">${esc(s.group)}</td>
             <td><b>${esc(s.name)}</b></td>
@@ -1477,21 +1481,6 @@ async function renderServicePrices() {
           </tr>`).join("")}</tbody>
       </table>`}
     </div></div>`;
-  document.getElementById("addServicePrice").addEventListener("click", () => servicePriceForm(null));
-  const syncBtn = document.getElementById("syncServicePrices");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      syncBtn.disabled = true;
-      try {
-        const r = await api("/service-prices/admin/sync", { method: "POST" });
-        toast(`기본 항목 ${(r.items || []).length}건 등록되었습니다.`);
-        route();
-      } catch (err) {
-        toast(err.message);
-        syncBtn.disabled = false;
-      }
-    });
-  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => servicePriceForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>
@@ -1499,6 +1488,20 @@ async function renderServicePrices() {
       await api("/service-prices/" + b.getAttribute("data-del"), { method: "DELETE" });
       toast("삭제되었습니다."); route();
     })));
+  const syncBtn = document.getElementById("syncServicePrices");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      syncBtn.disabled = true;
+      try {
+        const r = await api("/service-prices/admin/sync", { method: "POST" });
+        toast(`기본 ${(r.items || []).length}건으로 맞췄습니다.`);
+        route();
+      } catch (err) {
+        toast(err.message);
+        syncBtn.disabled = false;
+      }
+    });
+  }
 }
 
 function servicePriceForm(s) {

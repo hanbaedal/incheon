@@ -3,8 +3,6 @@
 const ServicePrice = require("../models/ServicePrice");
 const SERVICE_PRICE_SAMPLES = require("../constants/servicePriceSamples");
 
-const HIDDEN_GROUPS = ["주차비", "사진"];
-
 function sampleToDoc(sample) {
   return {
     group: sample.group,
@@ -33,7 +31,10 @@ async function upsertServicePrices() {
     if ((r.upsertedCount && r.upsertedCount > 0) || r.upsertedId) created++;
     else if (r.modifiedCount) updated++;
   }
-  await ServicePrice.deleteMany({ group: { $in: HIDDEN_GROUPS } });
+  const allowed = SERVICE_PRICE_SAMPLES.map((s) => ({ group: s.group, name: s.name }));
+  if (allowed.length > 0) {
+    await ServicePrice.deleteMany({ $nor: allowed });
+  }
   const total = await ServicePrice.countDocuments({ active: true });
   return { created, updated, total, expected: SERVICE_PRICE_SAMPLES.length };
 }
