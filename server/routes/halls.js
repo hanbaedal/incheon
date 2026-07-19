@@ -81,8 +81,11 @@ router.patch(
     const hall = await Hall.findById(req.params.id);
     if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
 
-    const allowed = ["name", "areaLabel", "capacity", "feature", "sortOrder", "active"];
-    for (const k of allowed) if (k in (req.body || {})) hall[k] = req.body[k];
+    const allowed = ["name", "areaLabel", "capacity", "feature", "sortOrder", "active", "dailyPrice"];
+    for (const k of allowed) if (k in (req.body || {})) {
+      if (k === "dailyPrice") hall[k] = Math.max(0, Math.round(Number(req.body[k]) || 0));
+      else hall[k] = req.body[k];
+    }
     await hall.save();
     res.json({ hall: hall.toAdminJSON() });
   })

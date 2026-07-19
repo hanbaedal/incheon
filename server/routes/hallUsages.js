@@ -8,6 +8,11 @@ const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily } = require("../middleware/auth");
 const { usageToAdminJSON } = require("../utils/hallFormat");
 const { autoCompletePastFunerals } = require("../utils/hallAvailability");
+const {
+  computeHallFee,
+  normalizeFuneralDays,
+  funeralDayLabel,
+} = require("../utils/hallPricing");
 
 const router = express.Router();
 
@@ -36,6 +41,7 @@ function formatMemberUsage(usage) {
           code: hall.code,
           specCode: hall.specCode,
           specLabel: hall.specLabel,
+          dailyPrice: hall.dailyPrice || 0,
           feature: hall.feature,
           areaLabel: hall.areaLabel,
           capacity: hall.capacity,
@@ -50,6 +56,10 @@ function formatMemberUsage(usage) {
     funeralDate: usage.funeralDate,
     funeralTime: usage.funeralTime,
     burialSite: usage.burialSite,
+    funeralDays: usage.funeralDays,
+    funeralDaysLabel: funeralDayLabel(usage.funeralDays),
+    dailyPrice: usage.dailyPrice || 0,
+    hallFeeAmount: usage.hallFeeAmount || 0,
     status: usage.status,
     familyCode: usage.familyCode,
     createdAt: usage.createdAt,
@@ -138,6 +148,13 @@ router.get(
   })
 );
 
+function applyUsagePricing(usage, hall, funeralDays) {
+  const days = normalizeFuneralDays(funeralDays, hall.isVirtual);
+  usage.funeralDays = days;
+  usage.dailyPrice = hall.isVirtual ? 0 : Math.max(0, Math.round(Number(hall.dailyPrice) || 0));
+  usage.hallFeeAmount = hall.isVirtual ? 0 : computeHallFee(usage.dailyPrice, days);
+}
+
 // 관리자: 빈소 이용 등록
 router.post(
   "/",
@@ -175,6 +192,11 @@ router.post(
       burialSite: body.burialSite || "",
       status,
     });
+    if (!hall.isVirtual) {
+      const days = normalizeFuneralDays(body.funeralDays, false);
+      if (!days) return res.status(400).json({ error: "장례 기간(3·4·5일장)을 선택해 주세요." });
+    }
+    applyUsagePricing(usage, hall, body.funeralDays || 3);
     if (usage.status === "active") usage.familyCode = genFamilyCode();
     await usage.save();
 
@@ -207,6 +229,11 @@ router.patch(
       const hall = await Hall.findById(body.hallId);
       if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
       usage.hallId = hall._id;
+      applyUsagePricing(usage, hall, "funeralDays" in body ? body.funeralDays : usage.funeralDays);
+    } else if ("funeralDays" in body) {
+      const hall = await Hall.findById(usage.hallId);
+      if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
+      applyUsagePricing(usage, hall, body.funeralDays);
     }
 
     if ("familyUserId" in body) {

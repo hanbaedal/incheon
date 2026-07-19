@@ -21,13 +21,21 @@
     .m-form input, .m-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
     .m-form input[type="date"], .m-form input[type="time"] { min-height: 42px; }
     .m-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .day-grid { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
+    .day-pick { min-width: 88px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; text-align: center; cursor: pointer; background: #fff; }
+    .day-pick.selected { border-color: var(--navy); background: #f4f7fb; font-weight: 700; color: var(--navy); }
+    .price-box { margin: 12px 0 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fafafa; }
+    .price-box table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .price-box th, .price-box td { padding: 8px 0; border-bottom: 1px solid #ececec; text-align: left; }
+    .price-box tr:last-child th, .price-box tr:last-child td { border-bottom: 0; font-weight: 700; color: var(--navy); }
+    .price-box td:last-child, .price-box th:last-child { text-align: right; }
   </style>
 </head>
 <body>
   <header id="mHeader"></header>
   <div class="m-wrap">
     <h1 class="m-title">빈소 이용 등록</h1>
-    <p class="m-lead">빈소 규격을 선택하고 고인·발인 정보를 입력해 주세요. 접수 후 관리자 확인·승인되면 빈소가 배정됩니다.</p>
+    <p class="m-lead">빈소를 선택하고 3·4·5일장 중 기간을 정하면 이용료가 계산됩니다. 고인·발인 정보 입력 후 접수해 주세요.</p>
     <div id="hallArea" class="card"><div class="state">불러오는 중…</div></div>
   </div>
 
@@ -39,6 +47,67 @@
     let PENDING = null;
     let USAGE = null;
     let SELECTED_HALL_ID = "";
+    let SELECTED_FUNERAL_DAYS = 3;
+    let FUNERAL_DAY_OPTIONS = [
+      { days: 3, label: "3일장" },
+      { days: 4, label: "4일장" },
+      { days: 5, label: "5일장" },
+    ];
+
+    function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
+
+    function selectedHall() {
+      return HALLS.find((h) => String(h.id) === String(SELECTED_HALL_ID)) || null;
+    }
+
+    function computeFee(hall, days) {
+      if (!hall || hall.isVirtual) return { dailyPrice: 0, funeralDays: null, hallFeeAmount: 0 };
+      const dailyPrice = Math.max(0, Number(hall.dailyPrice) || 0);
+      const funeralDays = Number(days) || 0;
+      return { dailyPrice, funeralDays, hallFeeAmount: dailyPrice * funeralDays };
+    }
+
+    function priceBoxHtml(hall, days) {
+      if (!hall) return "";
+      if (hall.isVirtual) {
+        return `<div class="price-box"><p style="margin:0;color:var(--gray)">무빈소는 별도 빈소 이용료가 없습니다. 상담 후 진행됩니다.</p></div>`;
+      }
+      if (!days) {
+        return `<div class="price-box"><p style="margin:0;color:#b45309">장례 기간(3·4·5일장)을 선택하면 이용료가 계산됩니다.</p></div>`;
+      }
+      const fee = computeFee(hall, days);
+      return `
+        <div class="price-box">
+          <table>
+            <tr><th>단가 (1일)</th><td>${won(fee.dailyPrice)}</td></tr>
+            <tr><th>기간</th><td>${mEsc(days)}일장</td></tr>
+            <tr><th>금액</th><td>${won(fee.hallFeeAmount)}</td></tr>
+          </table>
+        </div>`;
+    }
+
+    function funeralDaysPicker(selectedDays, hall) {
+      if (hall && hall.isVirtual) return "";
+      return `
+        <h4 style="margin:18px 0 10px">장례 기간 선택 *</h4>
+        <div class="day-grid">${FUNERAL_DAY_OPTIONS.map((o) => `
+          <div class="day-pick${Number(selectedDays) === o.days ? " selected" : ""}" data-days="${o.days}">${mEsc(o.label)}</div>
+        `).join("")}</div>
+        ${priceBoxHtml(hall || selectedHall(), selectedDays)}`;
+    }
+
+    function bindFuneralDays() {
+      document.querySelectorAll("[data-days]").forEach((el) => {
+        el.addEventListener("click", () => {
+          SELECTED_FUNERAL_DAYS = Number(el.getAttribute("data-days"));
+          const area = document.getElementById("funeralDaysArea");
+          if (area) {
+            area.innerHTML = funeralDaysPicker(SELECTED_FUNERAL_DAYS, selectedHall());
+            bindFuneralDays();
+          }
+        });
+      });
+    }
 
     function toDateInputValue(s) {
       const m = String(s || "").trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -99,7 +168,7 @@
             <div class="info">
               <b>${mEsc(h.name || h.hallNumber)}</b>
               ${spec}
-              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}</small>
+              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}${!h.isVirtual && h.dailyPrice ? " · 1일 " + won(h.dailyPrice) : ""}</small>
               <small>${mEsc(h.feature || "")}</small>
               ${h.availableLabel ? `<small style="color:${can ? "var(--navy)" : "#b45309"}">${mEsc(h.availableLabel)}</small>` : ""}
             </div>
@@ -114,6 +183,14 @@
           SELECTED_HALL_ID = el.getAttribute("data-pick");
           document.querySelectorAll("[data-pick]").forEach((x) => x.classList.remove("selected"));
           el.classList.add("selected");
+          const hall = selectedHall();
+          if (hall && hall.isVirtual) SELECTED_FUNERAL_DAYS = null;
+          else if (!SELECTED_FUNERAL_DAYS) SELECTED_FUNERAL_DAYS = 3;
+          const daysArea = document.getElementById("funeralDaysArea");
+          if (daysArea) {
+            daysArea.innerHTML = funeralDaysPicker(SELECTED_FUNERAL_DAYS, hall);
+            bindFuneralDays();
+          }
         });
       });
     }
@@ -126,9 +203,13 @@
       ]);
       HALLS = avail.items || [];
       SUMMARY = avail;
+      FUNERAL_DAY_OPTIONS = avail.funeralDayOptions || FUNERAL_DAY_OPTIONS;
       PENDING = (reqs.items || []).find((r) => r.status === "pending") || null;
       USAGE = usageRes.usage || null;
-      if (PENDING && PENDING.hall) SELECTED_HALL_ID = PENDING.hall.id;
+      if (PENDING && PENDING.hall) {
+        SELECTED_HALL_ID = PENDING.hall.id;
+        SELECTED_FUNERAL_DAYS = PENDING.funeralDays || 3;
+      }
     }
 
     function render() {
@@ -139,6 +220,7 @@
           <div class="card-body">
             <div class="notice-box">빈소가 배정되었습니다. 발인 정보를 수정할 수 있습니다.</div>
             <p style="margin:0 0 14px"><b>${mEsc(USAGE.hall ? USAGE.hall.name : "-")}</b>${USAGE.hall && USAGE.hall.specLabel ? " · " + mEsc(USAGE.hall.specLabel) : ""}${USAGE.hall && USAGE.hall.feature ? " · " + mEsc(USAGE.hall.feature) : ""}</p>
+            ${USAGE.hall && !USAGE.hall.isVirtual && USAGE.funeralDays ? priceBoxHtml({ ...USAGE.hall, dailyPrice: USAGE.dailyPrice }, USAGE.funeralDays) : ""}
             <div class="m-form">${usageFormHtml("u", USAGE)}</div>
             <div class="m-actions">
               <button class="btn btn-primary" id="saveUsage">이용 정보 저장</button>
@@ -151,12 +233,14 @@
 
       if (PENDING) {
         SELECTED_HALL_ID = PENDING.hall ? PENDING.hall.id : SELECTED_HALL_ID;
+        SELECTED_FUNERAL_DAYS = PENDING.funeralDays || SELECTED_FUNERAL_DAYS || 3;
         area.innerHTML = `
           <div class="card-head">빈소 신청 · 승인 대기</div>
           <div class="card-body">
             <div class="notice-box">신청하신 빈소 <b>${mEsc(PENDING.hall ? PENDING.hall.name : "-")}</b>는 관리자 승인 대기 중입니다. 아래 정보를 수정할 수 있습니다.</div>
             <h4 style="margin:0 0 10px">선택 빈소</h4>
             ${hallPickList(SELECTED_HALL_ID)}
+            <div id="funeralDaysArea">${funeralDaysPicker(SELECTED_FUNERAL_DAYS, selectedHall())}</div>
             <h4 style="margin:18px 0 10px">이용 정보</h4>
             <div class="m-form">${usageFormHtml("p", PENDING)}</div>
             <div class="m-actions">
@@ -164,6 +248,7 @@
             </div>
           </div>`;
         bindHallPick();
+        bindFuneralDays();
         document.getElementById("savePending").addEventListener("click", savePending);
         return;
       }
@@ -177,10 +262,11 @@
       }
 
       area.innerHTML = `
-        <div class="card-head">1. 빈소 규격 선택</div>
+        <div class="card-head">1. 빈소 선택</div>
         <div class="card-body">
           ${summary}
           ${hallPickList(SELECTED_HALL_ID)}
+          <div id="funeralDaysArea">${funeralDaysPicker(SELECTED_FUNERAL_DAYS, selectedHall())}</div>
           <h4 style="margin:18px 0 10px">2. 이용 정보 입력</h4>
           <div class="m-form">${usageFormHtml("n", { chiefMourner: ME.name })}</div>
           <div class="m-actions">
@@ -188,12 +274,15 @@
           </div>
         </div>`;
       bindHallPick();
+      bindFuneralDays();
       document.getElementById("submitReq").addEventListener("click", submitRequest);
     }
 
     async function submitRequest() {
-      if (!SELECTED_HALL_ID) { mToast("빈소 규격을 선택해 주세요."); return; }
-      const body = { hallId: SELECTED_HALL_ID, ...formValues("n") };
+      if (!SELECTED_HALL_ID) { mToast("빈소를 선택해 주세요."); return; }
+      const hall = selectedHall();
+      if (hall && !hall.isVirtual && !SELECTED_FUNERAL_DAYS) { mToast("장례 기간(3·4·5일장)을 선택해 주세요."); return; }
+      const body = { hallId: SELECTED_HALL_ID, funeralDays: hall && hall.isVirtual ? null : SELECTED_FUNERAL_DAYS, ...formValues("n") };
       if (!body.deceasedName || !body.funeralDate) { mToast("고인명과 발인 일자를 입력해 주세요."); return; }
       try {
         await mApi("/hall-requests", { method: "POST", body });
@@ -206,6 +295,8 @@
     async function savePending() {
       const body = formValues("p");
       if (SELECTED_HALL_ID) body.hallId = SELECTED_HALL_ID;
+      const hall = selectedHall();
+      if (hall && !hall.isVirtual) body.funeralDays = SELECTED_FUNERAL_DAYS;
       if (!body.deceasedName || !body.funeralDate) { mToast("고인명과 발인 일자를 입력해 주세요."); return; }
       try {
         await mApi("/hall-requests/mine", { method: "PATCH", body });

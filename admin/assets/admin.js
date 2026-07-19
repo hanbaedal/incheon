@@ -474,11 +474,12 @@ async function renderHalls() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 빈소가 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>호실</th><th>규격</th><th>면적</th><th>수용 인원</th><th>특징</th><th>상태</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>호실</th><th>규격</th><th>1일 단가</th><th>면적</th><th>수용 인원</th><th>특징</th><th>상태</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((h) => `
           <tr>
             <td><b>${esc(h.name)}</b>${h.isVirtual ? ' <span class="tag gray">무빈소</span>' : ""}</td>
             <td>${esc(h.specLabel) || "-"}</td>
+            <td class="nowrap">${h.isVirtual ? "-" : won(h.dailyPrice || 0)}</td>
             <td>${esc(h.areaLabel) || "-"}</td>
             <td>${esc(h.capacity) || "-"}</td>
             <td>${esc(h.feature) || "-"}</td>
@@ -505,6 +506,9 @@ function hallCatalogForm(h) {
     </div>
     <div class="field-row">
       <div class="field"><label>면적</label><input id="f_areaLabel" value="${esc(h.areaLabel || "")}" placeholder="예: 약 115㎡" /></div>
+      <div class="field"><label>1일 단가(원)</label><input type="number" min="0" step="1000" id="f_dailyPrice" value="${h.isVirtual ? 0 : (h.dailyPrice || 0)}" ${h.isVirtual ? "disabled" : ""} /></div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>수용 인원</label><input id="f_capacity" value="${esc(h.capacity || "")}" placeholder="예: 50명 내외" /></div>
     </div>
     <div class="field"><label>특징</label><input id="f_feature" value="${esc(h.feature || "")}" /></div>
@@ -515,6 +519,7 @@ function hallCatalogForm(h) {
         name: val("f_name"),
         areaLabel: val("f_areaLabel"),
         capacity: val("f_capacity"),
+        dailyPrice: h.isVirtual ? 0 : Math.max(0, Math.round(Number(val("f_dailyPrice")) || 0)),
         feature: val("f_feature"),
         active: val("f_active") === "true",
       };
@@ -549,11 +554,12 @@ async function renderHallUsages() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 빈소 이용이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>상태</th><th>빈소</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>상태</th><th>빈소</th><th>기간·이용료</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((u) => `
           <tr>
             <td>${statusTag(u.status)}</td>
             <td><b>${u.hall ? esc(u.hall.name) : "-"}</b>${u.hall && u.hall.specLabel ? `<br><small class="muted">${esc(u.hall.specLabel)}</small>` : ""}</td>
+            <td class="nowrap">${u.funeralDays ? esc(u.funeralDays) + "일장" : "-"}${u.hallFeeAmount ? `<br>${won(u.hallFeeAmount)}` : ""}</td>
             <td>${esc(u.deceasedName) || "-"}</td>
             <td>${esc(u.chiefMourner) || (u.family ? esc(u.family.name) : "-")}</td>
             <td class="nowrap">${esc(u.funeralDate) || "-"} ${esc(u.funeralTime)}</td>
@@ -609,6 +615,14 @@ async function hallUsageForm(u) {
       <div class="field"><label>상태</label><select id="f_status">${opt("active", "이용중", e.status || "active")}${opt("completed", "발인완료", e.status)}${opt("cancelled", "취소", e.status)}</select></div>
     </div>
     <div class="field-row">
+      <div class="field"><label>장례 기간</label><select id="f_funeralDays">
+        <option value="3" ${Number(e.funeralDays || 3) === 3 ? "selected" : ""}>3일장</option>
+        <option value="4" ${Number(e.funeralDays) === 4 ? "selected" : ""}>4일장</option>
+        <option value="5" ${Number(e.funeralDays) === 5 ? "selected" : ""}>5일장</option>
+      </select></div>
+      <div class="field"><label>이용료(자동계산)</label><input id="f_hallFeePreview" value="${e.hallFeeAmount ? won(e.hallFeeAmount) : ""}" disabled /></div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>고인명</label><input id="f_deceasedName" value="${esc(e.deceasedName || "")}" /></div>
       <div class="field"><label>상주</label><input id="f_chiefMourner" value="${esc(e.chiefMourner || "")}" /></div>
     </div>
@@ -636,6 +650,7 @@ async function hallUsageForm(u) {
         funeralDate: val("f_funeralDate"),
         funeralTime: val("f_funeralTime"),
         burialSite: val("f_burialSite"),
+        funeralDays: Number(val("f_funeralDays")) || 3,
         familyUserId: val("f_familyUserId") || null,
       };
       if (!body.hallId) { toast("빈소를 선택하세요."); return; }
@@ -919,12 +934,13 @@ async function renderHallRequests() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">빈소 신청이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>상태</th><th>상주</th><th>신청 빈소</th><th>고인</th><th>발인</th><th>신청일</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>상태</th><th>상주</th><th>신청 빈소</th><th>기간·이용료</th><th>고인</th><th>발인</th><th>신청일</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((r) => `
           <tr>
             <td>${statusTag(r.status)}</td>
             <td>${r.family ? esc(r.family.name) + " (" + esc(r.family.username) + ")" : "-"}</td>
-            <td class="nowrap">${r.hall ? `<b>${esc(r.hall.name)}</b>${r.hall.specLabel ? " · " + esc(r.hall.specLabel) : ""}${r.hall.feature ? "<br><small class=\"muted\">" + esc(r.hall.feature) + "</small>" : ""}` : "-"}</td>
+            <td class="nowrap">${r.hall ? `<b>${esc(r.hall.name)}</b>${r.hall.specLabel ? " · " + esc(r.hall.specLabel) : ""}` : "-"}</td>
+            <td class="nowrap">${r.funeralDays ? esc(r.funeralDays) + "일장" : "-"}${r.hallFeeAmount ? `<br>${won(r.hallFeeAmount)}` : ""}</td>
             <td>${esc(r.deceasedName) || "-"}</td>
             <td class="nowrap">${esc(r.funeralDate) || "-"} ${esc(r.funeralTime)}</td>
             <td class="nowrap">${fmtDay(r.createdAt)}</td>

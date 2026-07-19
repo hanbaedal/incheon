@@ -15,6 +15,9 @@ const hallUsageSchema = new mongoose.Schema(
     funeralDate: { type: String, trim: true, default: "" },
     funeralTime: { type: String, trim: true, default: "" },
     burialSite: { type: String, trim: true, default: "" },
+    funeralDays: { type: Number, default: null },
+    dailyPrice: { type: Number, default: 0, min: 0 },
+    hallFeeAmount: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: ["active", "completed", "cancelled"],

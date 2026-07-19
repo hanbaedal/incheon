@@ -8,6 +8,13 @@ const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily } = require("../middleware/auth");
 const { computeHallAvailability } = require("../utils/hallAvailability");
+const {
+  ALLOWED_FUNERAL_DAYS,
+  HALL_FUNERAL_DAYS,
+  computeHallFee,
+  normalizeFuneralDays,
+  funeralDayLabel,
+} = require("../utils/hallPricing");
 
 const router = express.Router();
 
@@ -50,14 +57,30 @@ function formatHallRef(hall) {
     areaLabel: hall.areaLabel,
     capacity: hall.capacity,
     isVirtual: hall.isVirtual,
+    dailyPrice: hall.dailyPrice || 0,
   };
 }
 
 function formatRequestRow(r) {
   return {
     ...r.toJSONSafe(),
+    funeralDaysLabel: funeralDayLabel(r.funeralDays),
     hall: formatHallRef(r.hallId),
   };
+}
+
+function applyHallPricing(target, hall, funeralDays) {
+  const days = normalizeFuneralDays(funeralDays, hall.isVirtual);
+  target.funeralDays = days;
+  target.dailyPrice = hall.isVirtual ? 0 : Math.max(0, Math.round(Number(hall.dailyPrice) || 0));
+  target.hallFeeAmount = hall.isVirtual ? 0 : computeHallFee(target.dailyPrice, days);
+}
+
+function validateFuneralDays(hall, funeralDays) {
+  if (hall.isVirtual) return null;
+  const days = normalizeFuneralDays(funeralDays, false);
+  if (!days) return "장례 기간(3·4·5일장)을 선택해 주세요.";
+  return null;
 }
 
 // 상주: 신청 가능한 빈소 규격 목록 + 가능 일자
@@ -66,7 +89,7 @@ router.get(
   requireFamily,
   asyncHandler(async (req, res) => {
     const availability = await computeHallAvailability();
-    res.json(availability);
+    res.json({ ...availability, funeralDayOptions: HALL_FUNERAL_DAYS });
   })
 );
 
@@ -76,7 +99,7 @@ router.post(
   requireFamily,
   asyncHandler(async (req, res) => {
     const body = req.body || {};
-    const { hallId } = body;
+    const { hallId, funeralDays } = body;
     if (!hallId) return res.status(400).json({ error: "신청할 빈소를 선택해 주세요." });
 
     const me = await User.findById(req.user.uid);
@@ -92,6 +115,9 @@ router.post(
 
     const hall = await Hall.findById(hallId);
     if (!hall || !hall.active) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
+
+    const daysErr = validateFuneralDays(hall, funeralDays);
+    if (daysErr) return res.status(400).json({ error: daysErr });
 
     const availability = await computeHallAvailability();
     const slot = availability.items.find((it) => String(it.id) === String(hallId));
@@ -111,7 +137,10 @@ router.post(
       hallId: hall._id,
       ...usage,
     });
-    res.status(201).json({ request: reqDoc.toJSONSafe() });
+    applyHallPricing(reqDoc, hall, funeralDays);
+    await reqDoc.save();
+    await reqDoc.populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual dailyPrice");
+    res.status(201).json({ request: formatRequestRow(reqDoc) });
   })
 );
 
@@ -128,6 +157,13 @@ router.patch(
       const hall = await Hall.findById(body.hallId);
       if (!hall || !hall.active) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
       pending.hallId = hall._id;
+      applyHallPricing(pending, hall, "funeralDays" in body ? body.funeralDays : pending.funeralDays);
+    } else if ("funeralDays" in body) {
+      const hall = await Hall.findById(pending.hallId);
+      if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
+      const daysErr = validateFuneralDays(hall, body.funeralDays);
+      if (daysErr) return res.status(400).json({ error: daysErr });
+      applyHallPricing(pending, hall, body.funeralDays);
     }
 
     const usage = pickUsageBody(body);
@@ -136,7 +172,7 @@ router.patch(
     for (const k of USAGE_FIELDS) pending[k] = usage[k];
 
     await pending.save();
-    await pending.populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual");
+    await pending.populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual dailyPrice");
     res.json({ request: formatRequestRow(pending) });
   })
 );
@@ -148,7 +184,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const items = await HallRequest.find({ familyUserId: req.user.uid })
       .sort({ createdAt: -1 })
-      .populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual");
+      .populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual dailyPrice");
     res.json({ items: items.map(formatRequestRow) });
   })
 );
@@ -163,7 +199,7 @@ router.get(
     const items = await HallRequest.find(filter)
       .sort({ createdAt: -1 })
       .populate("familyUserId", "name username phone")
-      .populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual");
+      .populate("hallId", "code name specCode specLabel feature areaLabel capacity isVirtual dailyPrice");
     res.json({
       items: items.map((r) => ({
         ...formatRequestRow(r),
@@ -217,6 +253,9 @@ router.patch(
         funeralDate: reqDoc.funeralDate,
         funeralTime: reqDoc.funeralTime,
         burialSite: reqDoc.burialSite,
+        funeralDays: reqDoc.funeralDays,
+        dailyPrice: reqDoc.dailyPrice,
+        hallFeeAmount: reqDoc.hallFeeAmount,
         status: "active",
         familyCode: genFamilyCode(),
       });

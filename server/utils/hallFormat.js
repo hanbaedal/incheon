@@ -1,5 +1,7 @@
 "use strict";
 
+const { funeralDayLabel } = require("./hallPricing");
+
 function resolveHall(hallOrUsage) {
   if (!hallOrUsage) return null;
   if (hallOrUsage.name && hallOrUsage.code) return hallOrUsage;
@@ -21,6 +23,7 @@ function hallToCatalogJSON(hall) {
     sortOrder: hall.sortOrder,
     isVirtual: hall.isVirtual,
     active: hall.active,
+    dailyPrice: hall.dailyPrice || 0,
     createdAt: hall.createdAt,
     updatedAt: hall.updatedAt,
   };
@@ -28,6 +31,17 @@ function hallToCatalogJSON(hall) {
 
 function hallToAdminJSON(hall) {
   return hallToCatalogJSON(hall);
+}
+
+function hallFeeFields(source) {
+  if (!source) return { funeralDays: null, funeralDaysLabel: "", dailyPrice: 0, hallFeeAmount: 0 };
+  const days = source.funeralDays != null ? source.funeralDays : null;
+  return {
+    funeralDays: days,
+    funeralDaysLabel: funeralDayLabel(days),
+    dailyPrice: source.dailyPrice || 0,
+    hallFeeAmount: source.hallFeeAmount || 0,
+  };
 }
 
 function usageToPublicJSON(usage, hall) {
@@ -49,6 +63,7 @@ function usageToPublicJSON(usage, hall) {
     funeralDate: usage.funeralDate,
     funeralTime: usage.funeralTime,
     burialSite: usage.burialSite,
+    ...hallFeeFields(usage),
     status: usage.status === "active" ? "in-use" : usage.status,
     updatedAt: usage.updatedAt,
   };
@@ -85,6 +100,7 @@ function usageToAdminJSON(usage, hall, family) {
     funeralDate: usage.funeralDate,
     funeralTime: usage.funeralTime,
     burialSite: usage.burialSite,
+    ...hallFeeFields(usage),
     status: usage.status,
     familyCode: usage.familyCode,
     createdAt: usage.createdAt,

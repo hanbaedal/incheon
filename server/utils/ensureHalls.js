@@ -81,6 +81,7 @@ async function upsertRooms() {
       existing.feature = item.feature;
       existing.sortOrder = item.sortOrder;
       existing.isVirtual = item.isVirtual;
+      if (item.dailyPrice != null) existing.dailyPrice = item.dailyPrice;
       if (existing.active == null) existing.active = true;
       await existing.save();
       updated += 1;

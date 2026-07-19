@@ -14,6 +14,7 @@ const hallSchema = new mongoose.Schema(
     capacity: { type: String, trim: true, default: "" },
     feature: { type: String, trim: true, default: "" },
     sortOrder: { type: Number, default: 0 },
+    dailyPrice: { type: Number, default: 0, min: 0 },
     isVirtual: { type: Boolean, default: false },
     active: { type: Boolean, default: true, index: true },
   },

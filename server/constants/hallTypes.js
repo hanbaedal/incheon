@@ -9,6 +9,19 @@ const HALL_SPEC_LABELS = {
 };
 
 /**
+ * 빈소 1일 단가 (공급가, 원)
+ * - 35평형: 하위 25% 15만원
+ * - 50평형: 중앙값 32만원
+ * - 80평형: 상위 25% 48만원
+ */
+const HALL_DAILY_PRICES = {
+  "35": 150000,
+  "50": 320000,
+  "80": 480000,
+  none: 0,
+};
+
+/**
  * 빈소 마스터 — 호실(101·102·103·109) + 규격(specCode) 매핑
  * MongoDB Hall 컬렉션 시드용
  */
@@ -23,6 +36,7 @@ const HALL_ROOMS = [
     feature: "소규모 가족장",
     sortOrder: 1,
     isVirtual: false,
+    dailyPrice: HALL_DAILY_PRICES["35"],
   },
   {
     code: "102",
@@ -34,6 +48,7 @@ const HALL_ROOMS = [
     feature: "실속형 (가장 많이 선택)",
     sortOrder: 2,
     isVirtual: false,
+    dailyPrice: HALL_DAILY_PRICES["50"],
   },
   {
     code: "103",
@@ -45,6 +60,7 @@ const HALL_ROOMS = [
     feature: "프리미엄",
     sortOrder: 3,
     isVirtual: false,
+    dailyPrice: HALL_DAILY_PRICES["80"],
   },
   {
     code: "109",
@@ -56,6 +72,7 @@ const HALL_ROOMS = [
     feature: "빈소 없이 진행 (상담 가능)",
     sortOrder: 4,
     isVirtual: true,
+    dailyPrice: HALL_DAILY_PRICES.none,
   },
 ];
 
@@ -67,4 +84,4 @@ const LEGACY_SPEC_TO_ROOM = {
   none: "109",
 };
 
-module.exports = { HALL_ROOMS, HALL_SPEC_LABELS, LEGACY_SPEC_TO_ROOM };
+module.exports = { HALL_ROOMS, HALL_SPEC_LABELS, HALL_DAILY_PRICES, LEGACY_SPEC_TO_ROOM };
