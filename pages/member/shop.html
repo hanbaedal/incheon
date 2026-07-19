@@ -4,36 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <title>장례 예약 | 상주 전용 서비스</title>
+  <title data-mi18n="shop.pageTitle">장례 예약 | 상주 전용 서비스</title>
   <link rel="stylesheet" href="../../assets/css/member.css" />
 </head>
 <body>
   <header id="mHeader"></header>
   <div class="m-wrap">
-    <h1 class="m-title">장례 서비스 예약</h1>
-    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식(식사·안주·떡·과일·제사상·식음료·공산품)·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 빈소를 선택하면 고인·발인 정보 입력 창이 열립니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.</p>
+    <h1 class="m-title" data-mi18n="shop.title">장례 서비스 예약</h1>
+    <p class="m-lead" data-mi18n="shop.lead">빈소 선택부터 장례 물품·접객 음식·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 빈소를 선택하면 고인·발인 정보 입력 창이 열립니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.</p>
 
     <div class="reserve-tabs" id="catTabs"></div>
 
     <div class="shop-grid">
-      <div id="mainArea" class="card"><div class="state">불러오는 중…</div></div>
+      <div id="mainArea" class="card"><div class="state" data-mi18n="common.loading">불러오는 중…</div></div>
       <div class="shop-side">
         <div class="card cart">
           <div class="card-head card-head-split" id="cartHead">
-            <span>예약 요약</span>
+            <span data-mi18n="shop.cartSummary">예약 요약</span>
             <span class="cart-hall-name" id="cartHallName"></span>
           </div>
           <div class="card-body">
-            <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
+            <div id="cartArea"><div class="cart-empty" data-mi18n="shop.cartEmpty">담긴 항목이 없습니다.</div></div>
             <div id="cartSum"></div>
-            <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled>예약 제출</button>
+            <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled data-mi18n="shop.submitOrder">예약 제출</button>
           </div>
         </div>
         <div class="card info-panel">
-          <div class="card-head">장례 안내</div>
+          <div class="card-head" data-mi18n="shop.infoGuide">장례 안내</div>
           <div class="info-tabs">
-            <button type="button" class="info-tab active" data-info-tab="forms">관련서식</button>
-            <button type="button" class="info-tab" data-info-tab="facility">장사시설안내</button>
+            <button type="button" class="info-tab active" data-info-tab="forms" data-mi18n="shop.tabForms">관련서식</button>
+            <button type="button" class="info-tab" data-info-tab="facility" data-mi18n="shop.tabFacility">장사시설안내</button>
           </div>
           <div class="card-body info-panel-body" id="infoPanelBody"></div>
         </div>
@@ -41,6 +41,7 @@
     </div>
   </div>
 
+  <script src="../../assets/js/member-i18n.js"></script>
   <script src="../../assets/js/forms-public.js"></script>
   <script src="../../assets/js/member.js"></script>
   <script src="../../assets/js/member-info.js"></script>
@@ -60,33 +61,10 @@
     let ACTIVE_FLOWER_CAT = "altar";
     let ACTIVE_PHOTO_CAT = "portrait";
     let ACTIVE_HEARSE_CAT = "cadillac";
-    const FOOD_SUB_CATS = [
-      { key: "meal", label: "식사류" },
-      { key: "anju", label: "안주류" },
-      { key: "tteok", label: "떡류" },
-      { key: "fruit", label: "과일류" },
-      { key: "jesa", label: "제사상" },
-      { key: "beverage", label: "식음료류" },
-      { key: "consumables", label: "공산품류" },
-    ];
-    const FLOWER_SUB_CATS = [
-      { key: "altar", label: "제단장식" },
-      { key: "basket", label: "근조바구니" },
-      { key: "wreath", label: "조문용 조화" },
-      { key: "chrysanthemum", label: "헌화용 국화" },
-      { key: "coffin", label: "관장식" },
-      { key: "vehicle", label: "차량장식" },
-    ];
-    const PHOTO_SUB_CATS = [
-      { key: "portrait", label: "영정" },
-      { key: "frame", label: "액자" },
-      { key: "idphoto", label: "증명사진" },
-      { key: "instant", label: "즉석사진" },
-    ];
-    const HEARSE_SUB_CATS = [
-      { key: "cadillac", label: "캐딜락" },
-      { key: "limousine", label: "고급리무진" },
-    ];
+    const FOOD_SUB_CATS = mFoodSubCats();
+    const FLOWER_SUB_CATS = mFlowerSubCats();
+    const PHOTO_SUB_CATS = mPhotoSubCats();
+    const HEARSE_SUB_CATS = mHearseSubCats();
     let ACTIVE_CAT = "hall";
     let HALLS = [];
     let HALL_SUMMARY = null;
@@ -102,6 +80,8 @@
       if (urlCat === "hall") ACTIVE_CAT = "hall";
       ME = await memberHeader("shop");
       if (!ME) return;
+      mApplyI18n(document);
+      mPageTitle("shop.pageTitle");
       initMemberInfoPanel("forms");
       renderTabs();
       try {
@@ -131,7 +111,7 @@
         renderMain();
         renderCart();
       } catch (e) {
-        document.getElementById("mainArea").innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
+        document.getElementById("mainArea").innerHTML = `<div class="state">${mEsc(mT("common.errorPrefix"))}${mEsc(e.message)}</div>`;
       }
       document.getElementById("orderBtn").addEventListener("click", placeOrder);
     })();
@@ -225,7 +205,7 @@
 
     function hallFeeLine(fee) {
       if (!fee) return "";
-      return `<br><small>${mEsc(fee.funeralDays)}일장 · 단가 ${won(fee.dailyPrice)}</small>`;
+      return `<br><small>${mEsc(mT("hall.feeLine", { days: fee.funeralDays, price: won(fee.dailyPrice) }))}</small>`;
     }
 
     function hallSummaryHtml() {
@@ -234,33 +214,33 @@
         const fee = resolveHallFee(MY_USAGE);
         const pending = fee && !fee.hallFeeOrdered ? fee : null;
         const sub = [
-          MY_USAGE.deceasedName ? "故 " + MY_USAGE.deceasedName : "",
-          MY_USAGE.funeralDate ? "발인 " + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
+          MY_USAGE.deceasedName ? mT("common.deceasedPrefix") + MY_USAGE.deceasedName : "",
+          MY_USAGE.funeralDate ? mT("common.funeralPrefix") + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
         ].filter(Boolean).join(" · ");
         return `
           <div class="cart-item cart-hall">
             <span class="nm">
-              <b>빈소 · ${mEsc(hallName) || "—"}</b>
+              <b>${mEsc(mT("shop.hallLabel"))}${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
               ${hallFeeLine(fee)}
-              <br><small class="status-ok">배정 완료${fee && fee.hallFeeOrdered ? " · 이용료 예약됨" : ""}</small>
+              <br><small class="status-ok">${mEsc(mT("shop.hallAssigned"))}${fee && fee.hallFeeOrdered ? mEsc(mT("shop.hallFeeReserved")) : ""}</small>
             </span>
-            <span class="cart-hall-right nowrap">${pending ? won(pending.hallFeeAmount) : (fee && fee.hallFeeOrdered ? "예약됨" : "—")}</span>
+            <span class="cart-hall-right nowrap">${pending ? won(pending.hallFeeAmount) : (fee && fee.hallFeeOrdered ? mEsc(mT("common.reserved")) : "—")}</span>
           </div>`;
       }
       if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
         const fee = resolveHallFee(MY_HALL_REQ);
         const sub = [
-          MY_HALL_REQ.deceasedName ? "故 " + MY_HALL_REQ.deceasedName : "",
-          MY_HALL_REQ.funeralDate ? "발인 " + MY_HALL_REQ.funeralDate : "",
+          MY_HALL_REQ.deceasedName ? mT("common.deceasedPrefix") + MY_HALL_REQ.deceasedName : "",
+          MY_HALL_REQ.funeralDate ? mT("common.funeralPrefix") + MY_HALL_REQ.funeralDate : "",
         ].filter(Boolean).join(" · ");
         return `
           <div class="cart-item cart-hall">
             <span class="nm">
-              <b>빈소 · ${mEsc(hallName) || "—"}</b>
+              <b>${mEsc(mT("shop.hallLabel"))}${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
               ${hallFeeLine(fee)}
-              <br><small class="status-wait">승인 대기</small>
+              <br><small class="status-wait">${mEsc(mT("shop.hallPending"))}</small>
             </span>
             <span class="cart-hall-right nowrap">${fee ? won(fee.hallFeeAmount) : "—"}</span>
           </div>`;
@@ -290,14 +270,14 @@
 
     function hallSummaryNotice() {
       if (!HALL_SUMMARY || !HALL_SUMMARY.activePhysicalCount) return "";
-      let t = `<div class="notice-box">현재 빈소 <b>${HALL_SUMMARY.activePhysicalCount}/${HALL_SUMMARY.capacity}</b>실 이용 중`;
-      if (HALL_SUMMARY.freePhysicalSlots > 0) t += ` · <b>${HALL_SUMMARY.freePhysicalSlots}</b>실 즉시 배정 가능`;
+      let t = `<div class="notice-box">${mT("hall.roomSummary", { used: HALL_SUMMARY.activePhysicalCount, cap: HALL_SUMMARY.capacity })}`;
+      if (HALL_SUMMARY.freePhysicalSlots > 0) t += mT("hall.roomFree", { n: HALL_SUMMARY.freePhysicalSlots });
       else if (HALL_SUMMARY.nextAvailableLabel) t += ` · ${mEsc(HALL_SUMMARY.nextAvailableLabel)}`;
       return t + "</div>";
     }
 
     function hallPickListHtml() {
-      if (!HALLS.length) return '<div class="state">현재 신청 가능한 빈소가 없습니다.</div>';
+      if (!HALLS.length) return `<div class="state">${mEsc(mT("hall.noAvailable"))}</div>`;
       return `<div class="hall-grid">${HALLS.map((h) => {
         const can = h.canRequestNow !== false;
         const sel = String(h.id) === String(SELECTED_HALL_ID) ? " selected" : "";
@@ -308,7 +288,7 @@
             <div class="info">
               <b>${mEsc(h.name || h.hallNumber)}</b>
               ${spec}
-              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}${!h.isVirtual && h.dailyPrice ? " · 1일 " + won(h.dailyPrice) : ""}</small>
+              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}${!h.isVirtual && h.dailyPrice ? " · " + mEsc(mT("hall.perDay")) + " " + won(h.dailyPrice) : ""}</small>
               <small>${mEsc(h.feature || "")}</small>
               ${h.availableLabel ? `<small class="${can ? "avail-ok" : "avail-wait"}">${mEsc(h.availableLabel)}</small>` : ""}
             </div>
@@ -358,12 +338,12 @@
     async function saveHallInfo(mode, prefix, btn) {
       const hall = modalHallRef(mode);
       if (mode !== "usage" && hall && !hall.isVirtual && !SELECTED_FUNERAL_DAYS) {
-        mToast("장례 기간(3·4·5일장)을 선택해 주세요.");
+        mToast(mT("hall.selectDays"));
         return false;
       }
       const body = mHallFormValues(prefix);
       if (!body.deceasedName || !body.funeralDate) {
-        mToast("고인명과 발인 일자를 입력해 주세요.");
+        mToast(mT("hall.needDeceased"));
         return false;
       }
       btn.disabled = true;
@@ -377,16 +357,16 @@
               ...body,
             },
           });
-          mToast("빈소 이용 신청이 접수되었습니다.");
+          mToast(mT("hall.reqOk"));
         } else if (mode === "pending") {
           const patch = { ...body };
           if (SELECTED_HALL_ID) patch.hallId = SELECTED_HALL_ID;
           if (hall && !hall.isVirtual) patch.funeralDays = SELECTED_FUNERAL_DAYS;
           await mApi("/hall-requests/mine", { method: "PATCH", body: patch });
-          mToast("신청 정보가 저장되었습니다.");
+          mToast(mT("hall.saveOk"));
         } else {
           await mApi("/hall-usages/mine", { method: "PATCH", body });
-          mToast("이용 정보가 저장되었습니다.");
+          mToast(mT("hall.usageOk"));
         }
         await loadHallData();
         renderMain();
@@ -402,7 +382,7 @@
     function openHallInfoModal(mode) {
       mode = mode || "new";
       if (mode === "new" && !SELECTED_HALL_ID) {
-        mToast("빈소를 선택해 주세요.");
+        mToast(mT("hall.selectFirst"));
         return;
       }
       const hall = modalHallRef(mode);
@@ -414,17 +394,17 @@
       const bodyHtml = `
         ${mode !== "usage" && hall ? `<p class="hall-assigned"><b>${mEsc(hallName)}</b>${hall.specLabel ? " · " + mEsc(hall.specLabel) : ""}</p>` : ""}
         ${showDays ? mHallFuneralDaysPickerHtml(FUNERAL_DAY_OPTIONS, SELECTED_FUNERAL_DAYS, hall) : (hall && hall.isVirtual ? mHallPriceBoxHtml(hall, null) : "")}
-        <h4 class="section-h4 ${showDays ? "spaced" : ""}">필수 입력 정보</h4>
+        <h4 class="section-h4 ${showDays ? "spaced" : ""}">${mEsc(mT("hall.requiredInfo"))}</h4>
         <div class="m-form">${mHallUsageFormHtml(formPrefix, data)}</div>`;
 
       mMemberModal.open({
-        title: mode === "usage" ? "이용 정보 수정" : (mode === "pending" ? "신청 정보 입력" : "빈소 이용 정보 입력"),
-        subtitle: `${mEsc(hallName)} · 고인·발인 정보를 입력해 주세요`,
+        title: mode === "usage" ? mT("hall.modalUsage") : (mode === "pending" ? mT("hall.modalPending") : mT("hall.modalNew")),
+        subtitle: mT("hall.modalSub", { name: hallName }),
         bodyHtml,
         buttons: [
-          { label: "취소" },
+          { label: mT("common.cancel") },
           {
-            label: mode === "new" ? "빈소 이용 신청" : "저장",
+            label: mode === "new" ? mT("hall.apply") : mT("common.save"),
             cls: "btn btn-primary",
             onClick: (btn) => saveHallInfo(mode, formPrefix, btn),
           },
@@ -441,19 +421,19 @@
         const h = MY_USAGE.hall;
         const hallName = h ? h.name : "-";
         const sub = [
-          MY_USAGE.deceasedName ? "故 " + MY_USAGE.deceasedName : "",
-          MY_USAGE.enshrinedAt ? "입관/안치 " + MY_USAGE.enshrinedAt : "",
-          MY_USAGE.funeralDate ? "발인 " + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
+          MY_USAGE.deceasedName ? mT("common.deceasedPrefix") + MY_USAGE.deceasedName : "",
+          MY_USAGE.enshrinedAt ? mT("common.enshrinePrefix") + MY_USAGE.enshrinedAt : "",
+          MY_USAGE.funeralDate ? mT("common.funeralPrefix") + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
         ].filter(Boolean).join(" · ");
         area.innerHTML = `
-          <div class="card-head">빈소선택 · 배정 완료</div>
+          <div class="card-head">${mEsc(mT("hall.assignedTitle"))}</div>
           <div class="card-body">
-            <div class="notice-box success">${MY_USAGE.scheduleLocked ? "장례 예약이 접수되어 발인 일자·시각은 변경할 수 없습니다." : "빈소가 배정되었습니다. 다른 탭에서 장례 물품·서비스를 예약해 주세요."}</div>
+            <div class="notice-box success">${mEsc(MY_USAGE.scheduleLocked ? mT("hall.lockedNotice") : mT("hall.activeNotice"))}</div>
             <p class="hall-assigned"><b>${mEsc(hallName)}</b>${h && h.specLabel ? " · " + mEsc(h.specLabel) : ""}${h && h.feature ? " · " + mEsc(h.feature) : ""}</p>
             ${sub ? `<p class="muted" style="margin:0 0 14px">${mEsc(sub)}</p>` : ""}
             ${h && !h.isVirtual && MY_USAGE.funeralDays ? mHallPriceBoxHtml({ ...h, dailyPrice: MY_USAGE.dailyPrice }, MY_USAGE.funeralDays) : ""}
             <div class="m-actions">
-              <button type="button" class="btn btn-primary" id="editUsageBtn">이용 정보 수정</button>
+              <button type="button" class="btn btn-primary" id="editUsageBtn">${mEsc(mT("hall.editUsage"))}</button>
             </div>
           </div>`;
         document.getElementById("editUsageBtn").addEventListener("click", () => openHallInfoModal("usage"));
@@ -464,13 +444,13 @@
         SELECTED_HALL_ID = MY_HALL_REQ.hall ? MY_HALL_REQ.hall.id : SELECTED_HALL_ID;
         SELECTED_FUNERAL_DAYS = MY_HALL_REQ.funeralDays || SELECTED_FUNERAL_DAYS || 3;
         area.innerHTML = `
-          <div class="card-head">빈소선택 · 승인 대기</div>
+          <div class="card-head">${mEsc(mT("hall.pendingTitle"))}</div>
           <div class="card-body">
-            <div class="notice-box">신청하신 빈소는 관리자 승인 대기 중입니다. 빈소를 선택하면 필수 정보 입력 창이 열립니다.</div>
+            <div class="notice-box">${mEsc(mT("hall.pendingNotice"))}</div>
             ${hallSummaryNotice()}
             ${hallPickListHtml()}
             <div class="m-actions top-gap">
-              <button type="button" class="btn btn-primary" id="editPendingBtn">신청 정보 입력</button>
+              <button type="button" class="btn btn-primary" id="editPendingBtn">${mEsc(mT("hall.editPending"))}</button>
             </div>
           </div>`;
         bindHallPick(() => openHallInfoModal("pending"));
@@ -479,9 +459,9 @@
       }
 
       area.innerHTML = `
-        <div class="card-head">빈소선택</div>
+        <div class="card-head">${mEsc(mT("hall.selectTitle"))}</div>
         <div class="card-body">
-          <div class="notice-box">빈소를 선택하면 필수 입력 창이 열립니다. 고인·발인 정보를 입력 후 신청해 주세요.</div>
+          <div class="notice-box">${mEsc(mT("hall.pickNotice"))}</div>
           ${hallSummaryNotice()}
           ${hallPickListHtml()}
         </div>`;
@@ -499,35 +479,35 @@
         const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
         let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
         if (COFFINS.length === 0 && HOENGDAES.length === 0) {
-          html += '<div class="state">등록된 관·횡대가 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneCoffin"))}</div>`;
         } else {
           if (COFFINS.length > 0) {
-            html += '<h4 class="section-h4">관</h4><div class="prod-grid">';
+            html += `<h4 class="section-h4">${mEsc(mT("prod.coffinHead"))}</h4><div class="prod-grid">`;
             COFFINS.forEach((c) => {
               html += `
                 <div class="prod-card">
-                  ${c.imageUrl ? `<img src="${mEsc(c.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                  ${c.imageUrl ? `<img src="${mEsc(c.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                   <div class="prod-card-body">
                     <b>${mEsc(c.name)}</b>
-                    <small>어깨 ${mEsc(c.shoulder || "-")} · 높이 ${c.height != null ? c.height : "-"} · 길이 ${c.length != null ? c.length : "-"}㎜</small>
+                    <small>${mEsc(mT("prod.coffinDim", { shoulder: c.shoulder || "-", height: c.height != null ? c.height : "-", length: c.length != null ? c.length : "-" }))}</small>
                     <div class="prod-meta"><span class="price">${won(c.price)} / ${mEsc(c.unit)}</span></div>
-                    <button class="btn btn-sm btn-primary" data-add="coffin:${c.id}">담기</button>
+                    <button class="btn btn-sm btn-primary" data-add="coffin:${c.id}">${mEsc(mT("common.addToCart"))}</button>
                   </div>
                 </div>`;
             });
             html += "</div>";
           }
           if (HOENGDAES.length > 0) {
-            html += '<h4 class="section-h4 spaced">횡대</h4><div class="prod-grid">';
+            html += `<h4 class="section-h4 spaced">${mEsc(mT("prod.hoengdaeHead"))}</h4><div class="prod-grid">`;
             HOENGDAES.forEach((h) => {
               html += `
                 <div class="prod-card">
-                  ${h.imageUrl ? `<img src="${mEsc(h.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                  ${h.imageUrl ? `<img src="${mEsc(h.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                   <div class="prod-card-body">
                     <b>${mEsc(h.name)}</b>
-                    <small>세로 ${h.vertical != null ? h.vertical : "-"} · 가로 ${h.horizontal != null ? h.horizontal : "-"} · 두께 ${h.thickness != null ? h.thickness : "-"}㎜</small>
+                    <small>${mEsc(mT("prod.hoengdaeDim", { v: h.vertical != null ? h.vertical : "-", h: h.horizontal != null ? h.horizontal : "-", t: h.thickness != null ? h.thickness : "-" }))}</small>
                     <div class="prod-meta"><span class="price">${won(h.price)} / ${mEsc(h.unit)}</span></div>
-                    <button class="btn btn-sm btn-primary" data-add="hoengdae:${h.id}">담기</button>
+                    <button class="btn btn-sm btn-primary" data-add="hoengdae:${h.id}">${mEsc(mT("common.addToCart"))}</button>
                   </div>
                 </div>`;
             });
@@ -545,18 +525,18 @@
         const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
         let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
         if (SHROUDS.length === 0) {
-          html += '<div class="state">등록된 수의가 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneShroud"))}</div>`;
         } else {
           html += '<div class="prod-grid">';
           SHROUDS.forEach((s) => {
             html += `
               <div class="prod-card">
-                ${s.imageUrl ? `<img src="${mEsc(s.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                ${s.imageUrl ? `<img src="${mEsc(s.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                 <div class="prod-card-body">
                   <b>${mEsc(s.name)}</b>
                   <small>${mEsc(s.material || "")}${s.weaveType ? " · " + mEsc(s.weaveType) : ""}</small>
                   <div class="prod-meta"><span class="price">${won(s.price)} / ${mEsc(s.unit)}</span></div>
-                  <button class="btn btn-sm btn-primary" data-add="shroud:${s.id}">담기</button>
+                  <button class="btn btn-sm btn-primary" data-add="shroud:${s.id}">${mEsc(mT("common.addToCart"))}</button>
                 </div>
               </div>`;
           });
@@ -573,18 +553,18 @@
         const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
         let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
         if (ACCESSORIES.length === 0) {
-          html += '<div class="state">등록된 부속물품이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneAccessory"))}</div>`;
         } else {
           html += '<div class="prod-grid">';
           ACCESSORIES.forEach((a) => {
             html += `
               <div class="prod-card">
-                ${a.imageUrl ? `<img src="${mEsc(a.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                ${a.imageUrl ? `<img src="${mEsc(a.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                 <div class="prod-card-body">
                   <b>${mEsc(a.name)}</b>
                   <small>${mEsc(a.spec || "&nbsp;")}</small>
                   <div class="prod-meta"><span class="price">${won(a.price)} / ${mEsc(a.unit)}</span></div>
-                  <button class="btn btn-sm btn-primary" data-add="accessory:${a.id}">담기</button>
+                  <button class="btn btn-sm btn-primary" data-add="accessory:${a.id}">${mEsc(mT("common.addToCart"))}</button>
                 </div>
               </div>`;
           });
@@ -600,28 +580,28 @@
       if (ACTIVE_CAT === "food") {
         const items = FOOD_ITEMS.filter((f) => f.foodCategory === ACTIVE_FOOD_CAT);
         const sub = FOOD_SUB_CATS.find((c) => c.key === ACTIVE_FOOD_CAT);
-        let html = `<div class="card-head">접객 음식 · ${mEsc(sub ? sub.label : ACTIVE_FOOD_CAT)}</div><div class="card-body">`;
+        let html = `<div class="card-head">${mEsc(mT("prod.foodHead"))}${mEsc(sub ? sub.label : ACTIVE_FOOD_CAT)}</div><div class="card-body">`;
         html += '<div class="reserve-tabs compact">';
         html += FOOD_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_FOOD_CAT ? "active" : ""}" data-fcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
         html += "</div>";
         if (items.length === 0) {
-          html += '<div class="state">등록된 품목이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneFood"))}</div>`;
         } else {
           html += '<div class="prod-grid">';
           items.forEach((f) => {
             html += `
               <div class="prod-card">
-                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                 <div class="prod-card-body">
                   <b>${mEsc(f.name)}</b>
                   <small>${mEsc(f.subGroup || f.description || "&nbsp;")}</small>
                   <div class="prod-meta">
                     <span class="price">${won(f.price)} / ${mEsc(f.unit)}</span>
-                    ${f.settlementType === "postpaid" ? '<span class="tag pending">발인 전 수기 정산</span>' : ""}
+                    ${f.settlementType === "postpaid" ? `<span class="tag pending">${mEsc(mT("shop.postpaidTag"))}</span>` : ""}
                   </div>
-                  <button class="btn btn-sm btn-primary" data-add="foodItem:${f.id}">담기</button>
+                  <button class="btn btn-sm btn-primary" data-add="foodItem:${f.id}">${mEsc(mT("common.addToCart"))}</button>
                 </div>
               </div>`;
           });
@@ -639,25 +619,25 @@
       if (ACTIVE_CAT === "flower") {
         const items = FLOWER_ITEMS.filter((f) => f.flowerCategory === ACTIVE_FLOWER_CAT);
         const sub = FLOWER_SUB_CATS.find((c) => c.key === ACTIVE_FLOWER_CAT);
-        let html = `<div class="card-head">근조 화환 · ${mEsc(sub ? sub.label : ACTIVE_FLOWER_CAT)}</div><div class="card-body">`;
+        let html = `<div class="card-head">${mEsc(mT("prod.flowerHead"))}${mEsc(sub ? sub.label : ACTIVE_FLOWER_CAT)}</div><div class="card-body">`;
         html += '<div class="reserve-tabs compact">';
         html += FLOWER_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_FLOWER_CAT ? "active" : ""}" data-flcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
         html += "</div>";
         if (items.length === 0) {
-          html += '<div class="state">등록된 품목이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneFlower"))}</div>`;
         } else {
           html += '<div class="prod-grid">';
           items.forEach((f) => {
             html += `
               <div class="prod-card">
-                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                 <div class="prod-card-body">
                   <b>${mEsc(f.name)}</b>
                   <small>${mEsc(f.description) || "&nbsp;"}</small>
                   <div class="prod-meta"><span class="price">${won(f.price)} / ${mEsc(f.unit)}</span></div>
-                  <button class="btn btn-sm btn-primary" data-add="flowerItem:${f.id}">담기</button>
+                  <button class="btn btn-sm btn-primary" data-add="flowerItem:${f.id}">${mEsc(mT("common.addToCart"))}</button>
                 </div>
               </div>`;
           });
@@ -675,26 +655,26 @@
       if (ACTIVE_CAT === "photo") {
         const items = PHOTO_ITEMS.filter((p) => p.photoCategory === ACTIVE_PHOTO_CAT);
         const sub = PHOTO_SUB_CATS.find((c) => c.key === ACTIVE_PHOTO_CAT);
-        let html = `<div class="card-head">영정 사진 · ${mEsc(sub ? sub.label : ACTIVE_PHOTO_CAT)}</div><div class="card-body">`;
+        let html = `<div class="card-head">${mEsc(mT("prod.photoHead"))}${mEsc(sub ? sub.label : ACTIVE_PHOTO_CAT)}</div><div class="card-body">`;
         html += '<div class="reserve-tabs compact">';
         html += PHOTO_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_PHOTO_CAT ? "active" : ""}" data-phcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
         html += "</div>";
         if (items.length === 0) {
-          html += '<div class="state">등록된 품목이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.nonePhoto"))}</div>`;
         } else {
           html += '<div class="prod-grid">';
           items.forEach((p) => {
             const label = p.subGroup ? `${p.subGroup} ${p.name}` : p.name;
             html += `
               <div class="prod-card">
-                ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
                 <div class="prod-card-body">
                   <b>${mEsc(label)}</b>
                   <small>${mEsc(p.spec || p.description || "&nbsp;")}</small>
                   <div class="prod-meta"><span class="price">${won(p.price)} / ${mEsc(p.unit)}</span></div>
-                  <button class="btn btn-sm btn-primary" data-add="photoItem:${p.id}">담기</button>
+                  <button class="btn btn-sm btn-primary" data-add="photoItem:${p.id}">${mEsc(mT("common.addToCart"))}</button>
                 </div>
               </div>`;
           });
@@ -718,11 +698,11 @@
           if (ao !== bo) return ao - bo;
           return String(a.spec).localeCompare(String(b.spec), "ko");
         });
-        let html = `<div class="card-head">상복 대여</div><div class="card-body">`;
+        let html = `<div class="card-head">${mEsc(mT("prod.dressHead"))}</div><div class="card-body">`;
         if (items.length === 0) {
-          html += '<div class="state">등록된 품목이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneDress"))}</div>`;
         } else {
-          html += '<table class="tbl full"><thead><tr><th>품목</th><th>치수</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          html += `<table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colItem"))}</th><th>${mEsc(mT("prod.colSize"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th><th></th></tr></thead><tbody>`;
           items.forEach((d) => {
             html += `
               <tr>
@@ -730,7 +710,7 @@
                 <td>${mEsc(d.spec)}</td>
                 <td>${mEsc(d.unit || "1개")}</td>
                 <td class="nowrap">${won(d.price)}</td>
-                <td><button class="btn btn-sm btn-primary" data-add="dressItem:${d.id}">담기</button></td>
+                <td><button class="btn btn-sm btn-primary" data-add="dressItem:${d.id}">${mEsc(mT("common.addToCart"))}</button></td>
               </tr>`;
           });
           html += "</tbody></table>";
@@ -745,16 +725,16 @@
       if (ACTIVE_CAT === "hearse") {
         const items = HEARSE_ITEMS.filter((h) => h.hearseCategory === ACTIVE_HEARSE_CAT);
         const sub = HEARSE_SUB_CATS.find((c) => c.key === ACTIVE_HEARSE_CAT);
-        let html = `<div class="card-head">운구·차량 · ${mEsc(sub ? sub.label : ACTIVE_HEARSE_CAT)}</div><div class="card-body">`;
+        let html = `<div class="card-head">${mEsc(mT("prod.hearseHead"))}${mEsc(sub ? sub.label : ACTIVE_HEARSE_CAT)}</div><div class="card-body">`;
         html += '<div class="reserve-tabs compact">';
         html += HEARSE_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_HEARSE_CAT ? "active" : ""}" data-hrcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
         html += "</div>";
         if (items.length === 0) {
-          html += '<div class="state">등록된 차량이 없습니다.</div>';
+          html += `<div class="state">${mEsc(mT("prod.noneHearse"))}</div>`;
         } else {
-          html += '<table class="tbl full"><thead><tr><th>차량</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          html += `<table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colVehicle"))}</th><th>${mEsc(mT("prod.colSpec"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th><th></th></tr></thead><tbody>`;
           items.forEach((h) => {
             html += `
               <tr>
@@ -762,7 +742,7 @@
                 <td>${mEsc(h.spec || "-")}</td>
                 <td>${mEsc(h.unit || "1대")}</td>
                 <td class="nowrap">${won(h.price)}</td>
-                <td><button class="btn btn-sm btn-primary" data-add="hearseItem:${h.id}">담기</button></td>
+                <td><button class="btn btn-sm btn-primary" data-add="hearseItem:${h.id}">${mEsc(mT("common.addToCart"))}</button></td>
               </tr>`;
           });
           html += "</tbody></table>";
@@ -780,21 +760,21 @@
       const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
       let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
       if (items.length === 0) {
-        html += '<div class="state">등록된 상품이 없습니다.</div>';
+        html += `<div class="state">${mEsc(mT("prod.noneGeneric"))}</div>`;
       } else {
         html += '<div class="prod-grid">';
         items.forEach((p) => {
           html += `
             <div class="prod-card">
-              ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+              ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : `<div class="prod-img placeholder">${mEsc(mT("common.noImage"))}</div>`}
               <div class="prod-card-body">
                 <b>${mEsc(p.name)}</b>
                 <small>${mEsc(p.description) || "&nbsp;"}</small>
                 <div class="prod-meta">
                   <span class="price">${won(p.price)} / ${mEsc(p.unit)}</span>
-                  ${p.settlementType === "postpaid" ? '<span class="tag pending">발인 전 수기 정산</span>' : ""}
+                  ${p.settlementType === "postpaid" ? `<span class="tag pending">${mEsc(mT("shop.postpaidTag"))}</span>` : ""}
                 </div>
-                <button class="btn btn-sm btn-primary" data-add="product:${p.id}">담기</button>
+                <button class="btn btn-sm btn-primary" data-add="product:${p.id}">${mEsc(mT("common.addToCart"))}</button>
               </div>
             </div>`;
         });
@@ -809,7 +789,7 @@
 
     function addToCart(key) {
       cart.set(key, (cart.get(key) || 0) + 1);
-      renderCart(); mToast("예약 목록에 담았습니다.");
+      renderCart(); mToast(mT("shop.addedToast"));
     }
     function setQty(key, qty) {
       if (qty <= 0) cart.delete(key); else cart.set(key, qty);
@@ -825,7 +805,7 @@
       const pendingHall = getPendingHallFee();
 
       if (cart.size === 0 && !hallHtml) {
-        area.innerHTML = '<div class="cart-empty">담긴 항목이 없습니다.</div>';
+        area.innerHTML = `<div class="cart-empty">${mEsc(mT("shop.cartEmpty"))}</div>`;
         sumArea.innerHTML = "";
         btn.disabled = true;
         return;
@@ -838,7 +818,7 @@
       }
 
       if (cart.size === 0) {
-        html += '<div class="cart-empty compact">장례 물품·서비스를 추가로 선택할 수 있습니다.</div>';
+        html += `<div class="cart-empty compact">${mEsc(mT("shop.cartEmptyHint"))}</div>`;
       } else {
         cart.forEach((qty, key) => {
           const p = findCartItem(key);
@@ -849,11 +829,11 @@
           if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
           html += `
             <div class="cart-item">
-              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small class="status-postpaid">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
+              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? `<br><small class="status-postpaid">${mEsc(mT("shop.postpaidShort"))}</small>` : ""}<br><span class="rm" data-rm="${key}">${mEsc(mT("common.delete"))}</span></span>
               <span class="qtybox">
                 <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
               </span>
-              <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? "정산" : won(line)}</span>
+              <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? mEsc(mT("common.settle")) : won(line)}</span>
             </div>`;
         });
       }
@@ -866,12 +846,13 @@
       } else {
         sumArea.innerHTML = `
           <div class="cart-sum">
-            <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
-            <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
-            <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
-            <p class="cart-sum-note">* 빈소 이용료는 예약 제출 시 주문에 포함됩니다.${cart.size === 0 ? "" : " 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다."}</p>
+            <div class="row"><span>${mEsc(mT("shop.supply"))}</span><span>${won(supply)}</span></div>
+            <div class="row"><span>${mEsc(mT("shop.vat"))}</span><span>${won(vat)}</span></div>
+            <div class="row total"><span>${mEsc(mT("shop.total"))}</span><span>${won(supply + vat)}</span></div>
+            <p class="cart-sum-note">${mEsc(mT("shop.sumNote"))}${cart.size === 0 ? "" : mEsc(mT("shop.sumNotePostpaid"))}</p>
           </div>`;
         btn.disabled = false;
+        btn.textContent = mT("shop.submitOrder");
       }
 
       area.querySelectorAll("[data-plus]").forEach((b) =>
@@ -898,16 +879,16 @@
         if (type === "hearseItem") return { itemType: "hearseItem", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
-      const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";
+      const memo = prompt(mT("shop.memoPrompt"), "") || "";
       const btn = document.getElementById("orderBtn");
-      btn.disabled = true; btn.textContent = "예약 처리 중…";
+      btn.disabled = true; btn.textContent = mT("shop.submitting");
       try {
         const d = await mApi("/orders", { method: "POST", body: { items, memo } });
-        mToast("예약이 접수되었습니다.");
+        mToast(mT("shop.orderOkToast"));
         location.href = "/pages/member/orders.html?ok=" + encodeURIComponent(d.order.orderNumber);
       } catch (e) {
         mToast(e.message);
-        btn.disabled = false; btn.textContent = "예약 제출";
+        btn.disabled = false; btn.textContent = mT("shop.submitOrder");
       }
     }
   </script>

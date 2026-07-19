@@ -107,6 +107,20 @@ a.link-gold { color: var(--gold); font-weight: 600; }
   transition: background 0.15s;
 }
 .m-nav button:hover { background: rgba(255, 255, 255, 0.16); }
+.m-lang-switch {
+  display: inline-flex; align-items: center; gap: 2px;
+  margin-left: 4px; padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+.m-lang-btn {
+  padding: 4px 7px; font-size: 11px; font-weight: 600; line-height: 1.2;
+  color: #b9c0d0; background: transparent; border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px; cursor: pointer;
+}
+.m-lang-btn:hover { color: #fff; }
+.m-lang-btn.is-active { color: #fff; background: var(--gold); border-color: var(--gold); }
+.m-login-lang { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.m-login-lang .m-lang-switch { border-left: none; padding-left: 0; margin-left: 0; }
 
 /* 컨테이너 · 페이지 타이틀 */
 .m-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 64px; }

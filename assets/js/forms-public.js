@@ -9,10 +9,11 @@ async function fetchPublicForms() {
 
 function formDownloadCell(f, compact) {
   if (f.downloadUrl) {
-    const label = compact ? "받기" : "다운로드";
-    return `<a class="${compact ? "info-link" : ""}" href="${escapeHtml(f.downloadUrl)}" download style="${compact ? "" : "color:var(--gold);font-weight:600;"}">${label}</a>`;
+    const label = typeof mT === "function" ? mT("common.download") : "받기";
+    return `<a class="${compact ? "info-link" : ""}" href="${escapeHtml(f.downloadUrl)}" download style="${compact ? "" : "color:var(--gold);font-weight:600;"}">${escapeHtml(label)}</a>`;
   }
-  return compact ? '<span class="muted">준비중</span>' : '<span class="muted">등록 예정</span>';
+  const pending = typeof mT === "function" ? mT("common.preparing") : "준비중";
+  return compact ? `<span class="muted">${escapeHtml(pending)}</span>` : `<span class="muted">${escapeHtml(pending)}</span>`;
 }
 
 function escapeHtml(s) {
@@ -43,7 +44,8 @@ function renderFormsTableRows(items, compact) {
 async function loadFormsIntoTable(tbodyId, compact) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="${compact ? 2 : 3}">불러오는 중…</td></tr>`;
+  const loading = typeof mT === "function" ? mT("common.loading") : "불러오는 중…";
+  tbody.innerHTML = `<tr><td colspan="${compact ? 2 : 3}">${escapeHtml(loading)}</td></tr>`;
   try {
     const items = await fetchPublicForms();
     tbody.innerHTML = renderFormsTableRows(items, compact);

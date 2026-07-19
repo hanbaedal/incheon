@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="refresh" content="0;url=/pages/member/shop.html?cat=hall" />
   <title>장례 예약 | 상주 전용 서비스</title>
-  <script>location.replace("/pages/member/shop.html?cat=hall");</script>
+  <script src="../../assets/js/member-i18n.js"></script>
+  <script>
+    mPageTitle("shop.pageTitle");
+    document.documentElement.lang = mLang() === "zh" ? "zh-CN" : mLang();
+    location.replace("/pages/member/shop.html?cat=hall");
+  </script>
 </head>
 <body>
-  <p><a href="/pages/member/shop.html?cat=hall">장례 예약으로 이동</a></p>
+  <p><a href="/pages/member/shop.html?cat=hall" data-mi18n="hall.redirectLink">장례 예약으로 이동</a></p>
+  <script>mApplyI18n(document);</script>
 </body>
 </html>

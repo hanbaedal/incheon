@@ -4,37 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <title>내 주문 | 상주 전용 서비스</title>
+  <title>내 예약 | 상주 전용 서비스</title>
   <link rel="stylesheet" href="../../assets/css/member.css" />
   <style id="docInlineStyle"></style>
 </head>
 <body>
   <header id="mHeader"></header>
   <div class="m-wrap">
-    <h1 class="m-title">내 예약 내역</h1>
-    <p class="m-lead">예약하신 내역과 처리 상태를 확인하실 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
+    <h1 class="m-title" data-mi18n="orders.title">내 예약 내역</h1>
+    <p class="m-lead" data-mi18n="orders.lead">예약하신 내역과 처리 상태를 확인하실 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
     <div id="okBox"></div>
-    <div id="ordArea" class="card"><div class="state">주문 내역을 불러오는 중…</div></div>
+    <div id="ordArea" class="card"><div class="state" data-mi18n="orders.loading">주문 내역을 불러오는 중…</div></div>
   </div>
 
   <div id="docModal" class="doc-modal-back" aria-hidden="true">
     <div class="doc-modal" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
       <div class="doc-modal-head">
-        <h3 id="docModalTitle">문서</h3>
-        <button type="button" class="doc-modal-x" id="docModalClose" aria-label="닫기">×</button>
+        <h3 id="docModalTitle" data-mi18n="orders.docTitle">문서</h3>
+        <button type="button" class="doc-modal-x" id="docModalClose" data-mi18n-aria="common.close" aria-label="닫기">×</button>
       </div>
       <div class="doc-modal-body" id="docModalBody"></div>
       <div class="doc-modal-foot">
-        <button type="button" class="btn" id="docModalClose2">닫기</button>
-        <button type="button" class="btn btn-primary" id="docModalPrint">인쇄</button>
+        <button type="button" class="btn" id="docModalClose2" data-mi18n="common.close">닫기</button>
+        <button type="button" class="btn btn-primary" id="docModalPrint" data-mi18n="common.print">인쇄</button>
       </div>
     </div>
   </div>
 
+  <script src="../../assets/js/member-i18n.js"></script>
   <script src="../../assets/js/member.js"></script>
   <script src="../../assets/js/order-doc.js"></script>
   <script>
     document.getElementById("docInlineStyle").textContent = DOC_STYLES;
+    mApplyI18n(document);
+    mPageTitle("orders.pageTitle");
+    document.querySelectorAll("[data-mi18n-aria]").forEach((el) => {
+      el.setAttribute("aria-label", mT(el.getAttribute("data-mi18n-aria")));
+    });
 
     let ME = null;
     let SUMMARY = null;
@@ -47,7 +53,7 @@
       const ok = new URLSearchParams(location.search).get("ok");
       if (ok) {
         document.getElementById("okBox").innerHTML =
-          `<div class="notice-box success">예약이 정상 접수되었습니다. (예약번호 ${mEsc(ok)})</div>`;
+          `<div class="notice-box success">${mEsc(mT("orders.okBox", { n: ok }))}</div>`;
       }
       bindModal();
       await load();
@@ -81,18 +87,22 @@
     async function showOrderDoc(orderId) {
       const data = await mApi("/orders/" + orderId);
       const html = buildOrderDocHtml(data.order, "order");
-      openDocModal("주문서 · " + data.order.orderNumber, html);
+      openDocModal(mT("orders.docOrder") + " · " + data.order.orderNumber, html);
     }
 
     async function showAggregateDoc(type) {
       if (!SUMMARY) SUMMARY = await mApi("/orders/mine/summary");
       if (!SUMMARY.orderCount) {
-        mToast("집계할 주문이 없습니다.");
+        mToast(mT("orders.noAgg"));
         return;
       }
-      const labels = { order: "주문서 합계", statement: "거래명세서", tax: "세금계산서" };
+      const labels = {
+        order: mT("orders.docAggOrder"),
+        statement: mT("orders.docStatement"),
+        tax: mT("orders.docTax"),
+      };
       const html = buildAggregateDocHtml(SUMMARY, type);
-      openDocModal(labels[type] || "문서", html);
+      openDocModal(labels[type] || mT("orders.docTitle"), html);
     }
 
     async function load() {
@@ -106,35 +116,42 @@
         const items = listRes.items;
 
         if (items.length === 0) {
-          area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" class="link-gold">장례 예약하기 →</a></div>';
+          area.innerHTML = `<div class="state">${mEsc(mT("orders.empty"))} <a href="/pages/member/shop.html" class="link-gold">${mEsc(mT("orders.goShop"))}</a></div>`;
           return;
         }
 
         const hasSummary = SUMMARY && SUMMARY.orderCount > 0;
         area.innerHTML = `
-          <div class="card-head">건별 예약 내역</div>
+          <div class="card-head">${mEsc(mT("orders.listHead"))}</div>
           <div class="card-body flush">
           <table class="tbl">
-            <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th class="nowrap">주문일</th><th class="right">문서</th></tr></thead>
+            <thead><tr>
+              <th>${mEsc(mT("orders.colNumber"))}</th>
+              <th>${mEsc(mT("orders.colItems"))}</th>
+              <th class="right">${mEsc(mT("orders.colTotal"))}</th>
+              <th>${mEsc(mT("orders.colStatus"))}</th>
+              <th class="nowrap">${mEsc(mT("orders.colDate"))}</th>
+              <th class="right">${mEsc(mT("orders.colDoc"))}</th>
+            </tr></thead>
             <tbody>${items.map((o) => `
               <tr>
                 <td class="nowrap"><b>${mEsc(o.orderNumber)}</b></td>
-                <td>${mEsc(o.items[0] ? o.items[0].name : "-")}${o.items.length > 1 ? ` 외 ${o.items.length - 1}건` : ""}</td>
+                <td>${mEsc(o.items[0] ? o.items[0].name : "-")}${o.items.length > 1 ? mEsc(mT("common.moreItems", { n: o.items.length - 1 })) : ""}</td>
                 <td class="right nowrap">${won(o.totalAmount)}</td>
-                <td><span class="tag ${o.status}">${MEMBER_STATUS[o.status] || o.status}</span></td>
+                <td><span class="tag ${o.status}">${mEsc(mMemberStatus(o.status))}</span></td>
                 <td class="nowrap">${mFmtDay(o.createdAt)}</td>
                 <td class="right nowrap">
-                  <button type="button" class="btn btn-sm" data-order-id="${mEsc(o.id)}">주문서</button>
+                  <button type="button" class="btn btn-sm" data-order-id="${mEsc(o.id)}">${mEsc(mT("orders.docOrder"))}</button>
                 </td>
               </tr>`).join("")}</tbody>
           </table>
           ${hasSummary ? `
           <div class="doc-actions">
-            <p class="doc-actions-lead">발인 정산 · 취소 제외 ${SUMMARY.orderCount}건 합계</p>
+            <p class="doc-actions-lead">${mEsc(mT("orders.docAggLead", { n: SUMMARY.orderCount }))}</p>
             <div class="doc-actions-btns">
-              <button type="button" class="btn btn-primary" data-agg="order">주문서 합계</button>
-              <button type="button" class="btn" data-agg="statement">거래명세서</button>
-              <button type="button" class="btn" data-agg="tax">세금계산서</button>
+              <button type="button" class="btn btn-primary" data-agg="order">${mEsc(mT("orders.docAggOrder"))}</button>
+              <button type="button" class="btn" data-agg="statement">${mEsc(mT("orders.docStatement"))}</button>
+              <button type="button" class="btn" data-agg="tax">${mEsc(mT("orders.docTax"))}</button>
             </div>
           </div>` : ""}
           </div>`;
@@ -157,7 +174,7 @@
           });
         });
       } catch (e) {
-        area.innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
+        area.innerHTML = `<div class="state">${mEsc(mT("common.errorPrefix"))}${mEsc(e.message)}</div>`;
       }
     }
   </script>

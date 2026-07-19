@@ -24,16 +24,19 @@
 </head>
 <body>
   <div class="bar">
-    <button type="button" id="backBtn">← 돌아가기</button>
+    <button type="button" id="backBtn" data-mi18n="doc.back">← 돌아가기</button>
     <span id="barTitle" style="color:#fff;font-weight:700;margin-right:10px"></span>
-    <button class="primary" onclick="window.print()">인쇄</button>
+    <button class="primary" onclick="window.print()" data-mi18n="common.print">인쇄</button>
   </div>
 
-  <div class="sheet-wrap" id="sheet"><div class="loading">문서를 불러오는 중…</div></div>
+  <div class="sheet-wrap" id="sheet"><div class="loading" data-mi18n="doc.loading">문서를 불러오는 중…</div></div>
 
+  <script src="../../assets/js/member-i18n.js"></script>
   <script src="../../assets/js/order-doc.js"></script>
   <script>
     document.getElementById("docStyle").textContent = DOC_STYLES;
+    mApplyI18n(document);
+    mPageTitle("doc.pageTitle");
 
     const params = new URLSearchParams(location.search);
     const orderId = params.get("id");
@@ -43,8 +46,16 @@
     const from = params.get("from") || "";
     if (type === "summary") type = "order";
 
-    const AGG_LABELS = { order: "주문서 합계", statement: "거래명세서", tax: "세금계산서" };
-    const ORDER_LABELS = { order: "주문서", statement: "거래명세서", tax: "세금계산서" };
+    const AGG_LABELS = {
+      order: mT("orders.docAggOrder"),
+      statement: mT("orders.docStatement"),
+      tax: mT("orders.docTax"),
+    };
+    const ORDER_LABELS = {
+      order: mT("orders.docOrder"),
+      statement: mT("orders.docStatement"),
+      tax: mT("orders.docTax"),
+    };
 
     document.getElementById("backBtn").addEventListener("click", () => {
       if (from === "admin") {
@@ -64,9 +75,9 @@
       try { data = await res.json(); } catch (e) {}
       if (res.status === 401) {
         location.href = "/pages/member/login.html?next=" + encodeURIComponent(location.pathname + location.search);
-        throw new Error("로그인이 필요합니다.");
+        throw new Error(mT("doc.needLogin"));
       }
-      if (!res.ok) throw new Error((data && data.error) || "주문을 불러올 수 없습니다.");
+      if (!res.ok) throw new Error((data && data.error) || mT("doc.loadOrderFail"));
       return data.order;
     }
 
@@ -79,9 +90,9 @@
       try { data = await res.json(); } catch (e) {}
       if (res.status === 401) {
         location.href = "/pages/member/login.html?next=" + encodeURIComponent(location.pathname + location.search);
-        throw new Error("로그인이 필요합니다.");
+        throw new Error(mT("doc.needLogin"));
       }
-      if (!res.ok) throw new Error((data && data.error) || "집계를 불러올 수 없습니다.");
+      if (!res.ok) throw new Error((data && data.error) || mT("doc.loadSummaryFail"));
       return data;
     }
 
@@ -95,7 +106,7 @@
           title = AGG_LABELS[type] || DOC_TITLES[type];
         } else {
           if (!orderId) {
-            document.getElementById("sheet").innerHTML = '<div class="loading">주문 정보가 없습니다.</div>';
+            document.getElementById("sheet").innerHTML = `<div class="loading">${mT("doc.noOrder")}</div>`;
             return;
           }
           const o = await fetchOrder(orderId);
@@ -105,7 +116,7 @@
         document.getElementById("barTitle").textContent = title;
         document.getElementById("sheet").innerHTML = html;
       } catch (e) {
-        document.getElementById("sheet").innerHTML = `<div class="loading">오류: ${docEsc(e.message)}</div>`;
+        document.getElementById("sheet").innerHTML = `<div class="loading">${mT("common.errorPrefix")}${docEsc(e.message)}</div>`;
       }
     })();
   </script>

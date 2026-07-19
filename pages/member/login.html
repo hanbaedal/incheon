@@ -10,30 +10,36 @@
 <body>
   <div class="m-login">
     <form class="m-login-card" id="loginForm">
-      <h1>로그인</h1>
-      <p class="sub">상주(유족)·관리자 통합 로그인입니다.<br />계정에 맞는 화면으로 자동 이동합니다.</p>
+      <div class="m-login-lang" id="mLoginLang"></div>
+      <h1 data-mi18n="login.title">로그인</h1>
+      <p class="sub" data-mi18n="login.sub">상주(유족)·관리자 통합 로그인입니다.<br />계정에 맞는 화면으로 자동 이동합니다.</p>
       <div class="fld">
-        <label for="username">아이디</label>
+        <label for="username" data-mi18n="login.username">아이디</label>
         <input id="username" type="text" autocomplete="username" required />
       </div>
       <div class="fld">
-        <label for="password">비밀번호</label>
+        <label for="password" data-mi18n="login.password">비밀번호</label>
         <div class="pw-wrap">
           <input id="password" type="password" autocomplete="current-password" required />
           <button type="button" class="pw-toggle" id="pwToggle" aria-label="비밀번호 표시"></button>
         </div>
       </div>
       <div class="notice-box error" id="errBox" style="display:none"></div>
-      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">로그인</button>
-      <p class="sub sub-foot">
-        계정이 없으신가요? 장례식장 상담실(<b>032-524-4444</b>)로 문의해 주세요.<br />
-        <a href="/" class="link-gold">← 홈페이지로 돌아가기</a>
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn" data-mi18n="login.submit">로그인</button>
+      <p class="sub sub-foot" data-mi18n="login.foot" data-mi18n-html="1">
+        계정이 없으신가요? 장례식장 상담실(<b>032-524-4444</b>)로 문의해 주세요.
       </p>
+      <p class="sub sub-foot"><a href="/" class="link-gold" data-mi18n="login.backHome">← 홈페이지로 돌아가기</a></p>
     </form>
   </div>
 
+  <script src="../../assets/js/member-i18n.js"></script>
   <script src="../../assets/js/member.js"></script>
   <script>
+    mApplyI18n(document);
+    mPageTitle("login.pageTitle");
+    mRenderLangSwitch(document.getElementById("mLoginLang"));
+
     function safeNext(raw) {
       if (!raw || typeof raw !== "string") return null;
       if (!raw.startsWith("/") || raw.startsWith("//")) return null;
@@ -80,9 +86,10 @@
         const show = pw.type === "password";
         pw.type = show ? "text" : "password";
         tg.innerHTML = show ? EYE_OFF : EYE;
-        tg.setAttribute("aria-label", show ? "비밀번호 숨김" : "비밀번호 표시");
+        tg.setAttribute("aria-label", show ? mT("login.pwHide") : mT("login.pwShow"));
         pw.focus();
       });
+      tg.setAttribute("aria-label", mT("login.pwShow"));
     })();
 
     const form = document.getElementById("loginForm");
@@ -91,7 +98,7 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       errBox.style.display = "none";
-      btn.disabled = true; btn.textContent = "로그인 중…";
+      btn.disabled = true; btn.textContent = mT("login.submitting");
       try {
         const d = await mApi("/auth/login", {
           method: "POST",
@@ -101,7 +108,7 @@
         gotoAfterLogin(d.user && d.user.role);
       } catch (err) {
         errBox.textContent = err.message; errBox.style.display = "block";
-        btn.disabled = false; btn.textContent = "로그인";
+        btn.disabled = false; btn.textContent = mT("login.submit");
       }
     });
   </script>
