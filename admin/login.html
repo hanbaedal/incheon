@@ -45,7 +45,7 @@
     })();
 
     // 이미 로그인된 관리자면 대시보드로
-    fetch("/api/auth/me", { credentials: "same-origin" })
+    fetch("/api/auth/me", { credentials: "same-origin", headers: { "X-Session-Scope": "admin" } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d && d.user && d.user.role === "admin") location.href = "/admin/"; })
       .catch(() => {});
@@ -58,7 +58,7 @@
       try {
         const r = await fetch("/api/auth/login", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Session-Scope": "admin" },
           credentials: "same-origin",
           body: JSON.stringify({ username, password }),
         });
@@ -66,7 +66,6 @@
         if (!r.ok) { msg.textContent = d.error || "로그인에 실패했습니다."; return; }
         if (d.user.role !== "admin") {
           msg.textContent = "관리자 전용 페이지입니다.";
-          await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
           return;
         }
         location.href = "/admin/";

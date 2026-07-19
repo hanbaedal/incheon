@@ -4,10 +4,12 @@
 /* ---------- 공통 유틸 ---------- */
 async function api(path, opts) {
   opts = opts || {};
+  const headers = { "X-Session-Scope": "admin" };
+  if (opts.body) headers["Content-Type"] = "application/json";
   const res = await fetch("/api" + path, {
     method: opts.method || "GET",
     credentials: "same-origin",
-    headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   let data = null;
@@ -79,7 +81,12 @@ async function guard() {
 }
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-Session-Scope": "admin" },
+    body: JSON.stringify({ scope: "admin" }),
+  });
   location.href = "/admin/login.html";
 });
 
@@ -161,7 +168,12 @@ const SETTLEMENT_LABELS = { prepaid: "선결제", postpaid: "사후정산" };
 async function uploadImage(file) {
   const fd = new FormData();
   fd.append("image", file);
-  const res = await fetch("/api/images", { method: "POST", credentials: "same-origin", body: fd });
+  const res = await fetch("/api/images", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "X-Session-Scope": "admin" },
+    body: fd,
+  });
   let data = null;
   try { data = await res.json(); } catch (e) {}
   if (res.status === 401) { location.href = "/admin/login.html"; throw new Error("unauthorized"); }

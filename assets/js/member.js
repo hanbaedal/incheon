@@ -3,10 +3,12 @@
 
 async function mApi(path, opts) {
   opts = opts || {};
+  const headers = { "X-Session-Scope": "member" };
+  if (opts.body) headers["Content-Type"] = "application/json";
   const res = await fetch("/api" + path, {
     method: opts.method || "GET",
     credentials: "same-origin",
-    headers: opts.body ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   let data = null;
@@ -71,7 +73,12 @@ async function memberHeader(active) {
         <button id="mLogout">로그아웃</button>
       </nav>`;
     document.getElementById("mLogout").addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-Session-Scope": "member" },
+        body: JSON.stringify({ scope: "member" }),
+      });
       location.href = "/pages/member/login.html";
     });
   }

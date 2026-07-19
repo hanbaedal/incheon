@@ -1,11 +1,10 @@
 "use strict";
 
-const { COOKIE_NAME, verifyToken } = require("../utils/token");
+const { resolveUserFromCookies } = require("../utils/token");
 
 // 요청의 세션 쿠키를 해석해 req.user 에 주입 (없으면 null)
 function attachUser(req, res, next) {
-  const token = req.cookies && req.cookies[COOKIE_NAME];
-  req.user = token ? verifyToken(token) : null;
+  req.user = resolveUserFromCookies(req);
   next();
 }
 
