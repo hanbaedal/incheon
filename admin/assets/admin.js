@@ -1924,7 +1924,7 @@ async function renderOrders() {
           ? `${esc(g.family.name)} (${esc(g.family.username)})`
           : esc("상주 미지정");
         const hallLabel = g.hall
-          ? `빈소 ${esc(g.hall.hallNumber)}${g.hall.deceasedName ? " · 故 " + esc(g.hall.deceasedName) : ""}`
+          ? `빈소 ${esc(g.hall.hallNumber)}${g.hall.deceasedName ? " · 故 " + esc(g.hall.deceasedName) : ""}${g.hall.funeralDate ? " · 발인 " + esc(g.hall.funeralDate) + (g.hall.funeralTime ? " " + esc(g.hall.funeralTime) : "") : ""}`
           : "빈소 미지정";
         const sumCount = activeCount(g.orders);
         return `
@@ -2013,7 +2013,8 @@ function orderDetail(o) {
 
   openModal(`주문 상세 · ${esc(o.orderNumber)}`, `
     <div class="detail-row"><b>상주</b><span>${o.family ? esc(o.family.name) + " (" + esc(o.family.username) + ")" : "-"}</span></div>
-    <div class="detail-row"><b>빈소</b><span>${o.hall ? esc(o.hall.hallNumber) + (o.hall.deceasedName ? " / " + esc(o.hall.deceasedName) : "") : "-"}</span></div>
+    <div class="detail-row"><b>빈소</b><span>${o.hall ? esc(o.hall.hallNumber) + (o.hall.specLabel ? " (" + esc(o.hall.specLabel) + ")" : "") + (o.hall.deceasedName ? " / 故 " + esc(o.hall.deceasedName) : "") : "-"}</span></div>
+    <div class="detail-row"><b>발인</b><span>${o.hall && o.hall.funeralDate ? esc(o.hall.funeralDate) + (o.hall.funeralTime ? " " + esc(o.hall.funeralTime) : "") : "-"}${o.hall && o.hall.frozen ? ' <span class="muted">(주문 접수 시 고정)</span>' : ""}</span></div>
     <div class="detail-row"><b>주문일</b><span>${fmt(o.createdAt)}</span></div>
     <table class="grid" style="margin:12px 0">
       <thead><tr><th>품목</th><th class="right">단가</th><th class="right">예약</th><th class="right">실사용</th><th class="right">금액</th></tr></thead>

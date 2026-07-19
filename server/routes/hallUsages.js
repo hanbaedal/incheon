@@ -14,6 +14,7 @@ const {
   funeralDayLabel,
 } = require("../utils/hallPricing");
 const { ensureUsagePricing, isHallFeeOrdered } = require("../utils/hallOrderItem");
+const { hasActiveOrdersForUsage, assertHallScheduleLocked } = require("../utils/orderHallSnapshot");
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ function pickUsageBody(body) {
   return out;
 }
 
-function formatMemberUsage(usage, hallFeeOrdered) {
+function formatMemberUsage(usage, hallFeeOrdered, scheduleLocked) {
   const hall = usage.hallId;
   const days = usage.funeralDays;
   const dailyPrice = usage.dailyPrice || (hall ? hall.dailyPrice : 0) || 0;
@@ -65,6 +66,7 @@ function formatMemberUsage(usage, hallFeeOrdered) {
     dailyPrice,
     hallFeeAmount,
     hallFeeOrdered: !!hallFeeOrdered,
+    scheduleLocked: !!scheduleLocked,
     status: usage.status,
     familyCode: usage.familyCode,
     createdAt: usage.createdAt,
@@ -93,7 +95,8 @@ router.get(
     await ensureUsagePricing(usage);
     await usage.populate("hallId");
     const hallFeeOrdered = await isHallFeeOrdered(me._id, usage._id);
-    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered) });
+    const scheduleLocked = await hasActiveOrdersForUsage(usage._id);
+    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered, scheduleLocked) });
   })
 );
 
@@ -109,6 +112,10 @@ router.patch(
     if (!usage) return res.status(404).json({ error: "수정할 수 있는 빈소 이용이 없습니다." });
 
     const patch = pickUsageBody(req.body || {});
+    const scheduleLocked = await hasActiveOrdersForUsage(usage._id);
+    const lockErr = assertHallScheduleLocked(usage, patch, scheduleLocked);
+    if (lockErr) return res.status(400).json({ error: lockErr });
+
     for (const k of USAGE_FIELDS) if (k in patch) usage[k] = patch[k];
     if (!usage.deceasedName) return res.status(400).json({ error: "고인명을 입력해 주세요." });
     if (!usage.funeralDate) return res.status(400).json({ error: "발인 일자를 선택해 주세요." });
@@ -116,7 +123,7 @@ router.patch(
     await usage.save();
     await usage.populate("hallId");
     const hallFeeOrdered = await isHallFeeOrdered(me._id, usage._id);
-    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered) });
+    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered, scheduleLocked) });
   })
 );
 
@@ -228,6 +235,14 @@ router.patch(
     if (!usage) return res.status(404).json({ error: "빈소 이용 정보를 찾을 수 없습니다." });
 
     const body = req.body || {};
+    const scheduleLocked = await hasActiveOrdersForUsage(usage._id);
+    const lockedPatch = {};
+    if ("hallId" in body) lockedPatch.hallId = body.hallId;
+    if ("funeralDate" in body) lockedPatch.funeralDate = body.funeralDate;
+    if ("funeralTime" in body) lockedPatch.funeralTime = body.funeralTime;
+    const lockErr = assertHallScheduleLocked(usage, lockedPatch, scheduleLocked);
+    if (lockErr) return res.status(400).json({ error: lockErr });
+
     const allowed = [
       "deceasedName", "chiefMourner", "relationship", "age",
       "enshrinedAt", "funeralDate", "funeralTime", "burialSite", "status", "familyCode",

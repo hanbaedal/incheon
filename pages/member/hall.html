@@ -6,30 +6,6 @@
   <meta name="robots" content="noindex" />
   <title>빈소 이용 등록 | 상주 전용 서비스</title>
   <link rel="stylesheet" href="../../assets/css/member.css" />
-  <style>
-    .hall-grid { display: grid; gap: 12px; margin-bottom: 20px; }
-    .hall-pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
-    .hall-pick:hover { border-color: var(--gold); }
-    .hall-pick.selected { border-color: var(--navy); background: #f4f7fb; }
-    .hall-pick.disabled { opacity: .65; cursor: not-allowed; }
-    .hall-pick .info b { display: block; margin-bottom: 4px; }
-    .hall-pick .info small { display: block; color: var(--gray); font-size: 13px; line-height: 1.5; }
-    .m-form { display: grid; gap: 14px; }
-    .m-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 640px) { .m-form-row { grid-template-columns: 1fr; } }
-    .m-form label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
-    .m-form input, .m-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
-    .m-form input[type="date"], .m-form input[type="time"] { min-height: 42px; }
-    .m-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-    .day-grid { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
-    .day-pick { min-width: 88px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; text-align: center; cursor: pointer; background: #fff; }
-    .day-pick.selected { border-color: var(--navy); background: #f4f7fb; font-weight: 700; color: var(--navy); }
-    .price-box { margin: 12px 0 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fafafa; }
-    .price-box table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .price-box th, .price-box td { padding: 8px 0; border-bottom: 1px solid #ececec; text-align: left; }
-    .price-box tr:last-child th, .price-box tr:last-child td { border-bottom: 0; font-weight: 700; color: var(--navy); }
-    .price-box td:last-child, .price-box th:last-child { text-align: right; }
-  </style>
 </head>
 <body>
   <header id="mHeader"></header>
@@ -70,10 +46,10 @@
     function priceBoxHtml(hall, days) {
       if (!hall) return "";
       if (hall.isVirtual) {
-        return `<div class="price-box"><p style="margin:0;color:var(--gray)">무빈소는 별도 빈소 이용료가 없습니다. 상담 후 진행됩니다.</p></div>`;
+        return `<div class="price-box"><p class="hint">무빈소는 별도 빈소 이용료가 없습니다. 상담 후 진행됩니다.</p></div>`;
       }
       if (!days) {
-        return `<div class="price-box"><p style="margin:0;color:#b45309">장례 기간(3·4·5일장)을 선택하면 이용료가 계산됩니다.</p></div>`;
+        return `<div class="price-box"><p class="hint-warn">장례 기간(3·4·5일장)을 선택하면 이용료가 계산됩니다.</p></div>`;
       }
       const fee = computeFee(hall, days);
       return `
@@ -89,7 +65,7 @@
     function funeralDaysPicker(selectedDays, hall) {
       if (hall && hall.isVirtual) return "";
       return `
-        <h4 style="margin:18px 0 10px">장례 기간 선택 *</h4>
+        <h4 class="section-h4 spaced">장례 기간 선택 *</h4>
         <div class="day-grid">${FUNERAL_DAY_OPTIONS.map((o) => `
           <div class="day-pick${Number(selectedDays) === o.days ? " selected" : ""}" data-days="${o.days}">${mEsc(o.label)}</div>
         `).join("")}</div>
@@ -137,6 +113,8 @@
 
     function usageFormHtml(prefix, data) {
       data = data || {};
+      const locked = !!data.scheduleLocked;
+      const lockAttr = locked ? " disabled readonly" : "";
       return `
         <div class="m-form-row">
           <div><label for="${prefix}_deceasedName">고인명 *</label><input id="${prefix}_deceasedName" value="${mEsc(data.deceasedName || "")}" /></div>
@@ -146,9 +124,10 @@
           <div><label for="${prefix}_relationship">고인과의 관계</label><input id="${prefix}_relationship" value="${mEsc(data.relationship || "")}" placeholder="예: 장남" /></div>
           <div><label for="${prefix}_age">향년</label><input id="${prefix}_age" value="${mEsc(data.age || "")}" placeholder="예: 향년 84세" /></div>
         </div>
+        ${locked ? '<p class="muted" style="margin:0 0 8px;font-size:13px">예약(주문) 접수 후 발인 일자·시각은 변경할 수 없습니다.</p>' : ""}
         <div class="m-form-row">
-          <div><label for="${prefix}_funeralDate">발인 일자 *</label><input type="date" id="${prefix}_funeralDate" value="${mEsc(toDateInputValue(data.funeralDate))}" /></div>
-          <div><label for="${prefix}_funeralTime">발인 시각</label><input type="time" id="${prefix}_funeralTime" value="${mEsc(toTimeInputValue(data.funeralTime))}" step="60" /></div>
+          <div><label for="${prefix}_funeralDate">발인 일자 *</label><input type="date" id="${prefix}_funeralDate" value="${mEsc(toDateInputValue(data.funeralDate))}"${lockAttr} /></div>
+          <div><label for="${prefix}_funeralTime">발인 시각</label><input type="time" id="${prefix}_funeralTime" value="${mEsc(toTimeInputValue(data.funeralTime))}" step="60"${lockAttr} /></div>
         </div>
         <div class="m-form-row">
           <div><label for="${prefix}_enshrinedAt">입관/안치</label><input id="${prefix}_enshrinedAt" value="${mEsc(data.enshrinedAt || "")}" placeholder="예: 2026-07-19 14:00" /></div>
@@ -170,7 +149,7 @@
               ${spec}
               <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}${!h.isVirtual && h.dailyPrice ? " · 1일 " + won(h.dailyPrice) : ""}</small>
               <small>${mEsc(h.feature || "")}</small>
-              ${h.availableLabel ? `<small style="color:${can ? "var(--navy)" : "#b45309"}">${mEsc(h.availableLabel)}</small>` : ""}
+              ${h.availableLabel ? `<small class="${can ? "avail-ok" : "avail-wait"}">${mEsc(h.availableLabel)}</small>` : ""}
             </div>
           </div>`;
       }).join("")}</div>`;
@@ -218,8 +197,8 @@
         area.innerHTML = `
           <div class="card-head">배정된 빈소</div>
           <div class="card-body">
-            <div class="notice-box">빈소가 배정되었습니다. 발인 정보를 수정할 수 있습니다.</div>
-            <p style="margin:0 0 14px"><b>${mEsc(USAGE.hall ? USAGE.hall.name : "-")}</b>${USAGE.hall && USAGE.hall.specLabel ? " · " + mEsc(USAGE.hall.specLabel) : ""}${USAGE.hall && USAGE.hall.feature ? " · " + mEsc(USAGE.hall.feature) : ""}</p>
+            <div class="notice-box">${USAGE.scheduleLocked ? "장례 예약이 접수되어 발인 일자·시각은 변경할 수 없습니다." : "빈소가 배정되었습니다. 발인 정보를 수정할 수 있습니다."}</div>
+            <p class="hall-assigned"><b>${mEsc(USAGE.hall ? USAGE.hall.name : "-")}</b>${USAGE.hall && USAGE.hall.specLabel ? " · " + mEsc(USAGE.hall.specLabel) : ""}${USAGE.hall && USAGE.hall.feature ? " · " + mEsc(USAGE.hall.feature) : ""}</p>
             ${USAGE.hall && !USAGE.hall.isVirtual && USAGE.funeralDays ? priceBoxHtml({ ...USAGE.hall, dailyPrice: USAGE.dailyPrice }, USAGE.funeralDays) : ""}
             <div class="m-form">${usageFormHtml("u", USAGE)}</div>
             <div class="m-actions">
@@ -238,10 +217,10 @@
           <div class="card-head">빈소 신청 · 승인 대기</div>
           <div class="card-body">
             <div class="notice-box">신청하신 빈소 <b>${mEsc(PENDING.hall ? PENDING.hall.name : "-")}</b>는 관리자 승인 대기 중입니다. 아래 정보를 수정할 수 있습니다.</div>
-            <h4 style="margin:0 0 10px">선택 빈소</h4>
+            <h4 class="section-h4">선택 빈소</h4>
             ${hallPickList(SELECTED_HALL_ID)}
             <div id="funeralDaysArea">${funeralDaysPicker(SELECTED_FUNERAL_DAYS, selectedHall())}</div>
-            <h4 style="margin:18px 0 10px">이용 정보</h4>
+            <h4 class="section-h4 spaced">이용 정보</h4>
             <div class="m-form">${usageFormHtml("p", PENDING)}</div>
             <div class="m-actions">
               <button class="btn btn-primary" id="savePending">신청 정보 저장</button>
@@ -267,7 +246,7 @@
           ${summary}
           ${hallPickList(SELECTED_HALL_ID)}
           <div id="funeralDaysArea">${funeralDaysPicker(SELECTED_FUNERAL_DAYS, selectedHall())}</div>
-          <h4 style="margin:18px 0 10px">2. 이용 정보 입력</h4>
+          <h4 class="section-h4 spaced">2. 이용 정보 입력</h4>
           <div class="m-form">${usageFormHtml("n", { chiefMourner: ME.name })}</div>
           <div class="m-actions">
             <button class="btn btn-primary" id="submitReq">빈소 이용 신청</button>

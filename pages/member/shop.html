@@ -25,7 +25,7 @@
         <div class="card-body">
           <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
           <div id="cartSum"></div>
-          <button class="btn btn-gold btn-block" id="orderBtn" style="margin-top:14px" disabled>예약 제출</button>
+          <button class="btn btn-gold btn-block order-btn-wrap" id="orderBtn" disabled>예약 제출</button>
         </div>
       </div>
     </div>
@@ -216,7 +216,7 @@
               <b>빈소 · ${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
               ${hallFeeLine(fee)}
-              <br><small style="color:var(--ok);font-weight:600">배정 완료${fee && fee.hallFeeOrdered ? " · 이용료 예약됨" : ""}</small>
+              <br><small class="status-ok">배정 완료${fee && fee.hallFeeOrdered ? " · 이용료 예약됨" : ""}</small>
             </span>
             <span class="cart-hall-right nowrap">${pending ? won(pending.hallFeeAmount) : (fee && fee.hallFeeOrdered ? "예약됨" : "—")}</span>
           </div>`;
@@ -233,7 +233,7 @@
               <b>빈소 · ${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
               ${hallFeeLine(fee)}
-              <br><small style="color:#b8860b;font-weight:600">승인 대기</small>
+              <br><small class="status-wait">승인 대기</small>
             </span>
             <span class="cart-hall-right nowrap">${fee ? won(fee.hallFeeAmount) : "—"}</span>
           </div>`;
@@ -262,13 +262,13 @@
       if (ACTIVE_CAT === "hall") {
         let html = '<div class="card-head">빈소선택</div><div class="card-body">';
         if (ME.hallUsageId) {
-          html += `<div class="notice-box">배정된 빈소가 있습니다. <a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600">빈소 이용</a>에서 정보를 확인하거나 아래에서 장례 서비스를 예약해 주세요.</div>`;
+          html += `<div class="notice-box">배정된 빈소가 있습니다. <a href="/pages/member/hall.html" class="link-navy">빈소 이용</a>에서 정보를 확인하거나 아래에서 장례 서비스를 예약해 주세요.</div>`;
         } else if (MY_HALL_REQ) {
           const st = MY_HALL_REQ.status === "pending" ? "승인 대기 중" : (MY_HALL_REQ.status === "approved" ? "승인 완료" : "거절됨");
-          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}<br><a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600;margin-top:6px;display:inline-block">빈소 이용 등록 보기</a></div>`;
+          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}<br><a href="/pages/member/hall.html" class="link-navy">빈소 이용 등록 보기</a></div>`;
         } else {
-          html += `<div class="notice-box">빈소 규격 선택과 고인·발인 정보 입력은 <a href="/pages/member/hall.html" style="color:var(--navy);font-weight:600">빈소 이용 등록</a> 메뉴에서 진행해 주세요.</div>`;
-          html += `<div class="m-actions" style="margin-top:12px"><a class="btn btn-primary" href="/pages/member/hall.html">빈소 이용 등록하기</a></div>`;
+          html += `<div class="notice-box">빈소 규격 선택과 고인·발인 정보 입력은 <a href="/pages/member/hall.html" class="link-navy">빈소 이용 등록</a> 메뉴에서 진행해 주세요.</div>`;
+          html += `<div class="m-actions top-gap"><a class="btn btn-primary" href="/pages/member/hall.html">빈소 이용 등록하기</a></div>`;
         }
         html += "</div>";
         area.innerHTML = html;
@@ -282,7 +282,7 @@
           html += '<div class="state">등록된 관·횡대가 없습니다.</div>';
         } else {
           if (COFFINS.length > 0) {
-            html += '<h4 style="margin:0 0 10px">관</h4><div class="prod-grid">';
+            html += '<h4 class="section-h4">관</h4><div class="prod-grid">';
             COFFINS.forEach((c) => {
               html += `
                 <div class="prod-card">
@@ -298,7 +298,7 @@
             html += "</div>";
           }
           if (HOENGDAES.length > 0) {
-            html += '<h4 style="margin:18px 0 10px">횡대</h4><div class="prod-grid">';
+            html += '<h4 class="section-h4 spaced">횡대</h4><div class="prod-grid">';
             HOENGDAES.forEach((h) => {
               html += `
                 <div class="prod-card">
@@ -381,7 +381,7 @@
         const items = FOOD_ITEMS.filter((f) => f.foodCategory === ACTIVE_FOOD_CAT);
         const sub = FOOD_SUB_CATS.find((c) => c.key === ACTIVE_FOOD_CAT);
         let html = `<div class="card-head">접객 음식 · ${mEsc(sub ? sub.label : ACTIVE_FOOD_CAT)}</div><div class="card-body">`;
-        html += '<div class="reserve-tabs" style="margin-bottom:14px;flex-wrap:wrap">';
+        html += '<div class="reserve-tabs compact">';
         html += FOOD_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_FOOD_CAT ? "active" : ""}" data-fcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
@@ -420,7 +420,7 @@
         const items = FLOWER_ITEMS.filter((f) => f.flowerCategory === ACTIVE_FLOWER_CAT);
         const sub = FLOWER_SUB_CATS.find((c) => c.key === ACTIVE_FLOWER_CAT);
         let html = `<div class="card-head">근조 화환 · ${mEsc(sub ? sub.label : ACTIVE_FLOWER_CAT)}</div><div class="card-body">`;
-        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += '<div class="reserve-tabs compact">';
         html += FLOWER_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_FLOWER_CAT ? "active" : ""}" data-flcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
@@ -456,7 +456,7 @@
         const items = PHOTO_ITEMS.filter((p) => p.photoCategory === ACTIVE_PHOTO_CAT);
         const sub = PHOTO_SUB_CATS.find((c) => c.key === ACTIVE_PHOTO_CAT);
         let html = `<div class="card-head">영정 사진 · ${mEsc(sub ? sub.label : ACTIVE_PHOTO_CAT)}</div><div class="card-body">`;
-        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += '<div class="reserve-tabs compact">';
         html += PHOTO_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_PHOTO_CAT ? "active" : ""}" data-phcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
@@ -502,7 +502,7 @@
         if (items.length === 0) {
           html += '<div class="state">등록된 품목이 없습니다.</div>';
         } else {
-          html += '<table class="tbl" style="width:100%"><thead><tr><th>품목</th><th>치수</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          html += '<table class="tbl full"><thead><tr><th>품목</th><th>치수</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
           items.forEach((d) => {
             html += `
               <tr>
@@ -526,7 +526,7 @@
         const items = HEARSE_ITEMS.filter((h) => h.hearseCategory === ACTIVE_HEARSE_CAT);
         const sub = HEARSE_SUB_CATS.find((c) => c.key === ACTIVE_HEARSE_CAT);
         let html = `<div class="card-head">운구·차량 · ${mEsc(sub ? sub.label : ACTIVE_HEARSE_CAT)}</div><div class="card-body">`;
-        html += '<div class="reserve-tabs" style="margin-bottom:14px">';
+        html += '<div class="reserve-tabs compact">';
         html += HEARSE_SUB_CATS.map((c) =>
           `<button type="button" class="reserve-tab ${c.key === ACTIVE_HEARSE_CAT ? "active" : ""}" data-hrcat="${c.key}">${mEsc(c.label)}</button>`
         ).join("");
@@ -534,7 +534,7 @@
         if (items.length === 0) {
           html += '<div class="state">등록된 차량이 없습니다.</div>';
         } else {
-          html += '<table class="tbl" style="width:100%"><thead><tr><th>차량</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          html += '<table class="tbl full"><thead><tr><th>차량</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
           items.forEach((h) => {
             html += `
               <tr>
@@ -618,7 +618,7 @@
       }
 
       if (cart.size === 0) {
-        html += '<div class="cart-empty" style="padding:14px 0 4px">장례 물품·서비스를 추가로 선택할 수 있습니다.</div>';
+        html += '<div class="cart-empty compact">장례 물품·서비스를 추가로 선택할 수 있습니다.</div>';
       } else {
         cart.forEach((qty, key) => {
           const p = findCartItem(key);
@@ -629,7 +629,7 @@
           if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
           html += `
             <div class="cart-item">
-              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
+              <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small class="status-postpaid">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
               <span class="qtybox">
                 <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
               </span>
@@ -649,7 +649,7 @@
             <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
             <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
             <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
-            <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 빈소 이용료는 예약 제출 시 주문에 포함됩니다.${cart.size === 0 ? "" : " 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다."}</p>
+            <p class="cart-sum-note">* 빈소 이용료는 예약 제출 시 주문에 포함됩니다.${cart.size === 0 ? "" : " 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다."}</p>
           </div>`;
         btn.disabled = false;
       }

@@ -49,6 +49,21 @@ const orderSchema = new mongoose.Schema(
     },
     memo: { type: String, default: "" },
     postpaidSettledAt: { type: Date, default: null },
+    /** 주문 접수 시점의 빈소·발인 정보 (변경 불가 스냅샷) */
+    hallSnapshot: {
+      hallUsageId: { type: mongoose.Schema.Types.ObjectId, default: null },
+      hallId: { type: mongoose.Schema.Types.ObjectId, default: null },
+      hallNumber: { type: String, default: "" },
+      hallCode: { type: String, default: "" },
+      specLabel: { type: String, default: "" },
+      deceasedName: { type: String, default: "" },
+      chiefMourner: { type: String, default: "" },
+      funeralDays: { type: Number, default: null },
+      funeralDate: { type: String, default: "" },
+      funeralTime: { type: String, default: "" },
+      dailyPrice: { type: Number, default: 0 },
+      hallFeeAmount: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );
@@ -79,6 +94,7 @@ orderSchema.methods.toJSONSafe = function toJSONSafe() {
     orderNumber: this.orderNumber,
     familyUserId: this.familyUserId,
     hallUsageId: this.hallUsageId,
+    hallSnapshot: this.hallSnapshot,
     items: this.items,
     supplyAmount: this.supplyAmount,
     vatAmount: this.vatAmount,

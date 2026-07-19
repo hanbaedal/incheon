@@ -119,7 +119,45 @@ function usageToHallSummary(usage, hall) {
     specLabel: h ? h.specLabel : "",
     deceasedName: usage.deceasedName,
     chiefMourner: usage.chiefMourner,
+    funeralDate: usage.funeralDate || "",
+    funeralTime: usage.funeralTime || "",
     feature: h ? h.feature : "",
+  };
+}
+
+function buildHallSnapshotFromUsage(usage, hall) {
+  const h = resolveHall(hall || usage);
+  if (!usage) return null;
+  return {
+    hallUsageId: usage._id,
+    hallId: h ? h._id : usage.hallId,
+    hallNumber: h ? h.name : "",
+    hallCode: h ? h.code : "",
+    specLabel: h ? h.specLabel : "",
+    deceasedName: usage.deceasedName || "",
+    chiefMourner: usage.chiefMourner || "",
+    funeralDays: usage.funeralDays != null ? usage.funeralDays : null,
+    funeralDate: usage.funeralDate || "",
+    funeralTime: usage.funeralTime || "",
+    dailyPrice: usage.dailyPrice || 0,
+    hallFeeAmount: usage.hallFeeAmount || 0,
+  };
+}
+
+function hallSnapshotToSummary(snapshot) {
+  if (!snapshot || !snapshot.hallNumber) return null;
+  return {
+    id: snapshot.hallUsageId,
+    hallUsageId: snapshot.hallUsageId,
+    hallNumber: snapshot.hallNumber,
+    hallCode: snapshot.hallCode || "",
+    specLabel: snapshot.specLabel || "",
+    deceasedName: snapshot.deceasedName || "",
+    chiefMourner: snapshot.chiefMourner || "",
+    funeralDate: snapshot.funeralDate || "",
+    funeralTime: snapshot.funeralTime || "",
+    funeralDays: snapshot.funeralDays,
+    frozen: true,
   };
 }
 
@@ -129,4 +167,7 @@ module.exports = {
   usageToPublicJSON,
   usageToAdminJSON,
   usageToHallSummary,
+  buildHallSnapshotFromUsage,
+  hallSnapshotToSummary,
+  resolveHall,
 };

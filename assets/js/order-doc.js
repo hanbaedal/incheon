@@ -102,6 +102,8 @@ function docHallMemo(hall, memo) {
   let t = "빈소 " + docEsc(hall.hallNumber);
   if (hall.deceasedName) t += " / 故 " + docEsc(hall.deceasedName);
   if (hall.chiefMourner) t += " / 상주 " + docEsc(hall.chiefMourner);
+  if (hall.funeralDate) t += " / 발인 " + docEsc(hall.funeralDate);
+  if (hall.funeralTime) t += " " + docEsc(hall.funeralTime);
   return t;
 }
 

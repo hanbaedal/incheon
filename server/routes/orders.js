@@ -17,10 +17,18 @@ const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
 const { nextOrderNumber } = require("../utils/orderNumber");
 const { aggregateOrders } = require("../utils/orderAggregate");
-const { usageToHallSummary } = require("../utils/hallFormat");
+const { buildHallSnapshotFromUsage, hallSnapshotToSummary, usageToHallSummary } = require("../utils/hallFormat");
+const { orderHallForDisplay } = require("../utils/orderHallSnapshot");
 const { appendHallFeeOrderItem } = require("../utils/hallOrderItem");
+const HallUsage = require("../models/HallUsage");
 
 const router = express.Router();
+
+function summaryHallFromOrders(orders, usage, hall) {
+  const first = orders.find((o) => o.hallSnapshot && o.hallSnapshot.hallNumber);
+  if (first) return hallSnapshotToSummary(first.hallSnapshot);
+  return usageToHallSummary(usage, hall);
+}
 
 function resolveItemType(it) {
   if (["coffin", "hoengdae", "shroud", "accessory", "foodItem", "flowerItem", "photoItem", "dressItem", "hearseItem"].includes(it.itemType)) return it.itemType;
@@ -210,10 +218,17 @@ router.post(
       return res.status(400).json({ error: "예약 항목이 없습니다." });
     }
 
+    let hallSnapshot = null;
+    if (me && me.hallUsageId) {
+      const usage = await HallUsage.findById(me.hallUsageId).populate("hallId");
+      if (usage) hallSnapshot = buildHallSnapshotFromUsage(usage, usage.hallId);
+    }
+
     const order = new Order({
       orderNumber: await nextOrderNumber(Order),
       familyUserId: req.user.uid,
       hallUsageId: (me && me.hallUsageId) || null,
+      hallSnapshot: hallSnapshot || undefined,
       items: orderItems,
       buyer: {
         name: (buyer && buyer.name) || (me && me.name) || "",
@@ -227,7 +242,13 @@ router.post(
     });
     order.recalcTotals();
     await order.save();
-    res.status(201).json({ order: order.toJSONSafe() });
+    const safe = order.toJSONSafe();
+    res.status(201).json({
+      order: {
+        ...safe,
+        hall: orderHallForDisplay(safe, null, null),
+      },
+    });
   })
 );
 
@@ -248,11 +269,12 @@ router.get(
   asyncHandler(async (req, res) => {
     const orders = await Order.find({ familyUserId: req.user.uid }).sort({ createdAt: 1 });
     const me = await User.findById(req.user.uid).populate({ path: "hallUsageId", populate: { path: "hallId" } });
-    const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
+    const safeOrders = orders.map((o) => o.toJSONSafe());
+    const agg = aggregateOrders(safeOrders);
     res.json({
       ...agg,
       family: me ? { name: me.name, username: me.username, phone: me.phone } : null,
-      hall: usageToHallSummary(me && me.hallUsageId, me && me.hallUsageId && me.hallUsageId.hallId),
+      hall: summaryHallFromOrders(safeOrders, me && me.hallUsageId, me && me.hallUsageId && me.hallUsageId.hallId),
     });
   })
 );
@@ -269,11 +291,14 @@ router.get(
       .populate("familyUserId", "name username")
       .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     res.json({
-      items: orders.map((o) => ({
-        ...o.toJSONSafe(),
-        family: o.familyUserId ? { id: o.familyUserId._id, name: o.familyUserId.name, username: o.familyUserId.username } : null,
-        hall: usageToHallSummary(o.hallUsageId, o.hallUsageId && o.hallUsageId.hallId),
-      })),
+      items: orders.map((o) => {
+        const safe = o.toJSONSafe();
+        return {
+          ...safe,
+          family: o.familyUserId ? { id: o.familyUserId._id, name: o.familyUserId.name, username: o.familyUserId.username } : null,
+          hall: orderHallForDisplay(safe, o.hallUsageId, o.hallUsageId && o.hallUsageId.hallId),
+        };
+      }),
     });
   })
 );
@@ -288,11 +313,12 @@ router.get(
     const family = await User.findById(familyUserId).populate({ path: "hallUsageId", populate: { path: "hallId" } });
     if (!family) return res.status(404).json({ error: "상주 계정을 찾을 수 없습니다." });
     const orders = await Order.find({ familyUserId }).sort({ createdAt: 1 });
-    const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
+    const safeOrders = orders.map((o) => o.toJSONSafe());
+    const agg = aggregateOrders(safeOrders);
     res.json({
       ...agg,
       family: { id: family._id, name: family.name, username: family.username, phone: family.phone },
-      hall: usageToHallSummary(family.hallUsageId, family.hallUsageId && family.hallUsageId.hallId),
+      hall: summaryHallFromOrders(safeOrders, family.hallUsageId, family.hallUsageId && family.hallUsageId.hallId),
     });
   })
 );
@@ -316,7 +342,7 @@ router.get(
       order: {
         ...order.toJSONSafe(),
         family: order.familyUserId ? { name: order.familyUserId.name, username: order.familyUserId.username, phone: order.familyUserId.phone } : null,
-        hall: usageToHallSummary(order.hallUsageId, order.hallUsageId && order.hallUsageId.hallId),
+        hall: orderHallForDisplay(order.toJSONSafe(), order.hallUsageId, order.hallUsageId && order.hallUsageId.hallId),
       },
     });
   })

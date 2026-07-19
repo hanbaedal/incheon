@@ -47,7 +47,7 @@
       const ok = new URLSearchParams(location.search).get("ok");
       if (ok) {
         document.getElementById("okBox").innerHTML =
-          `<div class="notice-box" style="background:#e8f5ee;border-color:#bfe2cd;color:#256b4c">예약이 정상 접수되었습니다. (예약번호 ${mEsc(ok)})</div>`;
+          `<div class="notice-box success">예약이 정상 접수되었습니다. (예약번호 ${mEsc(ok)})</div>`;
       }
       bindModal();
       await load();
@@ -106,14 +106,14 @@
         const items = listRes.items;
 
         if (items.length === 0) {
-          area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">장례 예약하기 →</a></div>';
+          area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" class="link-gold">장례 예약하기 →</a></div>';
           return;
         }
 
         const hasSummary = SUMMARY && SUMMARY.orderCount > 0;
         area.innerHTML = `
           <div class="card-head">건별 예약 내역</div>
-          <div class="card-body" style="padding:0">
+          <div class="card-body flush">
           <table class="tbl">
             <thead><tr><th>주문번호</th><th>주요 품목</th><th class="right">합계</th><th>상태</th><th class="nowrap">주문일</th><th class="right">문서</th></tr></thead>
             <tbody>${items.map((o) => `
