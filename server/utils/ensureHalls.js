@@ -7,6 +7,23 @@ const Order = require("../models/Order");
 const Memorial = require("../models/Memorial");
 const { HALL_CATALOG } = require("../constants/hallTypes");
 
+async function dropLegacyHallIndexes() {
+  let dropped = 0;
+  try {
+    const indexes = await Hall.collection.indexes();
+    for (const idx of indexes) {
+      const keys = Object.keys(idx.key || {});
+      if (keys.includes("hallNumber")) {
+        await Hall.collection.dropIndex(idx.name);
+        dropped += 1;
+      }
+    }
+  } catch (err) {
+    console.warn("[HALL] 구 인덱스 정리 실패:", err.message);
+  }
+  return dropped;
+}
+
 async function migrateLegacyHalls() {
   const legacy = await Hall.findOne({ code: { $exists: false } }).lean();
   if (!legacy) return false;
@@ -20,7 +37,10 @@ async function migrateLegacyHalls() {
 }
 
 async function upsertCatalog() {
+  await dropLegacyHallIndexes();
+
   let created = 0;
+  let updated = 0;
   for (const item of HALL_CATALOG) {
     const existing = await Hall.findOne({ code: item.code });
     if (existing) {
@@ -32,13 +52,14 @@ async function upsertCatalog() {
       existing.isVirtual = item.isVirtual;
       if (existing.active == null) existing.active = true;
       await existing.save();
+      updated += 1;
     } else {
       await Hall.create({ ...item, active: true });
       created += 1;
     }
   }
   const total = await Hall.countDocuments();
-  return { created, total, migrated: false };
+  return { created, updated, total, migrated: false };
 }
 
 async function ensureHalls() {

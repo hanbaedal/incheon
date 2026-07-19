@@ -44,7 +44,9 @@ async function main() {
   try {
     const r = await ensureHalls();
     if (r.migrated) console.log("[HALL] 구 빈소 데이터를 규격 카탈로그 구조로 전환했습니다.");
-    if (r.created > 0) console.log(`[HALL] 빈소 규격 ${r.created}건 신규 등록 (전체 ${r.total}건)`);
+    if (r.created > 0 || r.updated) {
+      console.log(`[HALL] 빈소 규격 동기화 — 신규 ${r.created}건, 갱신 ${r.updated || 0}건 (전체 ${r.total}건)`);
+    }
   } catch (err) {
     console.error("[HALL] 빈소 규격 등록 실패:", err.message);
   }
