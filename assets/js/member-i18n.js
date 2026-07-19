@@ -65,7 +65,7 @@
 
     "shop.pageTitle": { ko: "장례 예약 | 상주 전용 서비스", zh: "殡葬预约 | 丧主专用服务", en: "Reservations | Family Portal" },
     "shop.title": { ko: "장례 서비스 예약", zh: "殡葬服务预约", en: "Funeral Service Reservations" },
-    "shop.lead": { ko: "빈소 선택부터 장례 물품·접객 음식·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 빈소를 선택하면 고인·발인 정보 입력 창이 열립니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.", zh: "可从选择灵堂起预约殡葬用品、接待餐饮、花圈、遗像、丧服、运柩车辆等。选择灵堂后将打开逝者·出殡信息输入窗口。部分餐饮·日用品于使用后、出殡前人工结算。", en: "Reserve halls, funeral goods, catering, flowers, portraits, mourning attire, and hearses in advance. Selecting a hall opens the deceased and procession details form. Some beverages and consumables are settled manually before procession." },
+    "shop.lead": { ko: "시설 사용료(빈소·안치·입관)부터 장례 물품·접객 음식·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 빈소를 선택하면 안치료·입관실 요금이 자동으로 담기고, 고인·발인 정보 입력 창이 열립니다.", zh: "可从设施使用费(灵堂·安置·入殓)起预约殡葬用品、餐饮、花圈等。选择灵堂后自动加入安置费·入殓室费用，并打开逝者·出殡信息输入窗口。", en: "Reserve facility fees (hall, enshrinement, preparation room), funeral goods, catering, and more. Selecting a hall auto-adds enshrinement and preparation room fees and opens the information form." },
     "shop.cartSummary": { ko: "예약 요약", zh: "预约摘要", en: "Summary" },
     "shop.cartEmpty": { ko: "담긴 항목이 없습니다.", zh: "暂无项目。", en: "Your list is empty." },
     "shop.cartEmptyHint": { ko: "장례 물품·서비스를 추가로 선택할 수 있습니다.", zh: "可继续选择殡葬物品·服务。", en: "You can add more funeral items and services." },
@@ -89,6 +89,7 @@
     "shop.sumNotePostpaid": { ko: " 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다.", zh: " 矿泉水·饮料·酒类等后结算项目于出殡前人工结算。", en: " Postpaid items such as water and beverages are settled manually before procession." },
     "shop.postpaidTag": { ko: "발인 전 수기 정산", zh: "出殡前人工结算", en: "Settled before procession" },
     "shop.postpaidShort": { ko: "발인 전 정산", zh: "出殡前结算", en: "Postpaid" },
+    "shop.facilityAutoHint": { ko: "빈소 선택 시 안치료·입관실 요금은 자동으로 포함됩니다.", zh: "选择灵堂后安置费·入殓室费用将自动包含。", en: "Enshrinement and preparation room fees are included automatically when you select a hall." },
     "shop.hallAssigned": { ko: "배정 완료", zh: "已分配", en: "Assigned" },
     "shop.hallFeeReserved": { ko: " · 이용료 예약됨", zh: " · 使用费已预约", en: " · Hall fee reserved" },
     "shop.hallPending": { ko: "승인 대기", zh: "等待批准", en: "Pending approval" },
@@ -126,10 +127,10 @@
 
     "hall.redirectLink": { ko: "장례 예약으로 이동", zh: "前往殡葬预约", en: "Go to reservations" },
 
-    "hall.selectTitle": { ko: "빈소선택", zh: "选择灵堂", en: "Select hall" },
-    "hall.assignedTitle": { ko: "빈소선택 · 배정 완료", zh: "选择灵堂 · 已分配", en: "Hall · Assigned" },
-    "hall.pendingTitle": { ko: "빈소선택 · 승인 대기", zh: "选择灵堂 · 等待批准", en: "Hall · Pending" },
-    "hall.pickNotice": { ko: "빈소를 선택하면 필수 입력 창이 열립니다. 고인·발인 정보를 입력 후 신청해 주세요.", zh: "选择灵堂后将打开必填信息窗口。请输入逝者·出殡信息后提交申请。", en: "Select a hall to open the required information form." },
+    "hall.selectTitle": { ko: "시설 사용료 · 빈소 선택", zh: "设施使用费 · 选择灵堂", en: "Facility fees · Select hall" },
+    "hall.assignedTitle": { ko: "시설 사용료 · 배정 완료", zh: "设施使用费 · 已分配", en: "Facility fees · Assigned" },
+    "hall.pendingTitle": { ko: "시설 사용료 · 승인 대기", zh: "设施使用费 · 等待批准", en: "Facility fees · Pending" },
+    "hall.pickNotice": { ko: "빈소를 선택하면 안치료·입관실 요금이 자동으로 예약 요약에 담깁니다. 이어서 고인·발인 정보를 입력해 주세요.", zh: "选择灵堂后安置费·入殓室费用将自动加入预约摘要。请继续输入逝者·出殡信息。", en: "Selecting a hall auto-adds enshrinement and preparation room fees to your summary. Then enter deceased and procession details." },
     "hall.pendingNotice": { ko: "신청하신 빈소는 관리자 승인 대기 중입니다. 빈소를 선택하면 필수 정보 입력 창이 열립니다.", zh: "您申请的灵堂正在等待管理员批准。选择灵堂可输入/修改必填信息。", en: "Your hall request is pending approval. Select a hall to edit required information." },
     "hall.lockedNotice": { ko: "장례 예약이 접수되어 발인 일자·시각은 변경할 수 없습니다.", zh: "已提交殡葬预约，出殡日期·时间不可更改。", en: "A reservation exists; procession date and time cannot be changed." },
     "hall.activeNotice": { ko: "빈소가 배정되었습니다. 다른 탭에서 장례 물품·서비스를 예약해 주세요.", zh: "灵堂已分配。请在其他标签页预约殡葬物品·服务。", en: "Your hall is assigned. Reserve items and services in other tabs." },
@@ -208,7 +209,7 @@
     "info.obituaryNote1": { ko: "게재 마감 시간은 신문사별로 상이하므로 사전 확인이 필요합니다.", zh: "各报社截稿时间不同，需提前确认。", en: "Deadlines vary by newspaper; confirm in advance." },
     "info.obituaryNote2": { ko: "문안 작성 및 접수 대행은 상담실에서 도와드립니다.", zh: "文案撰写及受理代办由咨询室协助。", en: "We assist with writing and submission at the desk." },
 
-    "cat.hall": { ko: "빈소선택", zh: "选择灵堂", en: "Hall" },
+    "cat.hall": { ko: "시설 사용료", zh: "设施使用费", en: "Facility fees" },
     "cat.coffin": { ko: "장례 물품 · 관·횡대", zh: "殡葬用品 · 棺·横木", en: "Goods · Coffin" },
     "cat.shroud": { ko: "장례 물품 · 수의", zh: "殡葬用品 · 寿衣", en: "Goods · Shroud" },
     "cat.etc": { ko: "장례 물품 · 부속물품", zh: "殡葬用品 · 附属物品", en: "Goods · Accessories" },

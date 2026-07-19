@@ -104,6 +104,7 @@
         SERVICE_PRICES = serviceRes.items;
         FACILITY_FEES = facilityRes.items;
         await loadHallData();
+        syncAutoFacilityFees();
         renderMain();
         renderCart();
       } catch (e) {
@@ -305,6 +306,59 @@
       }).join("")}</div>`;
     }
 
+    function activeHallForFees() {
+      if (MY_USAGE && MY_USAGE.hall) return MY_USAGE.hall;
+      if (MY_HALL_REQ && MY_HALL_REQ.hall) return MY_HALL_REQ.hall;
+      return selectedHall();
+    }
+
+    function shouldAutoFacilityFees() {
+      const hall = activeHallForFees();
+      return !!(hall && !hall.isVirtual);
+    }
+
+    function facilityFeeQty() {
+      if (!shouldAutoFacilityFees()) return 0;
+      return Math.max(1, SELECTED_FUNERAL_DAYS || (MY_USAGE && MY_USAGE.funeralDays) || (MY_HALL_REQ && MY_HALL_REQ.funeralDays) || 1);
+    }
+
+    function autoFacilityFeeKeys() {
+      return (FACILITY_FEES || []).filter((f) => f.orderable !== false).map((f) => "hallFacilityFee:" + f.id);
+    }
+
+    function clearAutoFacilityFees() {
+      autoFacilityFeeKeys().forEach((k) => cart.delete(k));
+    }
+
+    function syncAutoFacilityFees(hall) {
+      hall = hall || activeHallForFees();
+      clearAutoFacilityFees();
+      const qty = hall && !hall.isVirtual
+        ? Math.max(1, SELECTED_FUNERAL_DAYS || (MY_USAGE && MY_USAGE.funeralDays) || (MY_HALL_REQ && MY_HALL_REQ.funeralDays) || 1)
+        : 0;
+      if (!qty) {
+        renderCart();
+        return;
+      }
+      FACILITY_FEES.forEach((f) => {
+        if (f.orderable !== false) cart.set("hallFacilityFee:" + f.id, qty);
+      });
+      renderCart();
+    }
+
+    function facilityFeesPreviewHtml() {
+      if (!shouldAutoFacilityFees() || !FACILITY_FEES.length) return "";
+      const qty = facilityFeeQty();
+      let rows = FACILITY_FEES.map((f) => {
+        const label = f.name && f.name !== "-" ? f.group + " · " + f.name : f.group;
+        return `<tr><th>${mEsc(label)}</th><td>${qty}${mEsc(f.unit || "1일")}</td><td class="nowrap">${won(f.price * qty)}</td></tr>`;
+      }).join("");
+      return `
+        <h4 class="section-h4 spaced">${mEsc(mT("prod.facilityHead"))}</h4>
+        <p class="note" style="margin-top:0">${mEsc(mT("shop.facilityAutoHint"))}</p>
+        <table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colItem"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
     function bindHallPick(onPick) {
       document.querySelectorAll("[data-pick]").forEach((el) => {
         el.addEventListener("click", () => {
@@ -315,6 +369,7 @@
           const hall = selectedHall();
           if (hall && hall.isVirtual) SELECTED_FUNERAL_DAYS = null;
           else if (!SELECTED_FUNERAL_DAYS) SELECTED_FUNERAL_DAYS = 3;
+          syncAutoFacilityFees(hall);
           if (onPick) onPick();
         });
       });
@@ -328,6 +383,7 @@
           el.classList.add("selected");
           const box = document.getElementById("mModalPriceBox");
           if (box) box.innerHTML = mHallPriceBoxHtml(hall, SELECTED_FUNERAL_DAYS);
+          syncAutoFacilityFees(hall);
         });
       });
     }
@@ -378,6 +434,7 @@
           mToast(mT("hall.usageOk"));
         }
         await loadHallData();
+        syncAutoFacilityFees();
         renderMain();
         renderCart();
         return true;
@@ -441,6 +498,7 @@
             <p class="hall-assigned"><b>${mEsc(hallName)}</b>${h && h.specLabel ? " · " + mEsc(h.specLabel) : ""}${h && h.feature ? " · " + mEsc(h.feature) : ""}</p>
             ${sub ? `<p class="muted" style="margin:0 0 14px">${mEsc(sub)}</p>` : ""}
             ${h && !h.isVirtual && MY_USAGE.funeralDays ? mHallPriceBoxHtml({ ...h, dailyPrice: MY_USAGE.dailyPrice }, MY_USAGE.funeralDays) : ""}
+            ${facilityFeesPreviewHtml()}
             <div class="m-actions">
               <button type="button" class="btn btn-primary" id="editUsageBtn">${mEsc(mT("hall.editUsage"))}</button>
             </div>
@@ -458,6 +516,7 @@
             <div class="notice-box">${mEsc(mT("hall.pendingNotice"))}</div>
             ${hallSummaryNotice()}
             ${hallPickListHtml()}
+            ${facilityFeesPreviewHtml()}
             <div class="m-actions top-gap">
               <button type="button" class="btn btn-primary" id="editPendingBtn">${mEsc(mT("hall.editPending"))}</button>
             </div>
@@ -473,6 +532,7 @@
           <div class="notice-box">${mEsc(mT("hall.pickNotice"))}</div>
           ${hallSummaryNotice()}
           ${hallPickListHtml()}
+          ${facilityFeesPreviewHtml()}
         </div>`;
       bindHallPick(() => openHallInfoModal("new"));
     }
@@ -783,24 +843,6 @@
           });
           html += "</tbody></table>";
         }
-        html += `<h4 style="margin:20px 0 8px">${mEsc(mT("prod.facilityHead"))}</h4>`;
-        html += `<p class="note" style="margin-top:0">${mEsc(mT("prod.facilityLead"))}</p>`;
-        if (FACILITY_FEES.length === 0) {
-          html += `<div class="state">${mEsc(mT("prod.noneGeneric"))}</div>`;
-        } else {
-          html += `<table class="tbl full"><thead><tr><th>${mEsc(mT("prod.colItem"))}</th><th>${mEsc(mT("prod.colQty"))}</th><th>${mEsc(mT("prod.colPrice"))}</th><th></th></tr></thead><tbody>`;
-          FACILITY_FEES.forEach((f) => {
-            const label = f.name && f.name !== "-" ? f.group + " · " + f.name : f.group;
-            html += `
-              <tr>
-                <th>${mEsc(label)}</th>
-                <td>${mEsc(f.unit || "1일")}</td>
-                <td class="nowrap">${won(f.price)}</td>
-                <td><button class="btn btn-sm btn-primary" data-add="hallFacilityFee:${f.id}">${mEsc(mT("common.addToCart"))}</button></td>
-              </tr>`;
-          });
-          html += "</tbody></table>";
-        }
         html += "</div>";
         area.innerHTML = html;
         area.querySelectorAll("[data-add]").forEach((b) =>
@@ -844,6 +886,13 @@
       renderCart(); mToast(mT("shop.addedToast"));
     }
     function setQty(key, qty) {
+      if (qty <= 0 && key.startsWith("hallFacilityFee:") && shouldAutoFacilityFees()) {
+        mToast(mT("shop.facilityAutoHint"));
+        return;
+      }
+      if (key.startsWith("hallFacilityFee:") && shouldAutoFacilityFees()) {
+        qty = facilityFeeQty();
+      }
       if (qty <= 0) cart.delete(key); else cart.set(key, qty);
       renderCart();
     }
