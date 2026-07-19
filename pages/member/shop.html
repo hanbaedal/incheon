@@ -11,7 +11,7 @@
   <header id="mHeader"></header>
   <div class="m-wrap">
     <h1 class="m-title">장례 서비스 예약</h1>
-    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식(식사·안주·떡·과일·제사상·식음료·공산품)·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.</p>
+    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식(식사·안주·떡·과일·제사상·식음료·공산품)·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 빈소를 선택하면 고인·발인 정보 입력 창이 열립니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.</p>
 
     <div class="reserve-tabs" id="catTabs"></div>
 
@@ -80,9 +80,14 @@
     let HALL_SUMMARY = null;
     let MY_HALL_REQ = null;
     let MY_USAGE = null;
+    let SELECTED_HALL_ID = "";
+    let SELECTED_FUNERAL_DAYS = 3;
+    let FUNERAL_DAY_OPTIONS = DEFAULT_FUNERAL_DAY_OPTIONS;
     const cart = new Map();
 
     (async function () {
+      const urlCat = new URLSearchParams(location.search).get("cat");
+      if (urlCat === "hall") ACTIVE_CAT = "hall";
       ME = await memberHeader("shop");
       if (!ME) return;
       renderTabs();
@@ -145,9 +150,18 @@
         HALLS = avail.items || [];
         HALL_SUMMARY = avail;
         MY_USAGE = usageRes.usage || null;
+        FUNERAL_DAY_OPTIONS = avail.funeralDayOptions || DEFAULT_FUNERAL_DAY_OPTIONS;
         MY_HALL_REQ = mine.items.find((r) => r.status === "pending")
           || mine.items.find((r) => r.status === "approved")
           || null;
+        if (MY_HALL_REQ && MY_HALL_REQ.hall) {
+          SELECTED_HALL_ID = MY_HALL_REQ.hall.id;
+          SELECTED_FUNERAL_DAYS = MY_HALL_REQ.funeralDays || 3;
+        }
+        if (MY_USAGE && MY_USAGE.hall) {
+          SELECTED_HALL_ID = MY_USAGE.hall.id;
+          SELECTED_FUNERAL_DAYS = MY_USAGE.funeralDays || SELECTED_FUNERAL_DAYS || 3;
+        }
       } catch (e) {
         HALLS = [];
         HALL_SUMMARY = null;
@@ -257,21 +271,214 @@
       return PRODUCTS.find((x) => x.id === id);
     }
 
+    function selectedHall() {
+      return HALLS.find((h) => String(h.id) === String(SELECTED_HALL_ID)) || null;
+    }
+
+    function hallSummaryNotice() {
+      if (!HALL_SUMMARY || !HALL_SUMMARY.activePhysicalCount) return "";
+      let t = `<div class="notice-box">현재 빈소 <b>${HALL_SUMMARY.activePhysicalCount}/${HALL_SUMMARY.capacity}</b>실 이용 중`;
+      if (HALL_SUMMARY.freePhysicalSlots > 0) t += ` · <b>${HALL_SUMMARY.freePhysicalSlots}</b>실 즉시 배정 가능`;
+      else if (HALL_SUMMARY.nextAvailableLabel) t += ` · ${mEsc(HALL_SUMMARY.nextAvailableLabel)}`;
+      return t + "</div>";
+    }
+
+    function hallPickListHtml() {
+      if (!HALLS.length) return '<div class="state">현재 신청 가능한 빈소가 없습니다.</div>';
+      return `<div class="hall-grid">${HALLS.map((h) => {
+        const can = h.canRequestNow !== false;
+        const sel = String(h.id) === String(SELECTED_HALL_ID) ? " selected" : "";
+        const dis = can ? "" : " disabled";
+        const spec = h.specLabel ? `<small>${mEsc(h.specLabel)}</small>` : "";
+        return `
+          <div class="hall-pick${sel}${dis}" data-pick="${h.id}" data-can="${can ? "1" : "0"}">
+            <div class="info">
+              <b>${mEsc(h.name || h.hallNumber)}</b>
+              ${spec}
+              <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}${!h.isVirtual && h.dailyPrice ? " · 1일 " + won(h.dailyPrice) : ""}</small>
+              <small>${mEsc(h.feature || "")}</small>
+              ${h.availableLabel ? `<small class="${can ? "avail-ok" : "avail-wait"}">${mEsc(h.availableLabel)}</small>` : ""}
+            </div>
+          </div>`;
+      }).join("")}</div>`;
+    }
+
+    function bindHallPick(onPick) {
+      document.querySelectorAll("[data-pick]").forEach((el) => {
+        el.addEventListener("click", () => {
+          if (el.getAttribute("data-can") !== "1") return;
+          SELECTED_HALL_ID = el.getAttribute("data-pick");
+          document.querySelectorAll("[data-pick]").forEach((x) => x.classList.remove("selected"));
+          el.classList.add("selected");
+          const hall = selectedHall();
+          if (hall && hall.isVirtual) SELECTED_FUNERAL_DAYS = null;
+          else if (!SELECTED_FUNERAL_DAYS) SELECTED_FUNERAL_DAYS = 3;
+          if (onPick) onPick();
+        });
+      });
+    }
+
+    function bindModalFuneralDays(hall) {
+      document.querySelectorAll("#mModalDayGrid [data-days]").forEach((el) => {
+        el.addEventListener("click", () => {
+          SELECTED_FUNERAL_DAYS = Number(el.getAttribute("data-days"));
+          document.querySelectorAll("#mModalDayGrid [data-days]").forEach((x) => x.classList.remove("selected"));
+          el.classList.add("selected");
+          const box = document.getElementById("mModalPriceBox");
+          if (box) box.innerHTML = mHallPriceBoxHtml(hall, SELECTED_FUNERAL_DAYS);
+        });
+      });
+    }
+
+    function hallInfoFormData(mode) {
+      if (mode === "usage" && MY_USAGE) return { ...MY_USAGE };
+      if (mode === "pending" && MY_HALL_REQ) return { ...MY_HALL_REQ };
+      return { chiefMourner: ME && ME.name ? ME.name : "" };
+    }
+
+    function modalHallRef(mode) {
+      if (mode === "usage" && MY_USAGE && MY_USAGE.hall) return MY_USAGE.hall;
+      if (mode === "pending" && MY_HALL_REQ && MY_HALL_REQ.hall) return MY_HALL_REQ.hall;
+      return selectedHall();
+    }
+
+    async function saveHallInfo(mode, prefix, btn) {
+      const hall = modalHallRef(mode);
+      if (mode !== "usage" && hall && !hall.isVirtual && !SELECTED_FUNERAL_DAYS) {
+        mToast("장례 기간(3·4·5일장)을 선택해 주세요.");
+        return false;
+      }
+      const body = mHallFormValues(prefix);
+      if (!body.deceasedName || !body.funeralDate) {
+        mToast("고인명과 발인 일자를 입력해 주세요.");
+        return false;
+      }
+      btn.disabled = true;
+      try {
+        if (mode === "new") {
+          await mApi("/hall-requests", {
+            method: "POST",
+            body: {
+              hallId: SELECTED_HALL_ID,
+              funeralDays: hall && hall.isVirtual ? null : SELECTED_FUNERAL_DAYS,
+              ...body,
+            },
+          });
+          mToast("빈소 이용 신청이 접수되었습니다.");
+        } else if (mode === "pending") {
+          const patch = { ...body };
+          if (SELECTED_HALL_ID) patch.hallId = SELECTED_HALL_ID;
+          if (hall && !hall.isVirtual) patch.funeralDays = SELECTED_FUNERAL_DAYS;
+          await mApi("/hall-requests/mine", { method: "PATCH", body: patch });
+          mToast("신청 정보가 저장되었습니다.");
+        } else {
+          await mApi("/hall-usages/mine", { method: "PATCH", body });
+          mToast("이용 정보가 저장되었습니다.");
+        }
+        await loadHallData();
+        renderMain();
+        renderCart();
+        return true;
+      } catch (e) {
+        mToast(e.message);
+        btn.disabled = false;
+        return false;
+      }
+    }
+
+    function openHallInfoModal(mode) {
+      mode = mode || "new";
+      if (mode === "new" && !SELECTED_HALL_ID) {
+        mToast("빈소를 선택해 주세요.");
+        return;
+      }
+      const hall = modalHallRef(mode);
+      const hallName = hall ? (hall.name || hall.hallNumber || "-") : "-";
+      const formPrefix = "hm";
+      const data = hallInfoFormData(mode);
+      if (mode === "usage" && MY_USAGE) SELECTED_FUNERAL_DAYS = MY_USAGE.funeralDays || SELECTED_FUNERAL_DAYS;
+      const showDays = hall && !hall.isVirtual && mode !== "usage";
+      const bodyHtml = `
+        ${mode !== "usage" && hall ? `<p class="hall-assigned"><b>${mEsc(hallName)}</b>${hall.specLabel ? " · " + mEsc(hall.specLabel) : ""}</p>` : ""}
+        ${showDays ? mHallFuneralDaysPickerHtml(FUNERAL_DAY_OPTIONS, SELECTED_FUNERAL_DAYS, hall) : (hall && hall.isVirtual ? mHallPriceBoxHtml(hall, null) : "")}
+        <h4 class="section-h4 ${showDays ? "spaced" : ""}">필수 입력 정보</h4>
+        <div class="m-form">${mHallUsageFormHtml(formPrefix, data)}</div>`;
+
+      mMemberModal.open({
+        title: mode === "usage" ? "이용 정보 수정" : (mode === "pending" ? "신청 정보 입력" : "빈소 이용 정보 입력"),
+        subtitle: `${mEsc(hallName)} · 고인·발인 정보를 입력해 주세요`,
+        bodyHtml,
+        buttons: [
+          { label: "취소" },
+          {
+            label: mode === "new" ? "빈소 이용 신청" : "저장",
+            cls: "btn btn-primary",
+            onClick: (btn) => saveHallInfo(mode, formPrefix, btn),
+          },
+        ],
+        onOpen: () => {
+          if (showDays && hall) bindModalFuneralDays(hall);
+        },
+      });
+    }
+
+    function renderHallTab() {
+      const area = document.getElementById("mainArea");
+      if (MY_USAGE && MY_USAGE.status === "active") {
+        const h = MY_USAGE.hall;
+        const hallName = h ? h.name : "-";
+        const sub = [
+          MY_USAGE.deceasedName ? "故 " + MY_USAGE.deceasedName : "",
+          MY_USAGE.enshrinedAt ? "입관/안치 " + MY_USAGE.enshrinedAt : "",
+          MY_USAGE.funeralDate ? "발인 " + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
+        ].filter(Boolean).join(" · ");
+        area.innerHTML = `
+          <div class="card-head">빈소선택 · 배정 완료</div>
+          <div class="card-body">
+            <div class="notice-box success">${MY_USAGE.scheduleLocked ? "장례 예약이 접수되어 발인 일자·시각은 변경할 수 없습니다." : "빈소가 배정되었습니다. 다른 탭에서 장례 물품·서비스를 예약해 주세요."}</div>
+            <p class="hall-assigned"><b>${mEsc(hallName)}</b>${h && h.specLabel ? " · " + mEsc(h.specLabel) : ""}${h && h.feature ? " · " + mEsc(h.feature) : ""}</p>
+            ${sub ? `<p class="muted" style="margin:0 0 14px">${mEsc(sub)}</p>` : ""}
+            ${h && !h.isVirtual && MY_USAGE.funeralDays ? mHallPriceBoxHtml({ ...h, dailyPrice: MY_USAGE.dailyPrice }, MY_USAGE.funeralDays) : ""}
+            <div class="m-actions">
+              <button type="button" class="btn btn-primary" id="editUsageBtn">이용 정보 수정</button>
+            </div>
+          </div>`;
+        document.getElementById("editUsageBtn").addEventListener("click", () => openHallInfoModal("usage"));
+        return;
+      }
+
+      if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
+        SELECTED_HALL_ID = MY_HALL_REQ.hall ? MY_HALL_REQ.hall.id : SELECTED_HALL_ID;
+        SELECTED_FUNERAL_DAYS = MY_HALL_REQ.funeralDays || SELECTED_FUNERAL_DAYS || 3;
+        area.innerHTML = `
+          <div class="card-head">빈소선택 · 승인 대기</div>
+          <div class="card-body">
+            <div class="notice-box">신청하신 빈소는 관리자 승인 대기 중입니다. 빈소를 선택하면 필수 정보 입력 창이 열립니다.</div>
+            ${hallSummaryNotice()}
+            ${hallPickListHtml()}
+            <div class="m-actions top-gap">
+              <button type="button" class="btn btn-primary" id="editPendingBtn">신청 정보 입력</button>
+            </div>
+          </div>`;
+        bindHallPick(() => openHallInfoModal("pending"));
+        document.getElementById("editPendingBtn").addEventListener("click", () => openHallInfoModal("pending"));
+        return;
+      }
+
+      area.innerHTML = `
+        <div class="card-head">빈소선택</div>
+        <div class="card-body">
+          <div class="notice-box">빈소를 선택하면 필수 입력 창이 열립니다. 고인·발인 정보를 입력 후 신청해 주세요.</div>
+          ${hallSummaryNotice()}
+          ${hallPickListHtml()}
+        </div>`;
+      bindHallPick(() => openHallInfoModal("new"));
+    }
+
     function renderMain() {
       const area = document.getElementById("mainArea");
       if (ACTIVE_CAT === "hall") {
-        let html = '<div class="card-head">빈소선택</div><div class="card-body">';
-        if (ME.hallUsageId) {
-          html += `<div class="notice-box">배정된 빈소가 있습니다. <a href="/pages/member/hall.html" class="link-navy">빈소 이용</a>에서 정보를 확인하거나 아래에서 장례 서비스를 예약해 주세요.</div>`;
-        } else if (MY_HALL_REQ) {
-          const st = MY_HALL_REQ.status === "pending" ? "승인 대기 중" : (MY_HALL_REQ.status === "approved" ? "승인 완료" : "거절됨");
-          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}<br><a href="/pages/member/hall.html" class="link-navy">빈소 이용 등록 보기</a></div>`;
-        } else {
-          html += `<div class="notice-box">빈소 규격 선택과 고인·발인 정보 입력은 <a href="/pages/member/hall.html" class="link-navy">빈소 이용 등록</a> 메뉴에서 진행해 주세요.</div>`;
-          html += `<div class="m-actions top-gap"><a class="btn btn-primary" href="/pages/member/hall.html">빈소 이용 등록하기</a></div>`;
-        }
-        html += "</div>";
-        area.innerHTML = html;
+        renderHallTab();
         return;
       }
 
