@@ -18,6 +18,7 @@ const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth
 const { nextOrderNumber } = require("../utils/orderNumber");
 const { aggregateOrders } = require("../utils/orderAggregate");
 const { usageToHallSummary } = require("../utils/hallFormat");
+const { appendHallFeeOrderItem } = require("../utils/hallOrderItem");
 
 const router = express.Router();
 
@@ -89,9 +90,8 @@ router.post(
   requireFamily,
   asyncHandler(async (req, res) => {
     const { items, buyer, memo } = req.body || {};
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: "예약 항목이 없습니다." });
-    }
+    const rawItems = Array.isArray(items) ? items : [];
+    const me = await User.findById(req.user.uid);
 
     const productIds = [];
     const coffinIds = [];
@@ -103,7 +103,7 @@ router.post(
     const photoItemIds = [];
     const dressItemIds = [];
     const hearseItemIds = [];
-    for (const it of items) {
+    for (const it of rawItems) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
       if (!refId) return res.status(400).json({ error: "품목 ID가 누락되었습니다." });
@@ -143,7 +143,7 @@ router.post(
     const hearseItemMap = new Map(hearseItems.map((h) => [String(h._id), h]));
 
     const orderItems = [];
-    for (const it of items) {
+    for (const it of rawItems) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
       const qty = Math.max(1, parseInt(it.qty, 10) || 1);
@@ -205,7 +205,11 @@ router.post(
       }
     }
 
-    const me = await User.findById(req.user.uid);
+    await appendHallFeeOrderItem(orderItems, req.user.uid, me && me.hallUsageId);
+    if (orderItems.length === 0) {
+      return res.status(400).json({ error: "예약 항목이 없습니다." });
+    }
+
     const order = new Order({
       orderNumber: await nextOrderNumber(Order),
       familyUserId: req.user.uid,

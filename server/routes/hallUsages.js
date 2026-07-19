@@ -13,6 +13,7 @@ const {
   normalizeFuneralDays,
   funeralDayLabel,
 } = require("../utils/hallPricing");
+const { ensureUsagePricing, isHallFeeOrdered } = require("../utils/hallOrderItem");
 
 const router = express.Router();
 
@@ -29,8 +30,11 @@ function pickUsageBody(body) {
   return out;
 }
 
-function formatMemberUsage(usage) {
+function formatMemberUsage(usage, hallFeeOrdered) {
   const hall = usage.hallId;
+  const days = usage.funeralDays;
+  const dailyPrice = usage.dailyPrice || (hall ? hall.dailyPrice : 0) || 0;
+  const hallFeeAmount = usage.hallFeeAmount || (hall && !hall.isVirtual && days ? computeHallFee(dailyPrice, days) : 0);
   return {
     id: usage._id,
     hall: hall
@@ -56,10 +60,11 @@ function formatMemberUsage(usage) {
     funeralDate: usage.funeralDate,
     funeralTime: usage.funeralTime,
     burialSite: usage.burialSite,
-    funeralDays: usage.funeralDays,
-    funeralDaysLabel: funeralDayLabel(usage.funeralDays),
-    dailyPrice: usage.dailyPrice || 0,
-    hallFeeAmount: usage.hallFeeAmount || 0,
+    funeralDays: days,
+    funeralDaysLabel: funeralDayLabel(days),
+    dailyPrice,
+    hallFeeAmount,
+    hallFeeOrdered: !!hallFeeOrdered,
     status: usage.status,
     familyCode: usage.familyCode,
     createdAt: usage.createdAt,
@@ -85,7 +90,10 @@ router.get(
     if (!me || !me.hallUsageId) return res.json({ usage: null });
     const usage = await HallUsage.findOne({ _id: me.hallUsageId, familyUserId: me._id }).populate("hallId");
     if (!usage) return res.json({ usage: null });
-    res.json({ usage: formatMemberUsage(usage) });
+    await ensureUsagePricing(usage);
+    await usage.populate("hallId");
+    const hallFeeOrdered = await isHallFeeOrdered(me._id, usage._id);
+    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered) });
   })
 );
 
@@ -107,7 +115,8 @@ router.patch(
 
     await usage.save();
     await usage.populate("hallId");
-    res.json({ usage: formatMemberUsage(usage) });
+    const hallFeeOrdered = await isHallFeeOrdered(me._id, usage._id);
+    res.json({ usage: formatMemberUsage(usage, hallFeeOrdered) });
   })
 );
 

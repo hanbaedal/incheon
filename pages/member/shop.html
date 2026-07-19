@@ -174,15 +174,38 @@
       if (el) el.textContent = getHallDisplayName();
     }
 
-    function hallFeeLine(data) {
-      if (!data || !data.funeralDays || !data.hallFeeAmount) return "";
-      const unit = data.dailyPrice ? " · 단가 " + won(data.dailyPrice) : "";
-      return `<br><small>${mEsc(data.funeralDays)}일장${unit} · ${won(data.hallFeeAmount)}</small>`;
+    function resolveHallFee(data) {
+      if (!data || !data.hall || data.hall.isVirtual) return null;
+      const days = data.funeralDays || 3;
+      const dailyPrice = data.dailyPrice || data.hall.dailyPrice || 0;
+      const hallFeeAmount = data.hallFeeAmount || (dailyPrice * days);
+      if (!hallFeeAmount) return null;
+      return {
+        funeralDays: days,
+        dailyPrice,
+        hallFeeAmount,
+        hallFeeOrdered: !!data.hallFeeOrdered,
+      };
+    }
+
+    function getPendingHallFee() {
+      if (MY_USAGE && MY_USAGE.status === "active") {
+        const fee = resolveHallFee(MY_USAGE);
+        if (fee && !fee.hallFeeOrdered) return fee;
+      }
+      return null;
+    }
+
+    function hallFeeLine(fee) {
+      if (!fee) return "";
+      return `<br><small>${mEsc(fee.funeralDays)}일장 · 단가 ${won(fee.dailyPrice)}</small>`;
     }
 
     function hallSummaryHtml() {
       const hallName = getHallDisplayName();
       if (MY_USAGE && MY_USAGE.status === "active") {
+        const fee = resolveHallFee(MY_USAGE);
+        const pending = fee && !fee.hallFeeOrdered ? fee : null;
         const sub = [
           MY_USAGE.deceasedName ? "故 " + MY_USAGE.deceasedName : "",
           MY_USAGE.funeralDate ? "발인 " + MY_USAGE.funeralDate + (MY_USAGE.funeralTime ? " " + MY_USAGE.funeralTime : "") : "",
@@ -190,15 +213,16 @@
         return `
           <div class="cart-item cart-hall">
             <span class="nm">
-              <b>빈소</b>
+              <b>빈소 · ${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
-              ${hallFeeLine(MY_USAGE)}
-              <br><small style="color:var(--ok);font-weight:600">배정 완료</small>
+              ${hallFeeLine(fee)}
+              <br><small style="color:var(--ok);font-weight:600">배정 완료${fee && fee.hallFeeOrdered ? " · 이용료 예약됨" : ""}</small>
             </span>
-            <span class="cart-hall-right nowrap">${mEsc(hallName) || "—"}</span>
+            <span class="cart-hall-right nowrap">${pending ? won(pending.hallFeeAmount) : (fee && fee.hallFeeOrdered ? "예약됨" : "—")}</span>
           </div>`;
       }
       if (MY_HALL_REQ && MY_HALL_REQ.status === "pending") {
+        const fee = resolveHallFee(MY_HALL_REQ);
         const sub = [
           MY_HALL_REQ.deceasedName ? "故 " + MY_HALL_REQ.deceasedName : "",
           MY_HALL_REQ.funeralDate ? "발인 " + MY_HALL_REQ.funeralDate : "",
@@ -206,12 +230,12 @@
         return `
           <div class="cart-item cart-hall">
             <span class="nm">
-              <b>빈소</b>
+              <b>빈소 · ${mEsc(hallName) || "—"}</b>
               ${sub ? `<br><small>${mEsc(sub)}</small>` : ""}
-              ${hallFeeLine(MY_HALL_REQ)}
+              ${hallFeeLine(fee)}
               <br><small style="color:#b8860b;font-weight:600">승인 대기</small>
             </span>
-            <span class="cart-hall-right nowrap">${mEsc(hallName) || "—"}</span>
+            <span class="cart-hall-right nowrap">${fee ? won(fee.hallFeeAmount) : "—"}</span>
           </div>`;
       }
       return "";
@@ -578,6 +602,7 @@
       const sumArea = document.getElementById("cartSum");
       const btn = document.getElementById("orderBtn");
       const hallHtml = hallSummaryHtml();
+      const pendingHall = getPendingHallFee();
 
       if (cart.size === 0 && !hallHtml) {
         area.innerHTML = '<div class="cart-empty">담긴 항목이 없습니다.</div>';
@@ -587,8 +612,13 @@
       }
 
       let supply = 0, vat = 0, html = hallHtml;
+      if (pendingHall) {
+        supply += pendingHall.hallFeeAmount;
+        vat += Math.round(pendingHall.hallFeeAmount * 0.1);
+      }
+
       if (cart.size === 0) {
-        html += '<div class="cart-empty" style="padding:14px 0 4px">장례 물품·서비스를 선택해 담아 주세요.</div>';
+        html += '<div class="cart-empty" style="padding:14px 0 4px">장례 물품·서비스를 추가로 선택할 수 있습니다.</div>';
       } else {
         cart.forEach((qty, key) => {
           const p = findCartItem(key);
@@ -609,10 +639,9 @@
       }
 
       area.innerHTML = html;
-      if (cart.size === 0) {
-        sumArea.innerHTML = hallHtml
-          ? '<p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 빈소 배정 후 물품·서비스를 예약해 주세요.</p>'
-          : "";
+      const canSubmit = cart.size > 0 || !!pendingHall;
+      if (!canSubmit) {
+        sumArea.innerHTML = "";
         btn.disabled = true;
       } else {
         sumArea.innerHTML = `
@@ -620,7 +649,7 @@
             <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
             <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
             <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
-            <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다.</p>
+            <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 빈소 이용료는 예약 제출 시 주문에 포함됩니다.${cart.size === 0 ? "" : " 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다."}</p>
           </div>`;
         btn.disabled = false;
       }
@@ -634,7 +663,8 @@
     }
 
     async function placeOrder() {
-      if (cart.size === 0) return;
+      const pendingHall = getPendingHallFee();
+      if (cart.size === 0 && !pendingHall) return;
       const items = Array.from(cart.entries()).map(([key, qty]) => {
         const [type, id] = key.split(":");
         if (type === "coffin") return { itemType: "coffin", itemRefId: id, qty };
