@@ -141,6 +141,7 @@ const NAV_MENU = [
   { id: "ops", label: "운영", badgeId: "navHallReqBadge",
     items: [
       { view: "halls", label: "빈소 관리" },
+      { view: "hallRegister", label: "빈소 등록" },
       { view: "families", label: "상주 계정" },
       { view: "hallRequests", label: "빈소 신청" },
     ],
@@ -300,6 +301,7 @@ function setNavBadge(id, count) {
 const VIEWS = {
   dashboard: { title: "대시보드", render: renderDashboard },
   halls: { title: "빈소 관리", render: renderHalls },
+  hallRegister: { title: "빈소 등록", render: renderHallRegister },
   families: { title: "상주 계정 관리", render: renderFamilies },
   hallRequests: { title: "빈소 신청", render: renderHallRequests },
   prodCoffin: { title: "관 관리", render: () => renderCoffins() },
@@ -483,6 +485,11 @@ async function renderHalls() {
     })));
 }
 
+async function renderHallRegister() {
+  await renderHalls();
+  hallForm(null);
+}
+
 function hallForm(h) {
   const e = h || {};
   const opt = (v, label, cur) => `<option value="${v}" ${cur === v ? "selected" : ""}>${label}</option>`;
@@ -519,7 +526,9 @@ function hallForm(h) {
       try {
         if (h) await api("/halls/" + h.id, { method: "PATCH", body });
         else await api("/halls", { method: "POST", body });
-        closeModal(); toast("저장되었습니다."); route();
+        closeModal(); toast("저장되었습니다.");
+        if (!h && currentView() === "hallRegister") location.hash = "halls";
+        else route();
       } catch (err) { toast(err.message); }
     } },
   ]);
