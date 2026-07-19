@@ -122,6 +122,7 @@
       label: { ko: "장례 서비스", zh: "殡葬服务", en: "Services" },
       href: "pages/service/supplies.html",
       children: [
+        { key: "prices", href: "pages/service/prices.html", label: { ko: "서비스 항목 및 가격", zh: "服务项目及价格", en: "Service Prices" } },
         {
           key: "supplies", href: "pages/service/supplies.html",
           label: { ko: "장례 물품", zh: "殡葬用品", en: "Supplies" },
