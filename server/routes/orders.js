@@ -7,6 +7,7 @@ const Coffin = require("../models/Coffin");
 const Hoengdae = require("../models/Hoengdae");
 const Shroud = require("../models/Shroud");
 const Accessory = require("../models/Accessory");
+const FoodItem = require("../models/FoodItem");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
@@ -15,11 +16,12 @@ const { nextOrderNumber } = require("../utils/orderNumber");
 const router = express.Router();
 
 function resolveItemType(it) {
-  if (["coffin", "hoengdae", "shroud", "accessory"].includes(it.itemType)) return it.itemType;
+  if (["coffin", "hoengdae", "shroud", "accessory", "foodItem"].includes(it.itemType)) return it.itemType;
   if (it.coffinId) return "coffin";
   if (it.hoengdaeId) return "hoengdae";
   if (it.shroudId) return "shroud";
   if (it.accessoryId) return "accessory";
+  if (it.foodItemId) return "foodItem";
   return "product";
 }
 
@@ -28,7 +30,25 @@ function resolveRefId(it, itemType) {
   if (itemType === "hoengdae") return it.itemRefId || it.hoengdaeId;
   if (itemType === "shroud") return it.itemRefId || it.shroudId;
   if (itemType === "accessory") return it.itemRefId || it.accessoryId;
+  if (itemType === "foodItem") return it.itemRefId || it.foodItemId;
   return it.productId;
+}
+
+function orderItemFromFood(ref, qty) {
+  const isPostpaid = ref.settlementType === "postpaid";
+  return {
+    itemType: "foodItem",
+    itemRefId: ref._id,
+    catKey: "food",
+    name: ref.name,
+    unit: ref.unit || "개",
+    price: ref.price,
+    qty,
+    finalQty: isPostpaid ? null : qty,
+    settlementType: ref.settlementType || "prepaid",
+    settled: !isPostpaid,
+    taxable: ref.taxable,
+  };
 }
 
 function prepaidItem(itemType, ref, catKey, qty) {
@@ -62,6 +82,7 @@ router.post(
     const hoengdaeIds = [];
     const shroudIds = [];
     const accessoryIds = [];
+    const foodItemIds = [];
     for (const it of items) {
       const itemType = resolveItemType(it);
       const refId = resolveRefId(it, itemType);
@@ -70,21 +91,24 @@ router.post(
       else if (itemType === "hoengdae") hoengdaeIds.push(refId);
       else if (itemType === "shroud") shroudIds.push(refId);
       else if (itemType === "accessory") accessoryIds.push(refId);
+      else if (itemType === "foodItem") foodItemIds.push(refId);
       else productIds.push(refId);
     }
 
-    const [products, coffins, hoengdaes, shrouds, accessories] = await Promise.all([
+    const [products, coffins, hoengdaes, shrouds, accessories, foodItems] = await Promise.all([
       productIds.length ? Product.find({ _id: { $in: productIds }, active: true }) : [],
       coffinIds.length ? Coffin.find({ _id: { $in: coffinIds }, active: true }) : [],
       hoengdaeIds.length ? Hoengdae.find({ _id: { $in: hoengdaeIds }, active: true }) : [],
       shroudIds.length ? Shroud.find({ _id: { $in: shroudIds }, active: true }) : [],
       accessoryIds.length ? Accessory.find({ _id: { $in: accessoryIds }, active: true }) : [],
+      foodItemIds.length ? FoodItem.find({ _id: { $in: foodItemIds }, active: true }) : [],
     ]);
     const productMap = new Map(products.map((p) => [String(p._id), p]));
     const coffinMap = new Map(coffins.map((c) => [String(c._id), c]));
     const hoengdaeMap = new Map(hoengdaes.map((h) => [String(h._id), h]));
     const shroudMap = new Map(shrouds.map((s) => [String(s._id), s]));
     const accessoryMap = new Map(accessories.map((a) => [String(a._id), a]));
+    const foodItemMap = new Map(foodItems.map((f) => [String(f._id), f]));
 
     const orderItems = [];
     for (const it of items) {
@@ -108,6 +132,10 @@ router.post(
         const a = accessoryMap.get(String(refId));
         if (!a) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 부속물품이 포함되어 있습니다." });
         orderItems.push(prepaidItem("accessory", a, "etc", qty));
+      } else if (itemType === "foodItem") {
+        const f = foodItemMap.get(String(refId));
+        if (!f) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 음식 품목이 포함되어 있습니다." });
+        orderItems.push(orderItemFromFood(f, qty));
       } else {
         const p = productMap.get(String(refId));
         if (!p) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상품이 포함되어 있습니다." });

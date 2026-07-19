@@ -17,6 +17,7 @@ router.use("/coffins", require("./coffins"));
 router.use("/hoengdae", require("./hoengdae"));
 router.use("/shrouds", require("./shrouds"));
 router.use("/accessories", require("./accessories"));
+router.use("/food-items", require("./foodItems"));
 router.use("/orders", require("./orders"));
 router.use("/images", require("./images"));
 router.use("/hall-requests", require("./hallRequests"));

@@ -25,10 +25,13 @@ async function main() {
   // AMC 장례용품 규격표 — 서버 시작 시 자동 등록 (Render Shell 불필요)
   try {
     const r = await ensureAmcCatalog();
-    const n = r.coffins.created + r.hoengdae.created + r.shrouds.created + r.accessories.created;
+    const n =
+      r.coffins.created + r.hoengdae.created + r.shrouds.created +
+      r.accessories.created + r.foodItems.created;
     if (n > 0) {
       console.log(
-        `[CATALOG] AMC 규격표 등록 — 관 ${r.coffins.created}, 횡대 ${r.hoengdae.created}, 수의 ${r.shrouds.created}, 부속 ${r.accessories.created}`
+        `[CATALOG] AMC 규격표 등록 — 관 ${r.coffins.created}, 횡대 ${r.hoengdae.created}, ` +
+        `수의 ${r.shrouds.created}, 부속 ${r.accessories.created}, 음식 ${r.foodItems.created}`
       );
     }
   } catch (err) {

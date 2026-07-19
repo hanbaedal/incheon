@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 const orderItemSchema = new mongoose.Schema(
   {
-    itemType: { type: String, enum: ["product", "coffin", "hoengdae", "shroud", "accessory"], default: "product" },
+    itemType: { type: String, enum: ["product", "coffin", "hoengdae", "shroud", "accessory", "foodItem"], default: "product" },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     itemRefId: { type: mongoose.Schema.Types.ObjectId, default: null },
     catKey: { type: String, default: "" },

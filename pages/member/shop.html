@@ -11,7 +11,7 @@
   <header id="mHeader"></header>
   <div class="m-wrap">
     <h1 class="m-title">장례 서비스 예약</h1>
-    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식·공산품류·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 공산품류(생수·음료·주류 등)는 소비 후 발인 전 수기 정산됩니다.</p>
+    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식(식사·안주·떡·과일·제사상·식음료·공산품)·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 식음료·공산품류는 소비 후 발인 전 수기 정산됩니다.</p>
 
     <div class="reserve-tabs" id="catTabs"></div>
 
@@ -36,6 +36,17 @@
     let HOENGDAES = [];
     let SHROUDS = [];
     let ACCESSORIES = [];
+    let FOOD_ITEMS = [];
+    let ACTIVE_FOOD_CAT = "meal";
+    const FOOD_SUB_CATS = [
+      { key: "meal", label: "식사류" },
+      { key: "anju", label: "안주류" },
+      { key: "tteok", label: "떡류" },
+      { key: "fruit", label: "과일류" },
+      { key: "jesa", label: "제사상" },
+      { key: "beverage", label: "식음료류" },
+      { key: "consumables", label: "공산품류" },
+    ];
     let ACTIVE_CAT = "hall";
     let HALLS = [];
     let MY_HALL_REQ = null;
@@ -46,18 +57,20 @@
       if (!ME) return;
       renderTabs();
       try {
-        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes] = await Promise.all([
+        const [prodRes, coffinRes, hoengdaeRes, shroudRes, accessoryRes, foodRes] = await Promise.all([
           mApi("/products"),
           mApi("/coffins"),
           mApi("/hoengdae"),
           mApi("/shrouds"),
           mApi("/accessories"),
+          mApi("/food-items"),
         ]);
         PRODUCTS = prodRes.items;
         COFFINS = coffinRes.items;
         HOENGDAES = hoengdaeRes.items;
         SHROUDS = shroudRes.items;
         ACCESSORIES = accessoryRes.items;
+        FOOD_ITEMS = foodRes.items;
         await loadHallData();
         renderMain();
       } catch (e) {
@@ -71,7 +84,11 @@
         `<button type="button" class="reserve-tab ${c.key === ACTIVE_CAT ? "active" : ""}" data-cat="${c.key}">${mEsc(c.label)}</button>`
       ).join("");
       document.querySelectorAll(".reserve-tab").forEach((b) =>
-        b.addEventListener("click", () => { ACTIVE_CAT = b.getAttribute("data-cat"); renderTabs(); renderMain(); }));
+        b.addEventListener("click", () => {
+          ACTIVE_CAT = b.getAttribute("data-cat");
+          if (ACTIVE_CAT === "food") ACTIVE_FOOD_CAT = "meal";
+          renderTabs(); renderMain();
+        }));
     }
 
     async function loadHallData() {
@@ -93,6 +110,7 @@
       if (type === "hoengdae") return HOENGDAES.find((x) => x.id === id);
       if (type === "shroud") return SHROUDS.find((x) => x.id === id);
       if (type === "accessory") return ACCESSORIES.find((x) => x.id === id);
+      if (type === "foodItem") return FOOD_ITEMS.find((x) => x.id === id);
       return PRODUCTS.find((x) => x.id === id);
     }
 
@@ -229,6 +247,45 @@
         return;
       }
 
+      if (ACTIVE_CAT === "food") {
+        const items = FOOD_ITEMS.filter((f) => f.foodCategory === ACTIVE_FOOD_CAT);
+        const sub = FOOD_SUB_CATS.find((c) => c.key === ACTIVE_FOOD_CAT);
+        let html = `<div class="card-head">접객 음식 · ${mEsc(sub ? sub.label : ACTIVE_FOOD_CAT)}</div><div class="card-body">`;
+        html += '<div class="reserve-tabs" style="margin-bottom:14px;flex-wrap:wrap">';
+        html += FOOD_SUB_CATS.map((c) =>
+          `<button type="button" class="reserve-tab ${c.key === ACTIVE_FOOD_CAT ? "active" : ""}" data-fcat="${c.key}">${mEsc(c.label)}</button>`
+        ).join("");
+        html += "</div>";
+        if (items.length === 0) {
+          html += '<div class="state">등록된 품목이 없습니다.</div>';
+        } else {
+          html += '<div class="prod-grid">';
+          items.forEach((f) => {
+            html += `
+              <div class="prod-card">
+                ${f.imageUrl ? `<img src="${mEsc(f.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+                <div class="prod-card-body">
+                  <b>${mEsc(f.name)}</b>
+                  <small>${mEsc(f.subGroup || f.description || "&nbsp;")}</small>
+                  <div class="prod-meta">
+                    <span class="price">${won(f.price)} / ${mEsc(f.unit)}</span>
+                    ${f.settlementType === "postpaid" ? '<span class="tag pending">발인 전 수기 정산</span>' : ""}
+                  </div>
+                  <button class="btn btn-sm btn-primary" data-add="foodItem:${f.id}">담기</button>
+                </div>
+              </div>`;
+          });
+          html += "</div>";
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-fcat]").forEach((b) =>
+          b.addEventListener("click", () => { ACTIVE_FOOD_CAT = b.getAttribute("data-fcat"); renderMain(); }));
+        area.querySelectorAll("[data-add]").forEach((b) =>
+          b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
+        return;
+      }
+
       const items = PRODUCTS.filter((p) => p.catKey === ACTIVE_CAT);
       const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
       let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
@@ -325,6 +382,7 @@
         if (type === "hoengdae") return { itemType: "hoengdae", itemRefId: id, qty };
         if (type === "shroud") return { itemType: "shroud", itemRefId: id, qty };
         if (type === "accessory") return { itemType: "accessory", itemRefId: id, qty };
+        if (type === "foodItem") return { itemType: "foodItem", itemRefId: id, qty };
         return { itemType: "product", productId: id, qty };
       });
       const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";

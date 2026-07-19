@@ -100,8 +100,13 @@ const VIEWS = {
   prodHoengdae: { title: "횡대 관리", render: () => renderHoengdae() },
   prodShroud: { title: "수의 관리", render: () => renderShrouds() },
   prodAccessory: { title: "부속물품 관리", render: () => renderAccessories() },
-  prodFood: { title: "접객 음식 관리", render: () => renderProductsByCat("food") },
-  prodConsumables: { title: "공산품류 관리", render: () => renderProductsByCat("consumables") },
+  prodFoodMeal: { title: "식사류 관리", render: () => renderFoodItems("meal") },
+  prodFoodAnju: { title: "안주류 관리", render: () => renderFoodItems("anju") },
+  prodFoodTteok: { title: "떡류 관리", render: () => renderFoodItems("tteok") },
+  prodFoodFruit: { title: "과일류 관리", render: () => renderFoodItems("fruit") },
+  prodFoodJesa: { title: "제사상 관리", render: () => renderFoodItems("jesa") },
+  prodFoodBeverage: { title: "식음료류 관리", render: () => renderFoodItems("beverage") },
+  prodFoodConsumables: { title: "공산품류 관리", render: () => renderFoodItems("consumables") },
   prodFlower: { title: "근조 화환 관리", render: () => renderProductsByCat("flower") },
   prodPhoto: { title: "영정 사진 관리", render: () => renderProductsByCat("photo") },
   prodDress: { title: "상복 대여 관리", render: () => renderProductsByCat("dress") },
@@ -163,15 +168,12 @@ async function refreshHallReqBadge() {
 function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
 
 const CAT_KEYS = [
-  { key: "food", label: "접객 음식" },
-  { key: "consumables", label: "공산품류" },
   { key: "flower", label: "근조 화환" },
   { key: "photo", label: "영정 사진" },
   { key: "dress", label: "상복 대여" },
   { key: "hearse", label: "운구·차량" },
 ];
 const PRODUCT_SPEC_FIELDS = {
-  food: [{ key: "serving", label: "1인/1판 기준" }],
   flower: [{ key: "size", label: "단수/크기" }],
   photo: [{ key: "size", label: "액자 규격" }],
   dress: [
@@ -181,6 +183,10 @@ const PRODUCT_SPEC_FIELDS = {
   hearse: [{ key: "vehicle", label: "차량 종류" }],
 };
 const SETTLEMENT_LABELS = { prepaid: "선결제", postpaid: "사후정산" };
+const FOOD_CATEGORY_LABELS = {
+  meal: "식사류", anju: "안주류", tteok: "떡류", fruit: "과일류",
+  jesa: "제사상", beverage: "식음료류", consumables: "공산품류",
+};
 
 async function uploadImage(file) {
   const fd = new FormData();
@@ -960,6 +966,108 @@ function accessoryForm(a) {
       try {
         if (a) await api("/accessories/" + a.id, { method: "PATCH", body });
         else await api("/accessories", { method: "POST", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+async function renderFoodItems(foodCategory) {
+  const label = FOOD_CATEGORY_LABELS[foodCategory] || foodCategory;
+  const d = await api("/food-items/admin/all?foodCategory=" + encodeURIComponent(foodCategory));
+  const showSubGroup = foodCategory === "meal" || foodCategory === "anju";
+  const showPostpaid = foodCategory === "beverage" || foodCategory === "consumables";
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addFood">+ ${esc(label)} 등록</button>
+      ${foodCategory === "meal" ? '<button class="btn" id="syncAmcFood">AMC 음식표 불러오기</button>' : ""}
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>품명</th>${showSubGroup ? "<th>구분</th>" : ""}<th class="right">가격</th>${showPostpaid ? "<th>정산</th>" : ""}<th>노출</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((f) => `
+          <tr>
+            <td><b>${esc(f.name)}</b>${f.imageUrl ? `<br><img src="${esc(f.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            ${showSubGroup ? `<td class="nowrap">${esc(f.subGroup || "-")}</td>` : ""}
+            <td class="right nowrap">${won(f.price)} / ${esc(f.unit)}</td>
+            ${showPostpaid ? `<td>${SETTLEMENT_LABELS[f.settlementType] || f.settlementType}</td>` : ""}
+            <td>${f.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(f))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${f.id}" data-name="${esc(f.name)}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("addFood").addEventListener("click", () => foodItemForm(null, foodCategory));
+  const syncBtn = document.getElementById("syncAmcFood");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      try {
+        const r = await api("/food-items/admin/sync-amc", { method: "POST", body: {} });
+        toast(r.message || "AMC 음식표를 불러왔습니다.");
+        route();
+      } catch (err) { toast(err.message); }
+    });
+  }
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => foodItemForm(JSON.parse(b.getAttribute("data-edit")), foodCategory)));
+  content.querySelectorAll("[data-del]").forEach((b) =>
+    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+      await api("/food-items/" + b.getAttribute("data-del"), { method: "DELETE" });
+      toast("삭제되었습니다."); route();
+    })));
+}
+
+function foodItemForm(f, foodCategory) {
+  const e = f || {};
+  const cat = foodCategory || e.foodCategory || "meal";
+  const label = FOOD_CATEGORY_LABELS[cat] || cat;
+  const isPostpaid = cat === "beverage" || cat === "consumables";
+  const settleOpts = Object.keys(SETTLEMENT_LABELS).map((k) =>
+    `<option value="${k}" ${(e.settlementType || (isPostpaid ? "postpaid" : "prepaid")) === k ? "selected" : ""}>${SETTLEMENT_LABELS[k]}</option>`).join("");
+  openModal(f ? label + " 수정" : label + " 등록", `
+    <input type="hidden" id="f_foodCategory" value="${esc(cat)}" />
+    <div class="field-row">
+      <div class="field"><label>품명 *</label><input id="f_name" value="${esc(e.name || "")}" placeholder="예: 육개장(8kg/30인분)" /></div>
+      <div class="field"><label>구분</label><input id="f_subGroup" value="${esc(e.subGroup || "")}" placeholder="식사류/반찬류 등" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
+      <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || (isPostpaid ? "개" : "식"))}" /></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>정산 방식</label><select id="f_settlementType">${settleOpts}</select></div>
+      <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
+    </div>
+    <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>이미지</label><input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"></p>` : ""}
+    </div>
+    <div class="field" style="display:flex;gap:18px">
+      <label class="check"><input type="checkbox" id="f_taxable" ${e.taxable === false ? "" : "checked"}/> 과세</label>
+      <label class="check"><input type="checkbox" id="f_active" ${e.active === false ? "" : "checked"}/> 판매(노출)</label>
+    </div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        foodCategory: val("f_foodCategory"), name: val("f_name"), subGroup: val("f_subGroup"),
+        price: Number(val("f_price")) || 0, unit: val("f_unit") || "개",
+        settlementType: val("f_settlementType"),
+        description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
+        taxable: checked("f_taxable"), active: checked("f_active"),
+      };
+      if (!body.name) { toast("품명을 입력하세요."); return; }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
+        catch (err) { toast(err.message); return; }
+      } else if (f && f.imageId) body.imageId = f.imageId;
+      try {
+        if (f) await api("/food-items/" + f.id, { method: "PATCH", body });
+        else await api("/food-items", { method: "POST", body });
         closeModal(); toast("저장되었습니다."); route();
       } catch (err) { toast(err.message); }
     } },

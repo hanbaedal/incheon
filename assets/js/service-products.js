@@ -176,6 +176,64 @@
     host.innerHTML = html;
   }
 
+  const FOOD_LABELS = {
+    meal: "식사류", anju: "안주류", tteok: "떡류", fruit: "과일류",
+    jesa: "제사상", beverage: "식음료류", consumables: "공산품류",
+  };
+
+  async function renderFoodCatalog(host, filterCats) {
+    const res = await fetch("/api/food-items");
+    const all = ((await res.json()).items) || [];
+    const cats = filterCats || Object.keys(FOOD_LABELS);
+    const loggedIn = await isMemberLoggedIn();
+    let html = "";
+
+    cats.forEach((cat) => {
+      const items = all.filter((f) => f.foodCategory === cat);
+      if (items.length === 0) return;
+      html += `<div class="block"><h3>${esc(FOOD_LABELS[cat] || cat)}</h3>`;
+      if (cat === "meal" || cat === "anju") {
+        const pairs = [];
+        for (let i = 0; i < items.length; i += 2) {
+          pairs.push([items[i], items[i + 1] || null]);
+        }
+        html += `<table class="tbl"><thead><tr><th>${cat === "meal" ? "식사류" : "안주류"}</th><th>${cat === "meal" ? "반찬류" : "마른안주류"}</th>${loggedIn ? "<th>가격</th><th>가격</th>" : ""}</tr></thead><tbody>`;
+        html += pairs.map(([a, b]) => `
+          <tr>
+            <th>${esc(a.name)}</th><td>${b ? esc(b.name) : ""}</td>
+            ${loggedIn ? `<td class="nowrap">${won(a.price)}</td><td class="nowrap">${b ? won(b.price) : ""}</td>` : ""}
+          </tr>`).join("");
+        html += "</tbody></table>";
+      } else if (cat === "tteok" || cat === "fruit") {
+        const pairs = [];
+        for (let i = 0; i < items.length; i += 2) {
+          pairs.push([items[i], items[i + 1] || null]);
+        }
+        html += `<table class="tbl"><thead><tr><th>종류</th><th></th>${loggedIn ? "<th>가격</th><th>가격</th>" : ""}</tr></thead><tbody>`;
+        html += pairs.map(([a, b]) => `
+          <tr>
+            <th>${esc(a.name)}</th><td>${b ? esc(b.name) : ""}</td>
+            ${loggedIn ? `<td class="nowrap">${won(a.price)}</td><td class="nowrap">${b ? won(b.price) : ""}</td>` : ""}
+          </tr>`).join("");
+        html += "</tbody></table>";
+      } else {
+        html += `<table class="tbl"><thead><tr><th>품명</th>${loggedIn ? "<th>가격</th>" : ""}${cat === "beverage" || cat === "consumables" ? "<th>정산</th>" : ""}</tr></thead><tbody>`;
+        html += items.map((f) => `
+          <tr>
+            <th>${esc(f.name)}</th>
+            ${loggedIn ? `<td class="nowrap">${won(f.price)} / ${esc(f.unit)}</td>` : ""}
+            ${cat === "beverage" || cat === "consumables" ? `<td>${f.settlementType === "postpaid" ? "소비 후 정산" : "선결제"}</td>` : ""}
+          </tr>`).join("");
+        html += "</tbody></table>";
+      }
+      html += "</div>";
+    });
+
+    if (!loggedIn) html += loginNoticeHtml();
+    else html += '<div class="block">' + reserveHintHtml() + "</div>";
+    host.innerHTML = html || '<div class="service-prod-empty">등록된 접객 음식이 없습니다.</div>';
+  }
+
   async function loadProducts(catKey) {
     const host = document.getElementById("serviceProducts");
     if (!host || !catKey) return;
@@ -201,6 +259,16 @@
       host.innerHTML = '<div class="service-prod-loading">부속물품 정보를 불러오는 중…</div>';
       try { await renderAccessorySpecs(host); }
       catch (e) { host.innerHTML = '<div class="service-prod-empty">부속물품 정보를 불러올 수 없습니다.</div>'; }
+      return;
+    }
+
+    if (catKey === "food" || catKey === "consumables") {
+      host.innerHTML = '<div class="service-prod-loading">접객 음식 정보를 불러오는 중…</div>';
+      try {
+        await renderFoodCatalog(host, catKey === "consumables" ? ["beverage", "consumables"] : null);
+      } catch (e) {
+        host.innerHTML = '<div class="service-prod-empty">접객 음식 정보를 불러올 수 없습니다.</div>';
+      }
       return;
     }
 
