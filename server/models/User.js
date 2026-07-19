@@ -10,8 +10,8 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["admin", "family"], required: true, index: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: "" },
-    // 상주(family) 계정이 연결된 빈소
-    hallId: { type: mongoose.Schema.Types.ObjectId, ref: "Hall", default: null },
+    // 상주(family) 계정이 연결된 빈소 이용
+    hallUsageId: { type: mongoose.Schema.Types.ObjectId, ref: "HallUsage", default: null },
     active: { type: Boolean, default: true },
     lastLoginAt: { type: Date, default: null },
   },
@@ -33,7 +33,7 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     role: this.role,
     name: this.name,
     phone: this.phone,
-    hallId: this.hallId,
+    hallUsageId: this.hallUsageId,
     active: this.active,
     createdAt: this.createdAt,
   };

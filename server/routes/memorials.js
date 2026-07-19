@@ -2,33 +2,40 @@
 
 const express = require("express");
 const Memorial = require("../models/Memorial");
-const Hall = require("../models/Hall");
+const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin } = require("../middleware/auth");
+const { usageToHallSummary } = require("../utils/hallFormat");
 
 const router = express.Router();
 
-// 공개: 특정 빈소의 추모글 목록
+function resolveUsageId(query, body) {
+  return query.hallUsageId || query.hallId || body.hallUsageId || body.hallId || null;
+}
+
+// 공개: 특정 빈소 이용의 추모글 목록
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const { hallId } = req.query;
-    if (!hallId) return res.status(400).json({ error: "hallId 가 필요합니다." });
-    const items = await Memorial.find({ hallId, hidden: false }).sort({ createdAt: -1 });
+    const hallUsageId = resolveUsageId(req.query, {});
+    if (!hallUsageId) return res.status(400).json({ error: "hallUsageId 가 필요합니다." });
+    const items = await Memorial.find({ hallUsageId, hidden: false }).sort({ createdAt: -1 });
     res.json({ items: items.map((m) => m.toJSONSafe()) });
   })
 );
 
-// 관리자: 전체 추모글 (숨김 포함, 빈소 정보 병합)
+// 관리자: 전체 추모글 (숨김 포함, 빈소 이용 정보 병합)
 router.get(
   "/admin/all",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const items = await Memorial.find({}).sort({ createdAt: -1 }).populate("hallId", "hallNumber deceasedName");
+    const items = await Memorial.find({})
+      .sort({ createdAt: -1 })
+      .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     res.json({
       items: items.map((m) => ({
         ...m.toJSONSafe(),
-        hall: m.hallId ? { id: m.hallId._id, hallNumber: m.hallId.hallNumber, deceasedName: m.hallId.deceasedName } : null,
+        hall: usageToHallSummary(m.hallUsageId, m.hallUsageId && m.hallUsageId.hallId),
       })),
     });
   })
@@ -38,15 +45,19 @@ router.get(
 router.post(
   "/",
   asyncHandler(async (req, res) => {
-    const { hallId, author, relation, message, type, password } = req.body || {};
-    if (!hallId || !author || !message) {
+    const body = req.body || {};
+    const hallUsageId = resolveUsageId({}, body);
+    const { author, relation, message, type, password } = body;
+    if (!hallUsageId || !author || !message) {
       return res.status(400).json({ error: "빈소, 작성자, 추모 내용을 입력해 주세요." });
     }
-    const hall = await Hall.findById(hallId);
-    if (!hall) return res.status(404).json({ error: "해당 빈소를 찾을 수 없습니다." });
+    const usage = await HallUsage.findById(hallUsageId);
+    if (!usage || usage.status !== "active") {
+      return res.status(404).json({ error: "해당 빈소를 찾을 수 없습니다." });
+    }
 
     const memorial = new Memorial({
-      hallId,
+      hallUsageId,
       author,
       relation: relation || "",
       message,

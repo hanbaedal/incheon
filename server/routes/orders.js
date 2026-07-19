@@ -17,6 +17,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
 const { nextOrderNumber } = require("../utils/orderNumber");
 const { aggregateOrders } = require("../utils/orderAggregate");
+const { usageToHallSummary } = require("../utils/hallFormat");
 
 const router = express.Router();
 
@@ -208,7 +209,7 @@ router.post(
     const order = new Order({
       orderNumber: await nextOrderNumber(Order),
       familyUserId: req.user.uid,
-      hallId: (me && me.hallId) || null,
+      hallUsageId: (me && me.hallUsageId) || null,
       items: orderItems,
       buyer: {
         name: (buyer && buyer.name) || (me && me.name) || "",
@@ -242,14 +243,12 @@ router.get(
   requireFamily,
   asyncHandler(async (req, res) => {
     const orders = await Order.find({ familyUserId: req.user.uid }).sort({ createdAt: 1 });
-    const me = await User.findById(req.user.uid).populate("hallId", "hallNumber deceasedName chiefMourner");
+    const me = await User.findById(req.user.uid).populate({ path: "hallUsageId", populate: { path: "hallId" } });
     const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
     res.json({
       ...agg,
       family: me ? { name: me.name, username: me.username, phone: me.phone } : null,
-      hall: me && me.hallId
-        ? { hallNumber: me.hallId.hallNumber, deceasedName: me.hallId.deceasedName, chiefMourner: me.hallId.chiefMourner }
-        : null,
+      hall: usageToHallSummary(me && me.hallUsageId, me && me.hallUsageId && me.hallUsageId.hallId),
     });
   })
 );
@@ -264,12 +263,12 @@ router.get(
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .populate("familyUserId", "name username")
-      .populate("hallId", "hallNumber deceasedName");
+      .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     res.json({
       items: orders.map((o) => ({
         ...o.toJSONSafe(),
         family: o.familyUserId ? { id: o.familyUserId._id, name: o.familyUserId.name, username: o.familyUserId.username } : null,
-        hall: o.hallId ? { id: o.hallId._id, hallNumber: o.hallId.hallNumber, deceasedName: o.hallId.deceasedName } : null,
+        hall: usageToHallSummary(o.hallUsageId, o.hallUsageId && o.hallUsageId.hallId),
       })),
     });
   })
@@ -282,16 +281,14 @@ router.get(
   asyncHandler(async (req, res) => {
     const { familyUserId } = req.query || {};
     if (!familyUserId) return res.status(400).json({ error: "상주 계정 ID가 필요합니다." });
-    const family = await User.findById(familyUserId).populate("hallId", "hallNumber deceasedName chiefMourner");
+    const family = await User.findById(familyUserId).populate({ path: "hallUsageId", populate: { path: "hallId" } });
     if (!family) return res.status(404).json({ error: "상주 계정을 찾을 수 없습니다." });
     const orders = await Order.find({ familyUserId }).sort({ createdAt: 1 });
     const agg = aggregateOrders(orders.map((o) => o.toJSONSafe()));
     res.json({
       ...agg,
       family: { id: family._id, name: family.name, username: family.username, phone: family.phone },
-      hall: family.hallId
-        ? { hallNumber: family.hallId.hallNumber, deceasedName: family.hallId.deceasedName, chiefMourner: family.hallId.chiefMourner }
-        : null,
+      hall: usageToHallSummary(family.hallUsageId, family.hallUsageId && family.hallUsageId.hallId),
     });
   })
 );
@@ -303,7 +300,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
       .populate("familyUserId", "name username phone")
-      .populate("hallId", "hallNumber deceasedName chiefMourner");
+      .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
     if (req.user.role !== "admin") {
       const ownerId = order.familyUserId && order.familyUserId._id;
@@ -315,7 +312,7 @@ router.get(
       order: {
         ...order.toJSONSafe(),
         family: order.familyUserId ? { name: order.familyUserId.name, username: order.familyUserId.username, phone: order.familyUserId.phone } : null,
-        hall: order.hallId ? { hallNumber: order.hallId.hallNumber, deceasedName: order.hallId.deceasedName, chiefMourner: order.hallId.chiefMourner } : null,
+        hall: usageToHallSummary(order.hallUsageId, order.hallUsageId && order.hallUsageId.hallId),
       },
     });
   })

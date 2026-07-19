@@ -38,6 +38,20 @@ function fmtDay(iso) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+/** 발인 일자 등 date input용 YYYY-MM-DD */
+function toDateInputValue(s) {
+  const m = String(s || "").trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${m[1]}-${p(m[2])}-${p(m[3])}`;
+}
+/** 발인 시각 time input용 HH:mm */
+function toTimeInputValue(s) {
+  const m = String(s || "").trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(m[1])}:${p(m[2])}`;
+}
 
 let toastTimer = null;
 function toast(msg) {
@@ -140,8 +154,9 @@ const NAV_MENU = [
   { id: "dashboard", label: "대시보드", view: "dashboard" },
   { id: "ops", label: "운영", badgeId: "navHallReqBadge",
     items: [
-      { view: "halls", label: "빈소 관리" },
-      { view: "hallRegister", label: "빈소 등록" },
+      { view: "halls", label: "빈소 규격" },
+      { view: "hallUsages", label: "빈소 이용" },
+      { view: "hallRegister", label: "빈소 이용 등록" },
       { view: "families", label: "상주 계정" },
       { view: "hallRequests", label: "빈소 신청" },
     ],
@@ -300,8 +315,9 @@ function setNavBadge(id, count) {
 /* ---------- 라우터 ---------- */
 const VIEWS = {
   dashboard: { title: "대시보드", render: renderDashboard },
-  halls: { title: "빈소 관리", render: renderHalls },
-  hallRegister: { title: "빈소 등록", render: renderHallRegister },
+  halls: { title: "빈소 규격", render: renderHalls },
+  hallUsages: { title: "빈소 이용", render: renderHallUsages },
+  hallRegister: { title: "빈소 이용 등록", render: renderHallRegister },
   families: { title: "상주 계정 관리", render: renderFamilies },
   hallRequests: { title: "빈소 신청", render: renderHallRequests },
   prodCoffin: { title: "관 관리", render: () => renderCoffins() },
@@ -419,11 +435,11 @@ async function uploadImage(file) {
 
 /* ---------- 대시보드 ---------- */
 async function renderDashboard() {
-  const [halls, inquiries, memorials, families, orders] = await Promise.all([
-    api("/halls/admin/all"), api("/inquiries/admin/all"),
+  const [usages, inquiries, memorials, families, orders] = await Promise.all([
+    api("/hall-usages/admin/all?status=active"), api("/inquiries/admin/all"),
     api("/memorials/admin/all"), api("/users/admin/all"), api("/orders/admin/all"),
   ]);
-  const inUse = halls.items.filter((h) => h.status === "in-use").length;
+  const inUse = usages.items.length;
   const pending = inquiries.items.filter((i) => i.status === "pending").length;
   const pendingOrders = orders.items.filter((o) => o.status === "pending").length;
   const recent = orders.items.slice(0, 6);
@@ -450,53 +466,143 @@ async function renderDashboard() {
     </div>`;
 }
 
-/* ---------- 빈소 관리 ---------- */
+/* ---------- 빈소 규격(카탈로그) ---------- */
 async function renderHalls() {
   const d = await api("/halls/admin/all");
   content.innerHTML = `
-    <div class="toolbar"><button class="btn btn-primary" id="addHall">+ 빈소 등록</button></div>
+    <p class="muted" style="margin:0 0 14px">35·50·80평형 및 무빈소 규격입니다. 상주는 이 목록에서 빈소를 선택해 이용 신청합니다.</p>
     <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">등록된 빈소가 없습니다.</div>' : `
+      ${d.items.length === 0 ? '<div class="empty">등록된 빈소 규격이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>호실</th><th>상태</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>구분</th><th>평형/면적</th><th>수용 인원</th><th>특징</th><th>상태</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((h) => `
           <tr>
-            <td><b>${esc(h.hallNumber)}</b></td>
-            <td><span class="tag ${h.status === "in-use" ? "use" : "free"}">${h.status === "in-use" ? "사용중" : "비어있음"}</span></td>
-            <td>${esc(h.deceasedName) || "-"}</td>
-            <td>${esc(h.chiefMourner) || "-"}</td>
-            <td class="nowrap">${esc(h.funeralDate) || "-"} ${esc(h.funeralTime)}</td>
-            <td class="nowrap">${h.familyCode ? `<code>${esc(h.familyCode)}</code>` : "-"}</td>
+            <td><b>${esc(h.name)}</b>${h.isVirtual ? ' <span class="tag gray">무빈소</span>' : ""}</td>
+            <td>${esc(h.areaLabel) || "-"}</td>
+            <td>${esc(h.capacity) || "-"}</td>
+            <td>${esc(h.feature) || "-"}</td>
+            <td>${h.active ? '<span class="tag free">신청 가능</span>' : '<span class="tag gray">중지</span>'}</td>
             <td class="actions">
               <button class="btn btn-sm" data-edit='${esc(JSON.stringify(h))}'>수정</button>
-              <button class="btn btn-sm btn-danger" data-del="${h.id}" data-name="${esc(h.hallNumber)}">삭제</button>
             </td>
           </tr>`).join("")}</tbody>
       </table>`}
     </div></div>`;
 
-  document.getElementById("addHall").addEventListener("click", () => hallForm(null));
   content.querySelectorAll("[data-edit]").forEach((b) =>
-    b.addEventListener("click", () => hallForm(JSON.parse(b.getAttribute("data-edit")))));
+    b.addEventListener("click", () => hallCatalogForm(JSON.parse(b.getAttribute("data-edit")))));
+}
+
+function hallCatalogForm(h) {
+  openModal("빈소 규격 수정", `
+    <div class="field-row">
+      <div class="field"><label>구분명</label><input id="f_name" value="${esc(h.name || "")}" /></div>
+      <div class="field"><label>신청 가능</label><select id="f_active"><option value="true" ${h.active ? "selected" : ""}>가능</option><option value="false" ${!h.active ? "selected" : ""}>중지</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>면적</label><input id="f_areaLabel" value="${esc(h.areaLabel || "")}" placeholder="예: 약 115㎡" /></div>
+      <div class="field"><label>수용 인원</label><input id="f_capacity" value="${esc(h.capacity || "")}" placeholder="예: 50명 내외" /></div>
+    </div>
+    <div class="field"><label>특징</label><input id="f_feature" value="${esc(h.feature || "")}" /></div>
+  `, [
+    { label: "취소", onClick: closeModal },
+    { label: "저장", cls: "btn-primary", onClick: async () => {
+      const body = {
+        name: val("f_name"),
+        areaLabel: val("f_areaLabel"),
+        capacity: val("f_capacity"),
+        feature: val("f_feature"),
+        active: val("f_active") === "true",
+      };
+      if (!body.name) { toast("구분명을 입력하세요."); return; }
+      try {
+        await api("/halls/" + h.id, { method: "PATCH", body });
+        closeModal(); toast("저장되었습니다."); route();
+      } catch (err) { toast(err.message); }
+    } },
+  ]);
+}
+
+/* ---------- 빈소 이용 ---------- */
+let hallUsageFilter = "";
+async function renderHallUsages() {
+  const d = await api("/hall-usages/admin/all" + (hallUsageFilter ? "?status=" + hallUsageFilter : ""));
+  const statusTag = (s) => {
+    if (s === "active") return '<span class="tag use">이용중</span>';
+    if (s === "completed") return '<span class="tag answered">발인완료</span>';
+    return '<span class="tag gray">취소</span>';
+  };
+  content.innerHTML = `
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addHallUsage">+ 빈소 이용 등록</button>
+      <select id="hallUsageStatus">
+        <option value="">전체 상태</option>
+        <option value="active" ${hallUsageFilter === "active" ? "selected" : ""}>이용중</option>
+        <option value="completed" ${hallUsageFilter === "completed" ? "selected" : ""}>발인완료</option>
+        <option value="cancelled" ${hallUsageFilter === "cancelled" ? "selected" : ""}>취소</option>
+      </select>
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">등록된 빈소 이용이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>상태</th><th>빈소 규격</th><th>고인명</th><th>상주</th><th>발인</th><th>접근코드</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((u) => `
+          <tr>
+            <td>${statusTag(u.status)}</td>
+            <td><b>${u.hall ? esc(u.hall.name) : "-"}</b></td>
+            <td>${esc(u.deceasedName) || "-"}</td>
+            <td>${esc(u.chiefMourner) || (u.family ? esc(u.family.name) : "-")}</td>
+            <td class="nowrap">${esc(u.funeralDate) || "-"} ${esc(u.funeralTime)}</td>
+            <td class="nowrap">${u.familyCode ? `<code>${esc(u.familyCode)}</code>` : "-"}</td>
+            <td class="actions">
+              <button class="btn btn-sm" data-edit='${esc(JSON.stringify(u))}'>수정</button>
+              <button class="btn btn-sm btn-danger" data-del="${u.id}" data-name="${esc(u.hall ? u.hall.name : "빈소")}">삭제</button>
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+
+  document.getElementById("addHallUsage").addEventListener("click", () => hallUsageForm(null));
+  document.getElementById("hallUsageStatus").addEventListener("change", (e) => { hallUsageFilter = e.target.value; renderHallUsages(); });
+  content.querySelectorAll("[data-edit]").forEach((b) =>
+    b.addEventListener("click", () => hallUsageForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>
-    b.addEventListener("click", () => confirmDelete("빈소", b.getAttribute("data-name"), async () => {
-      await api("/halls/" + b.getAttribute("data-del"), { method: "DELETE" });
+    b.addEventListener("click", () => confirmDelete("빈소 이용", b.getAttribute("data-name"), async () => {
+      await api("/hall-usages/" + b.getAttribute("data-del"), { method: "DELETE" });
       toast("삭제되었습니다."); route();
     })));
 }
 
 async function renderHallRegister() {
-  await renderHalls();
-  hallForm(null);
+  await renderHallUsages();
+  hallUsageForm(null);
 }
 
-function hallForm(h) {
-  const e = h || {};
+async function hallUsageForm(u) {
+  const e = u || {};
   const opt = (v, label, cur) => `<option value="${v}" ${cur === v ? "selected" : ""}>${label}</option>`;
-  openModal(h ? "빈소 수정" : "빈소 등록", `
+  let catalogOptions = "";
+  let familyOptions = '<option value="">(연결 안 함)</option>';
+  try {
+    const [catalog, families] = await Promise.all([
+      api("/halls/admin/all"),
+      api("/users/admin/all"),
+    ]);
+    catalogOptions = catalog.items.map((h) => {
+      const label = esc(h.name) + (h.feature ? " · " + esc(h.feature) : "");
+      const sel = e.hall && e.hall.id === h.id ? "selected" : "";
+      return `<option value="${h.id}" ${sel}>${label}</option>`;
+    }).join("");
+    familyOptions += families.items.map((f) => {
+      const sel = e.family && e.family.id === f.id ? "selected" : "";
+      return `<option value="${f.id}" ${sel}>${esc(f.name)} (${esc(f.username)})</option>`;
+    }).join("");
+  } catch (err) {}
+
+  openModal(u ? "빈소 이용 수정" : "빈소 이용 등록", `
     <div class="field-row">
-      <div class="field"><label>호실명 *</label><input id="f_hallNumber" value="${esc(e.hallNumber || "")}" placeholder="예: 특1호실" /></div>
-      <div class="field"><label>상태</label><select id="f_status">${opt("available", "비어있음", e.status || "available")}${opt("in-use", "사용중", e.status)}</select></div>
+      <div class="field"><label>빈소 규격 *</label><select id="f_hallId">${catalogOptions}</select></div>
+      <div class="field"><label>상태</label><select id="f_status">${opt("active", "이용중", e.status || "active")}${opt("completed", "발인완료", e.status)}${opt("cancelled", "취소", e.status)}</select></div>
     </div>
     <div class="field-row">
       <div class="field"><label>고인명</label><input id="f_deceasedName" value="${esc(e.deceasedName || "")}" /></div>
@@ -507,27 +613,33 @@ function hallForm(h) {
       <div class="field"><label>향년</label><input id="f_age" value="${esc(e.age || "")}" placeholder="예: 향년 84세" /></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>발인 일자</label><input id="f_funeralDate" value="${esc(e.funeralDate || "")}" placeholder="예: 2026-07-20" /></div>
-      <div class="field"><label>발인 시각</label><input id="f_funeralTime" value="${esc(e.funeralTime || "")}" placeholder="예: 07:00" /></div>
+      <div class="field"><label>발인 일자</label><input type="date" id="f_funeralDate" value="${esc(toDateInputValue(e.funeralDate))}" /></div>
+      <div class="field"><label>발인 시각</label><input type="time" id="f_funeralTime" value="${esc(toTimeInputValue(e.funeralTime))}" step="60" /></div>
     </div>
     <div class="field"><label>장지</label><input id="f_burialSite" value="${esc(e.burialSite || "")}" /></div>
-    ${h && h.familyCode ? `<p class="muted">상주 접근코드: <code>${esc(h.familyCode)}</code></p>` : ""}
+    <div class="field"><label>연결 상주 계정</label><select id="f_familyUserId">${familyOptions}</select></div>
+    ${u && u.familyCode ? `<p class="muted">상주 접근코드: <code>${esc(u.familyCode)}</code></p>` : ""}
   `, [
     { label: "취소", onClick: closeModal },
     { label: "저장", cls: "btn-primary", onClick: async () => {
       const body = {
-        hallNumber: val("f_hallNumber"), status: val("f_status"),
-        deceasedName: val("f_deceasedName"), chiefMourner: val("f_chiefMourner"),
-        relationship: val("f_relationship"), age: val("f_age"),
-        funeralDate: val("f_funeralDate"), funeralTime: val("f_funeralTime"),
+        hallId: val("f_hallId"),
+        status: val("f_status"),
+        deceasedName: val("f_deceasedName"),
+        chiefMourner: val("f_chiefMourner"),
+        relationship: val("f_relationship"),
+        age: val("f_age"),
+        funeralDate: val("f_funeralDate"),
+        funeralTime: val("f_funeralTime"),
         burialSite: val("f_burialSite"),
+        familyUserId: val("f_familyUserId") || null,
       };
-      if (!body.hallNumber) { toast("호실명을 입력하세요."); return; }
+      if (!body.hallId) { toast("빈소 규격을 선택하세요."); return; }
       try {
-        if (h) await api("/halls/" + h.id, { method: "PATCH", body });
-        else await api("/halls", { method: "POST", body });
+        if (u) await api("/hall-usages/" + u.id, { method: "PATCH", body });
+        else await api("/hall-usages", { method: "POST", body });
         closeModal(); toast("저장되었습니다.");
-        if (!h && currentView() === "hallRegister") location.hash = "halls";
+        if (!u && currentView() === "hallRegister") location.hash = "hallUsages";
         else route();
       } catch (err) { toast(err.message); }
     } },
@@ -743,9 +855,9 @@ async function familyForm(u) {
   // 빈소 선택지
   let hallOptions = '<option value="">(연결 안 함)</option>';
   try {
-    const hd = await api("/halls/admin/all");
+    const hd = await api("/hall-usages/admin/active-options");
     hallOptions += hd.items.map((h) => {
-      const label = esc(h.hallNumber) + (h.deceasedName ? " / " + esc(h.deceasedName) : "");
+      const label = esc(h.hallNumber) + (h.deceasedName ? " / " + esc(h.deceasedName) : "") + (h.chiefMourner ? " · " + esc(h.chiefMourner) : "");
       const sel = e.hall && e.hall.id === h.id ? "selected" : "";
       return `<option value="${h.id}" ${sel}>${label}</option>`;
     }).join("");
@@ -758,22 +870,22 @@ async function familyForm(u) {
     </div>
     <div class="field-row">
       <div class="field"><label>연락처</label><input id="f_phone" value="${esc(e.phone || "")}" placeholder="010-0000-0000" /></div>
-      <div class="field"><label>연결 빈소</label><select id="f_hall">${hallOptions}</select></div>
+      <div class="field"><label>연결 빈소 이용</label><select id="f_hall">${hallOptions}</select></div>
     </div>
     <div class="field"><label>${u ? "비밀번호 재설정 (미입력 시 유지)" : "비밀번호 *"}</label><input id="f_password" type="text" placeholder="${u ? "변경할 때만 입력" : "초기 비밀번호"}" /></div>
     ${u ? `<div class="field"><label class="check"><input type="checkbox" id="f_active" ${e.active ? "checked" : ""}/> 계정 사용(활성)</label></div>` : ""}
   `, [
     { label: "취소", onClick: closeModal },
     { label: "저장", cls: "btn-primary", onClick: async () => {
-      const hallId = val("f_hall");
+      const hallUsageId = val("f_hall");
       if (u) {
-        const body = { name: val("f_name"), phone: val("f_phone"), hallId: hallId || null, active: checked("f_active") };
+        const body = { name: val("f_name"), phone: val("f_phone"), hallUsageId: hallUsageId || null, active: checked("f_active") };
         const pw = val("f_password"); if (pw) body.password = pw;
         if (!body.name) { toast("이름을 입력하세요."); return; }
         try { await api("/users/" + u.id, { method: "PATCH", body }); closeModal(); toast("저장되었습니다."); route(); }
         catch (err) { toast(err.message); }
       } else {
-        const body = { username: val("f_username"), name: val("f_name"), phone: val("f_phone"), password: val("f_password"), hallId: hallId || null };
+        const body = { username: val("f_username"), name: val("f_name"), phone: val("f_phone"), password: val("f_password"), hallUsageId: hallUsageId || null };
         if (!body.username || !body.name || !body.password) { toast("아이디·이름·비밀번호를 입력하세요."); return; }
         try { await api("/users", { method: "POST", body }); closeModal(); toast("상주 계정이 발급되었습니다."); route(); }
         catch (err) { toast(err.message); }
@@ -809,7 +921,7 @@ async function renderHallRequests() {
             <td>${statusTag(r.status)}</td>
             <td>${r.family ? esc(r.family.name) + " (" + esc(r.family.username) + ")" : "-"}</td>
             <td class="nowrap">${r.family ? esc(r.family.phone) || "-" : "-"}</td>
-            <td class="nowrap">${r.hall ? esc(r.hall.hallNumber) : "-"}</td>
+            <td class="nowrap">${r.hall ? esc(r.hall.name) + (r.hall.feature ? " · " + esc(r.hall.feature) : "") : "-"}</td>
             <td class="nowrap">${fmtDay(r.createdAt)}</td>
             <td class="actions">
               ${r.status === "pending" ? `

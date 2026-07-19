@@ -4,9 +4,9 @@ const env = require("./config/env");
 const { connectDB, disconnectDB } = require("./config/db");
 const Notice = require("./models/Notice");
 const Product = require("./models/Product");
-const Hall = require("./models/Hall");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureAdmin } = require("./utils/ensureAdmin");
+const { ensureHalls } = require("./utils/ensureHalls");
 
 async function seedAdmin() {
   const r = await ensureAdmin();
@@ -58,19 +58,9 @@ async function seedNotice() {
 }
 
 async function seedHalls() {
-  const count = await Hall.countDocuments();
-  if (count > 0) {
-    console.log(`- 빈소 ${count}건 존재 (시드 건너뜀)`);
-    return;
-  }
-  const halls = [
-    { hallNumber: "특1호실", status: "available" },
-    { hallNumber: "1호실", status: "available" },
-    { hallNumber: "2호실", status: "available" },
-    { hallNumber: "3호실", status: "available" },
-  ];
-  await Hall.insertMany(halls);
-  console.log(`+ 샘플 빈소 ${halls.length}건 생성`);
+  const r = await ensureHalls();
+  if (r.migrated) console.log("+ 구 빈소 데이터를 규격 카탈로그 구조로 전환");
+  console.log(`+ 빈소 규격 ${r.total}건 (신규 ${r.created})`);
 }
 
 async function main() {

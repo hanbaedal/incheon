@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 // 추모글 / 헌화
 const memorialSchema = new mongoose.Schema(
   {
-    hallId: { type: mongoose.Schema.Types.ObjectId, ref: "Hall", required: true, index: true },
+    hallUsageId: { type: mongoose.Schema.Types.ObjectId, ref: "HallUsage", required: true, index: true },
     author: { type: String, required: true, trim: true }, // 작성자
     relation: { type: String, trim: true, default: "" }, // 고인과의 관계
     message: { type: String, required: true, trim: true },
@@ -31,7 +31,7 @@ memorialSchema.methods.verifyPassword = function verifyPassword(plain) {
 memorialSchema.methods.toJSONSafe = function toJSONSafe() {
   return {
     id: this._id,
-    hallId: this.hallId,
+    hallUsageId: this.hallUsageId,
     author: this.author,
     relation: this.relation,
     message: this.message,

@@ -2,97 +2,89 @@
 
 const express = require("express");
 const Hall = require("../models/Hall");
+const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin } = require("../middleware/auth");
+const { usageToPublicJSON } = require("../utils/hallFormat");
+const { computeHallAvailability, autoCompletePastFunerals } = require("../utils/hallAvailability");
 
 const router = express.Router();
 
-function genFamilyCode() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-// 공개: 빈소 현황 (민감정보 제외)
+// 공개: 현재 이용 중인 빈소 현황 (HallUsage 기준)
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const filter = {};
-    if (req.query.status) filter.status = req.query.status;
-    const halls = await Hall.find(filter).sort({ hallNumber: 1 });
-    res.json({ items: halls.map((h) => h.toPublicJSON()) });
+    await autoCompletePastFunerals();
+    const filter = { status: "active" };
+    if (req.query.status === "in-use") filter.status = "active";
+    else if (req.query.status === "completed") filter.status = "completed";
+
+    const usages = await HallUsage.find(filter)
+      .sort({ updatedAt: -1 })
+      .populate("hallId");
+    res.json({ items: usages.map((u) => usageToPublicJSON(u, u.hallId)) });
   })
 );
 
-// 공개: 빈소 검색 (고인명/상주명/호실)
+// 공개: 빈소 검색 (고인명/상주명/규격명)
 router.get(
   "/search",
   asyncHandler(async (req, res) => {
     const q = String(req.query.q || "").trim();
     if (!q) return res.json({ items: [] });
+    await autoCompletePastFunerals();
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+
     const halls = await Hall.find({
-      status: "in-use",
-      $or: [{ deceasedName: rx }, { chiefMourner: rx }, { hallNumber: rx }],
-    }).sort({ hallNumber: 1 });
-    res.json({ items: halls.map((h) => h.toPublicJSON()) });
+      $or: [{ name: rx }, { feature: rx }, { code: rx }],
+    }).select("_id");
+    const hallIds = halls.map((h) => h._id);
+
+    const usages = await HallUsage.find({
+      status: "active",
+      $or: [
+        { deceasedName: rx },
+        { chiefMourner: rx },
+        { hallId: { $in: hallIds } },
+      ],
+    })
+      .sort({ updatedAt: -1 })
+      .populate("hallId");
+
+    res.json({ items: usages.map((u) => usageToPublicJSON(u, u.hallId)) });
   })
 );
 
-// 관리자: 전체 목록 (familyCode 포함)
+// 공개: 빈소 가능 일자 (발인 일자 역산)
+router.get(
+  "/availability",
+  asyncHandler(async (req, res) => {
+    res.json(await computeHallAvailability());
+  })
+);
+
+// 관리자: 빈소 규격(카탈로그) 목록
 router.get(
   "/admin/all",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const halls = await Hall.find({}).sort({ hallNumber: 1 });
+    const halls = await Hall.find({}).sort({ sortOrder: 1, name: 1 });
     res.json({ items: halls.map((h) => h.toAdminJSON()) });
   })
 );
 
-// 관리자: 빈소 등록
-router.post(
-  "/",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const body = req.body || {};
-    if (!body.hallNumber) return res.status(400).json({ error: "호실명을 입력해 주세요." });
-    const hall = new Hall(body);
-    if (hall.status === "in-use" && !hall.familyCode) hall.familyCode = genFamilyCode();
-    await hall.save();
-    res.status(201).json({ hall: hall.toAdminJSON() });
-  })
-);
-
-// 관리자: 빈소 수정
+// 관리자: 빈소 규격 수정
 router.patch(
   "/:id",
   requireAdmin,
   asyncHandler(async (req, res) => {
     const hall = await Hall.findById(req.params.id);
-    if (!hall) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
+    if (!hall) return res.status(404).json({ error: "빈소 규격을 찾을 수 없습니다." });
 
-    const allowed = [
-      "hallNumber", "deceasedName", "chiefMourner", "relationship", "age",
-      "enshrinedAt", "funeralDate", "funeralTime", "burialSite", "status", "familyCode",
-    ];
+    const allowed = ["name", "areaLabel", "capacity", "feature", "sortOrder", "active"];
     for (const k of allowed) if (k in (req.body || {})) hall[k] = req.body[k];
-
-    if (hall.status === "in-use" && !hall.familyCode) hall.familyCode = genFamilyCode();
-    if (hall.status === "available") {
-      // 발인 완료(비어있음) 처리 시 고인/상주 정보 및 코드 정리
-      hall.familyCode = "";
-    }
     await hall.save();
     res.json({ hall: hall.toAdminJSON() });
-  })
-);
-
-// 관리자: 빈소 삭제
-router.delete(
-  "/:id",
-  requireAdmin,
-  asyncHandler(async (req, res) => {
-    const r = await Hall.findByIdAndDelete(req.params.id);
-    if (!r) return res.status(404).json({ error: "빈소를 찾을 수 없습니다." });
-    res.json({ ok: true });
   })
 );
 

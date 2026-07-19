@@ -214,6 +214,7 @@ table.grid tr:hover td { background: #fafbfe; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--navy); font-size: 13px; }
 .field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.field input[type="date"], .field input[type="time"] { min-height: 42px; }
 .field textarea { min-height: 120px; resize: vertical; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .check { display: flex; align-items: center; gap: 8px; }

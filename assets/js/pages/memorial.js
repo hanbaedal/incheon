@@ -13,8 +13,6 @@ onSiteReady(function () {
       .map((h) => `<option value="${h.id}">${escHtml(h.hallNumber)}${h.deceasedName ? " - 故 " + escHtml(h.deceasedName) : ""}</option>`)
       .join("");
   }
-
-  /* 온라인 추모(cyber.html): 빈소 목록 → 추모글 열람 + 작성 */
   if (cyberArea) {
     cyberArea.innerHTML = '<div class="dyn-loading">불러오는 중…</div>';
     inUseHalls()

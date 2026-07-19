@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, required: true, unique: true }, // 예: 20260718-0001
     familyUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
-    hallId: { type: mongoose.Schema.Types.ObjectId, ref: "Hall", default: null },
+    hallUsageId: { type: mongoose.Schema.Types.ObjectId, ref: "HallUsage", default: null },
     items: { type: [orderItemSchema], default: [] },
     // 금액(원 단위, 정수)
     supplyAmount: { type: Number, default: 0 }, // 공급가액
@@ -78,7 +78,7 @@ orderSchema.methods.toJSONSafe = function toJSONSafe() {
     id: this._id,
     orderNumber: this.orderNumber,
     familyUserId: this.familyUserId,
-    hallId: this.hallId,
+    hallUsageId: this.hallUsageId,
     items: this.items,
     supplyAmount: this.supplyAmount,
     vatAmount: this.vatAmount,

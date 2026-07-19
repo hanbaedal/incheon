@@ -74,6 +74,7 @@
     ];
     let ACTIVE_CAT = "hall";
     let HALLS = [];
+    let HALL_SUMMARY = null;
     let MY_HALL_REQ = null;
     const cart = new Map();
 
@@ -129,11 +130,14 @@
 
     async function loadHallData() {
       try {
-        HALLS = (await mApi("/hall-requests/available")).items;
+        const d = await mApi("/hall-requests/available");
+        HALLS = d.items || [];
+        HALL_SUMMARY = d;
         const mine = (await mApi("/hall-requests/mine")).items;
         MY_HALL_REQ = mine.find((r) => r.status === "pending") || mine.find((r) => r.status === "approved") || null;
       } catch (e) {
         HALLS = [];
+        HALL_SUMMARY = null;
         MY_HALL_REQ = null;
       }
     }
@@ -158,22 +162,38 @@
       const area = document.getElementById("mainArea");
       if (ACTIVE_CAT === "hall") {
         let html = '<div class="card-head">빈소선택</div><div class="card-body">';
-        if (ME.hallId) {
+        if (ME.hallUsageId) {
           html += `<div class="notice-box">배정된 빈소가 있습니다. 아래 카테고리에서 장례 서비스를 예약해 주세요.</div>`;
         } else if (MY_HALL_REQ) {
           const st = MY_HALL_REQ.status === "pending" ? "승인 대기 중" : (MY_HALL_REQ.status === "approved" ? "승인 완료" : "거절됨");
-          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && MY_HALL_REQ.hall.hallNumber) || "-")}</b> · 상태: ${st}</div>`;
+          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && (MY_HALL_REQ.hall.name || MY_HALL_REQ.hall.hallNumber)) || "-")}</b> · 상태: ${st}</div>`;
         }
-        if (!ME.hallId && (!MY_HALL_REQ || MY_HALL_REQ.status === "rejected")) {
+        if (!ME.hallUsageId && (!MY_HALL_REQ || MY_HALL_REQ.status === "rejected")) {
           if (HALLS.length === 0) {
-            html += '<div class="state">현재 신청 가능한 빈소가 없습니다.</div>';
+            html += '<div class="state">현재 신청 가능한 빈소 규격이 없습니다.</div>';
           } else {
-            html += '<p style="margin:0 0 12px;color:var(--gray);font-size:14px">비어있는 빈소 중 선택하여 신청해 주세요. 관리자 승인 후 배정됩니다.</p>';
+            if (HALL_SUMMARY && HALL_SUMMARY.activePhysicalCount > 0) {
+              html += `<div class="notice-box" style="margin-bottom:12px">현재 빈소 <b>${HALL_SUMMARY.activePhysicalCount}/${HALL_SUMMARY.capacity}</b>실 이용 중`;
+              if (HALL_SUMMARY.freePhysicalSlots > 0) {
+                html += ` · <b>${HALL_SUMMARY.freePhysicalSlots}</b>실 즉시 배정 가능`;
+              } else if (HALL_SUMMARY.nextAvailableLabel) {
+                html += ` · ${mEsc(HALL_SUMMARY.nextAvailableLabel)}`;
+              }
+              html += "</div>";
+            }
+            html += '<p style="margin:0 0 12px;color:var(--gray);font-size:14px">발인 일정을 기준으로 이용 가능 일자를 안내합니다. 아래에서 규격을 선택해 신청해 주세요.</p>';
             HALLS.forEach((h) => {
+              const can = h.canRequestNow !== false;
+              const avail = h.availableLabel ? `<small style="color:${can ? "var(--navy)" : "#b45309"}">${mEsc(h.availableLabel)}</small>` : "";
               html += `
                 <div class="prod">
-                  <div class="info"><b>${mEsc(h.hallNumber)}</b><small>현재 비어있음</small></div>
-                  <button class="btn btn-sm btn-primary" data-hall="${h.id}">신청</button>
+                  <div class="info">
+                    <b>${mEsc(h.name || h.hallNumber)}</b>
+                    <small>${mEsc(h.areaLabel || "")}${h.capacity ? " · " + mEsc(h.capacity) : ""}</small>
+                    <small>${mEsc(h.feature || "")}</small>
+                    ${avail}
+                  </div>
+                  <button class="btn btn-sm btn-primary" data-hall="${h.id}" ${can ? "" : "disabled"}>${can ? "신청" : "대기"}</button>
                 </div>`;
             });
           }

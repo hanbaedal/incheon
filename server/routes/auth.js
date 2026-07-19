@@ -41,7 +41,7 @@ router.post(
       uid: String(user._id),
       role: user.role,
       name: user.name,
-      hallId: user.hallId ? String(user.hallId) : null,
+      hallUsageId: user.hallUsageId ? String(user.hallUsageId) : null,
     });
     res.json({ user: user.toSafeJSON() });
   })
