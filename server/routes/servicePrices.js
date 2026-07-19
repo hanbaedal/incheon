@@ -27,6 +27,17 @@ router.get(
 );
 
 router.post(
+  "/admin/sync",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { upsertServicePrices } = require("../utils/ensureServicePrices");
+    const result = await upsertServicePrices();
+    const items = await ServicePrice.find({ active: true }).sort({ sortOrder: 1, group: 1, name: 1 });
+    res.json({ ok: true, result, items: items.map((s) => s.toJSONSafe()) });
+  })
+);
+
+router.post(
   "/",
   requireAdmin,
   asyncHandler(async (req, res) => {

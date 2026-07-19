@@ -1447,9 +1447,14 @@ function accessoryForm(a) {
 
 async function renderServicePrices() {
   const d = await api("/service-prices/admin/all");
+  const emptyHint = d.items.length === 0
+    ? `<div class="notice-box">기본 항목(관리비·폐기물·도우미)이 자동 등록되지 않았습니다. 아래 <strong>기본 3건 등록</strong> 버튼을 눌러 주세요.</div>`
+    : "";
   content.innerHTML = `
+    ${emptyHint}
     <div class="toolbar">
       <button class="btn btn-primary" id="addServicePrice">+ 서비스 항목 등록</button>
+      <button class="btn" id="syncServicePrices">기본 3건 등록</button>
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 항목이 없습니다.</div>' : `
@@ -1473,6 +1478,20 @@ async function renderServicePrices() {
       </table>`}
     </div></div>`;
   document.getElementById("addServicePrice").addEventListener("click", () => servicePriceForm(null));
+  const syncBtn = document.getElementById("syncServicePrices");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", async () => {
+      syncBtn.disabled = true;
+      try {
+        const r = await api("/service-prices/admin/sync", { method: "POST" });
+        toast(`기본 항목 ${(r.items || []).length}건 등록되었습니다.`);
+        route();
+      } catch (err) {
+        toast(err.message);
+        syncBtn.disabled = false;
+      }
+    });
+  }
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => servicePriceForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>

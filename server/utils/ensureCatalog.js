@@ -9,7 +9,6 @@ const FlowerItem = require("../models/FlowerItem");
 const PhotoItem = require("../models/PhotoItem");
 const DressItem = require("../models/DressItem");
 const HearseItem = require("../models/HearseItem");
-const ServicePrice = require("../models/ServicePrice");
 const COFFIN_SAMPLES = require("../constants/coffinSamples");
 const HOENGDAE_SAMPLES = require("../constants/hoengdaeSamples");
 const SHROUD_SAMPLES = require("../constants/shroudSamples");
@@ -19,7 +18,6 @@ const FLOWER_SAMPLES = require("../constants/flowerSamples");
 const PHOTO_SAMPLES = require("../constants/photoSamples");
 const DRESS_SAMPLES = require("../constants/dressSamples");
 const HEARSE_SAMPLES = require("../constants/hearseSamples");
-const SERVICE_PRICE_SAMPLES = require("../constants/servicePriceSamples");
 const { upsertByName } = require("./catalogUpsert");
 
 const DEFAULTS = {
@@ -163,40 +161,6 @@ async function upsertHearseItems() {
   return { created, updated, total: HEARSE_SAMPLES.length };
 }
 
-async function upsertServicePrices() {
-  const HIDDEN_GROUPS = ["주차비", "사진"];
-  let created = 0;
-  let updated = 0;
-  for (const sample of SERVICE_PRICE_SAMPLES) {
-    const r = await ServicePrice.updateOne(
-      { group: sample.group, name: sample.name },
-      {
-        $set: {
-          group: sample.group,
-          name: sample.name,
-          unit: sample.unit || "-",
-          price: sample.price != null ? sample.price : 0,
-          note: sample.note || "-",
-          settlementType: sample.settlementType || "prepaid",
-          orderable: sample.orderable !== false,
-          sortOrder: sample.sortOrder || 0,
-          active: true,
-        },
-        $setOnInsert: { taxable: true },
-      },
-      { upsert: true, runValidators: true }
-    );
-    if (r.upsertedCount) created++;
-    else if (r.modifiedCount) updated++;
-  }
-  const hidden = await ServicePrice.updateMany(
-    { group: { $in: HIDDEN_GROUPS } },
-    { $set: { active: false, orderable: false } }
-  );
-  if (hidden.modifiedCount) updated += hidden.modifiedCount;
-  return { created, updated, total: SERVICE_PRICE_SAMPLES.length };
-}
-
 async function ensureAmcCatalog() {
   const coffins = await upsertByName(Coffin, COFFIN_SAMPLES, DEFAULTS.coffin);
   const hoengdae = await upsertByName(Hoengdae, HOENGDAE_SAMPLES, DEFAULTS.hoengdae);
@@ -207,8 +171,7 @@ async function ensureAmcCatalog() {
   const photoItems = await upsertPhotoItems();
   const dressItems = await upsertDressItems();
   const hearseItems = await upsertHearseItems();
-  const servicePrices = await upsertServicePrices();
-  return { coffins, hoengdae, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems, servicePrices };
+  return { coffins, hoengdae, shrouds, accessories, foodItems, flowerItems, photoItems, dressItems, hearseItems };
 }
 
-module.exports = { ensureAmcCatalog, upsertByName, upsertFoodItems, upsertFlowerItems, upsertPhotoItems, upsertDressItems, upsertHearseItems, upsertServicePrices };
+module.exports = { ensureAmcCatalog, upsertByName, upsertFoodItems, upsertFlowerItems, upsertPhotoItems, upsertDressItems, upsertHearseItems };
