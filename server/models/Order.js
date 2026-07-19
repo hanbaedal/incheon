@@ -5,10 +5,14 @@ const mongoose = require("mongoose");
 const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    catKey: { type: String, default: "" },
     name: { type: String, required: true },
     unit: { type: String, default: "개" },
     price: { type: Number, required: true, min: 0 }, // 단가(공급가)
     qty: { type: Number, required: true, min: 1 },
+    finalQty: { type: Number, default: null }, // 사후정산 실사용 수량
+    settlementType: { type: String, enum: ["prepaid", "postpaid"], default: "prepaid" },
+    settled: { type: Boolean, default: false },
     taxable: { type: Boolean, default: true },
   },
   { _id: false }
@@ -41,6 +45,7 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     memo: { type: String, default: "" },
+    postpaidSettledAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -49,7 +54,13 @@ orderSchema.methods.recalcTotals = function recalcTotals() {
   let supply = 0;
   let vat = 0;
   for (const it of this.items) {
-    const line = Math.round(it.price * it.qty);
+    let billQty = 0;
+    if (it.settlementType === "postpaid") {
+      if (it.settled && it.finalQty != null) billQty = Math.max(0, it.finalQty);
+    } else {
+      billQty = it.qty;
+    }
+    const line = Math.round(it.price * billQty);
     supply += line;
     if (it.taxable) vat += Math.round(line * 0.1);
   }
@@ -72,6 +83,7 @@ orderSchema.methods.toJSONSafe = function toJSONSafe() {
     buyer: this.buyer,
     status: this.status,
     memo: this.memo,
+    postpaidSettledAt: this.postpaidSettledAt,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
   };

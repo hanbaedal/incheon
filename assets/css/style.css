@@ -467,3 +467,30 @@ p { margin: 0 0 1em; }
   .sub-hero-title { font-size: 27px; }
   .footer-links { flex-wrap: wrap; gap: 14px; }
 }
+
+/* =============== 장례서비스 동적 상품 카드 =============== */
+.service-prod-loading, .service-prod-empty {
+  text-align: center; color: var(--gray); padding: 24px 0; font-size: 14px;
+}
+.service-prod-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px;
+}
+.service-prod-card {
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff;
+  box-shadow: 0 2px 8px rgba(31,42,68,.04);
+}
+.service-prod-img {
+  width: 100%; height: 160px; object-fit: cover; display: block; background: #f3f4f6;
+}
+.service-prod-img.placeholder {
+  display: grid; place-items: center; color: var(--gray); font-size: 13px;
+}
+.service-prod-body { padding: 14px 16px 16px; }
+.service-prod-body h4 { margin: 0 0 8px; font-size: 16px; color: var(--navy); }
+.service-prod-body p { margin: 0 0 10px; font-size: 13.5px; color: var(--gray); min-height: 40px; }
+.service-prod-price { font-weight: 700; color: var(--navy); font-size: 15px; }
+.service-prod-price span { font-weight: 500; color: var(--gray); font-size: 13px; }
+.service-prod-badge {
+  display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 20px;
+  background: #fdf3e0; color: #b8860b; font-size: 12px; font-weight: 600;
+}

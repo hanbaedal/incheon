@@ -10,16 +10,15 @@ const { nextOrderNumber } = require("../utils/orderNumber");
 
 const router = express.Router();
 
-// 상주: 주문 생성
+// 상주: 주문(예약) 생성
 router.post(
   "/",
   requireFamily,
   asyncHandler(async (req, res) => {
     const { items, buyer, memo } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: "주문 항목이 없습니다." });
+      return res.status(400).json({ error: "예약 항목이 없습니다." });
     }
-    // 상품 정보를 서버에서 다시 조회(가격 위변조 방지)
     const ids = items.map((i) => i.productId);
     const products = await Product.find({ _id: { $in: ids }, active: true });
     const map = new Map(products.map((p) => [String(p._id), p]));
@@ -29,7 +28,19 @@ router.post(
       const p = map.get(String(it.productId));
       if (!p) return res.status(400).json({ error: "존재하지 않거나 판매 종료된 상품이 포함되어 있습니다." });
       const qty = Math.max(1, parseInt(it.qty, 10) || 1);
-      orderItems.push({ productId: p._id, name: p.name, unit: p.unit, price: p.price, qty, taxable: p.taxable });
+      const isPostpaid = p.settlementType === "postpaid";
+      orderItems.push({
+        productId: p._id,
+        catKey: p.catKey,
+        name: p.name,
+        unit: p.unit,
+        price: p.price,
+        qty,
+        finalQty: isPostpaid ? null : qty,
+        settlementType: p.settlementType || "prepaid",
+        settled: !isPostpaid,
+        taxable: p.taxable,
+      });
     }
 
     const me = await User.findById(req.user.uid);
@@ -117,6 +128,45 @@ router.patch(
     if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
     if (status) order.status = status;
     if (typeof memo === "string") order.memo = memo;
+    await order.save();
+    res.json({ order: order.toJSONSafe() });
+  })
+);
+
+// 관리자: 사후정산 (발인 전 수기 정산)
+router.patch(
+  "/:id/settle",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { items } = req.body || {};
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "정산할 품목 정보가 없습니다." });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
+
+    const settleMap = new Map(items.map((it) => [String(it.productId), it]));
+    let changed = false;
+
+    order.items.forEach((it) => {
+      if (it.settlementType !== "postpaid") return;
+      const input = settleMap.get(String(it.productId));
+      if (!input) return;
+      const finalQty = Math.max(0, parseInt(input.finalQty, 10) || 0);
+      it.finalQty = finalQty;
+      it.settled = true;
+      changed = true;
+    });
+
+    if (!changed) return res.status(400).json({ error: "정산할 사후정산 품목이 없습니다." });
+
+    const allPostpaidSettled = order.items
+      .filter((it) => it.settlementType === "postpaid")
+      .every((it) => it.settled);
+    if (allPostpaidSettled) order.postpaidSettledAt = new Date();
+
+    order.recalcTotals();
     await order.save();
     res.json({ order: order.toJSONSafe() });
   })

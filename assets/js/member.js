@@ -38,6 +38,17 @@ function mToast(msg) {
 }
 
 const MEMBER_STATUS = { pending: "접수", confirmed: "확인", paid: "결제완료", canceled: "취소" };
+const RESERVE_CATS = [
+  { key: "hall", label: "빈소선택", type: "hall" },
+  { key: "coffin", label: "장례 물품 · 관·횡대", type: "product" },
+  { key: "shroud", label: "장례 물품 · 수의", type: "product" },
+  { key: "etc", label: "장례 물품 · 염습·부속", type: "product" },
+  { key: "food", label: "접객 음식", type: "product" },
+  { key: "flower", label: "근조 화환", type: "product" },
+  { key: "photo", label: "영정 사진", type: "product" },
+  { key: "dress", label: "상복 대여", type: "product" },
+  { key: "hearse", label: "운구·차량", type: "product" },
+];
 
 /* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' */
 async function memberHeader(active) {
@@ -53,8 +64,8 @@ async function memberHeader(active) {
     host.innerHTML = `
       <div class="brand"><strong>상주 전용 서비스</strong><span>근로복지공단 인천병원 장례식장</span></div>
       <nav class="m-nav">
-        <a href="/pages/member/shop.html" class="${active === "shop" ? "active" : ""}">상품 주문</a>
-        <a href="/pages/member/orders.html" class="${active === "orders" ? "active" : ""}">내 주문</a>
+        <a href="/pages/member/shop.html" class="${active === "shop" ? "active" : ""}">장례 예약</a>
+        <a href="/pages/member/orders.html" class="${active === "orders" ? "active" : ""}">내 예약</a>
         <a href="/" target="_blank">홈페이지</a>
         <span class="who">${mEsc(me.name)} 님</span>
         <button id="mLogout">로그아웃</button>

@@ -10,8 +10,8 @@
 <body>
   <header id="mHeader"></header>
   <div class="m-wrap">
-    <h1 class="m-title">내 주문 내역</h1>
-    <p class="m-lead">주문하신 내역과 처리 상태를 확인하실 수 있습니다.</p>
+    <h1 class="m-title">내 예약 내역</h1>
+    <p class="m-lead">예약하신 내역과 처리 상태를 확인하실 수 있습니다. 사후정산 품목은 발인 전 관리자가 실사용 수량을 정산합니다.</p>
     <div id="okBox"></div>
     <div id="ordArea" class="card"><div class="state">주문 내역을 불러오는 중…</div></div>
   </div>
@@ -27,7 +27,7 @@
       const ok = new URLSearchParams(location.search).get("ok");
       if (ok) {
         document.getElementById("okBox").innerHTML =
-          `<div class="notice-box" style="background:#e8f5ee;border-color:#bfe2cd;color:#256b4c">주문이 정상 접수되었습니다. (주문번호 ${mEsc(ok)})</div>`;
+          `<div class="notice-box" style="background:#e8f5ee;border-color:#bfe2cd;color:#256b4c">예약이 정상 접수되었습니다. (예약번호 ${mEsc(ok)})</div>`;
       }
       await load();
     })();
@@ -37,7 +37,7 @@
       try {
         const items = (await mApi("/orders/mine")).items;
         if (items.length === 0) {
-          area.innerHTML = '<div class="state">주문 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">상품 주문하기 →</a></div>';
+          area.innerHTML = '<div class="state">예약 내역이 없습니다. <a href="/pages/member/shop.html" style="color:var(--gold);font-weight:600">장례 예약하기 →</a></div>';
           return;
         }
         area.innerHTML = `

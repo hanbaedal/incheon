@@ -88,6 +88,7 @@ const VIEWS = {
   dashboard: { title: "대시보드", render: renderDashboard },
   halls: { title: "빈소 관리", render: renderHalls },
   families: { title: "상주 계정 관리", render: renderFamilies },
+  hallRequests: { title: "빈소 신청", render: renderHallRequests },
   products: { title: "상품 관리", render: renderProducts },
   orders: { title: "주문 관리", render: renderOrders },
   notices: { title: "알림 소식", render: renderNotices },
@@ -111,6 +112,7 @@ async function route() {
   catch (e) { content.innerHTML = `<div class="empty">오류: ${esc(e.message)}</div>`; }
   refreshInquiryBadge();
   refreshOrderBadge();
+  refreshHallReqBadge();
 }
 window.addEventListener("hashchange", route);
 
@@ -132,8 +134,40 @@ async function refreshOrderBadge() {
   } catch (e) {}
 }
 
+async function refreshHallReqBadge() {
+  try {
+    const d = await api("/hall-requests/admin/all?status=pending");
+    const badge = document.getElementById("navHallReqBadge");
+    if (d.items.length > 0) { badge.style.display = "grid"; badge.textContent = d.items.length; }
+    else badge.style.display = "none";
+  } catch (e) {}
+}
+
 /* 금액 표시 */
 function won(n) { return (Number(n) || 0).toLocaleString("ko-KR") + "원"; }
+
+const CAT_KEYS = [
+  { key: "coffin", label: "관·횡대" },
+  { key: "shroud", label: "수의(壽衣)" },
+  { key: "etc", label: "염습·부속 용품" },
+  { key: "food", label: "접객 음식" },
+  { key: "flower", label: "근조 화환" },
+  { key: "photo", label: "영정 사진" },
+  { key: "dress", label: "상복 대여" },
+  { key: "hearse", label: "운구·차량" },
+];
+const SETTLEMENT_LABELS = { prepaid: "선결제", postpaid: "사후정산" };
+
+async function uploadImage(file) {
+  const fd = new FormData();
+  fd.append("image", file);
+  const res = await fetch("/api/images", { method: "POST", credentials: "same-origin", body: fd });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (res.status === 401) { location.href = "/admin/login.html"; throw new Error("unauthorized"); }
+  if (!res.ok) throw new Error((data && data.error) || "이미지 업로드에 실패했습니다.");
+  return data.image;
+}
 
 /* ---------- 대시보드 ---------- */
 async function renderDashboard() {
@@ -493,6 +527,62 @@ async function familyForm(u) {
   ]);
 }
 
+/* ---------- 빈소 신청 관리 ---------- */
+let hallReqFilter = "";
+async function renderHallRequests() {
+  const d = await api("/hall-requests/admin/all" + (hallReqFilter ? "?status=" + hallReqFilter : ""));
+  const statusTag = (s) => {
+    if (s === "pending") return '<span class="tag pending">대기</span>';
+    if (s === "approved") return '<span class="tag answered">승인</span>';
+    return '<span class="tag gray">거절</span>';
+  };
+  content.innerHTML = `
+    <div class="toolbar">
+      <select id="hallReqStatus">
+        <option value="">전체 상태</option>
+        <option value="pending" ${hallReqFilter === "pending" ? "selected" : ""}>대기</option>
+        <option value="approved" ${hallReqFilter === "approved" ? "selected" : ""}>승인</option>
+        <option value="rejected" ${hallReqFilter === "rejected" ? "selected" : ""}>거절</option>
+      </select>
+    </div>
+    <div class="panel"><div class="panel-body" style="padding:0">
+      ${d.items.length === 0 ? '<div class="empty">빈소 신청이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>상태</th><th>상주</th><th>연락처</th><th>신청 빈소</th><th>신청일</th><th class="right">관리</th></tr></thead>
+        <tbody>${d.items.map((r) => `
+          <tr>
+            <td>${statusTag(r.status)}</td>
+            <td>${r.family ? esc(r.family.name) + " (" + esc(r.family.username) + ")" : "-"}</td>
+            <td class="nowrap">${r.family ? esc(r.family.phone) || "-" : "-"}</td>
+            <td class="nowrap">${r.hall ? esc(r.hall.hallNumber) : "-"}</td>
+            <td class="nowrap">${fmtDay(r.createdAt)}</td>
+            <td class="actions">
+              ${r.status === "pending" ? `
+                <button class="btn btn-sm btn-primary" data-approve="${r.id}">승인</button>
+                <button class="btn btn-sm btn-danger" data-reject="${r.id}">거절</button>
+              ` : `<span class="muted">${esc(r.note) || "-"}</span>`}
+            </td>
+          </tr>`).join("")}</tbody>
+      </table>`}
+    </div></div>`;
+
+  document.getElementById("hallReqStatus").addEventListener("change", (e) => { hallReqFilter = e.target.value; renderHallRequests(); });
+  content.querySelectorAll("[data-approve]").forEach((b) =>
+    b.addEventListener("click", () => decideHallRequest(b.getAttribute("data-approve"), "approved")));
+  content.querySelectorAll("[data-reject]").forEach((b) =>
+    b.addEventListener("click", () => decideHallRequest(b.getAttribute("data-reject"), "rejected")));
+}
+
+async function decideHallRequest(id, status) {
+  const note = prompt(status === "approved" ? "승인 메모 (선택)" : "거절 사유 (선택)", "") || "";
+  try {
+    await api("/hall-requests/" + id, { method: "PATCH", body: { status, note } });
+    toast(status === "approved" ? "빈소 신청을 승인했습니다." : "빈소 신청을 거절했습니다.");
+    renderHallRequests();
+    refreshHallReqBadge();
+  } catch (err) { toast(err.message); }
+}
+
 /* ---------- 상품 관리 ---------- */
 async function renderProducts() {
   const d = await api("/products/admin/all");
@@ -501,16 +591,15 @@ async function renderProducts() {
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 상품이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>분류</th><th>상품명</th><th class="right">가격</th><th>단위</th><th>과세</th><th>노출</th><th>정렬</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>카테고리</th><th>분류</th><th>상품명</th><th class="right">가격</th><th>정산</th><th>노출</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((p) => `
           <tr>
+            <td class="nowrap">${esc((CAT_KEYS.find((c) => c.key === p.catKey) || {}).label || p.catKey || "-")}</td>
             <td class="nowrap">${esc(p.category)}</td>
-            <td><b>${esc(p.name)}</b></td>
-            <td class="right nowrap">${won(p.price)}</td>
-            <td>${esc(p.unit)}</td>
-            <td>${p.taxable ? "과세" : "면세"}</td>
+            <td><b>${esc(p.name)}</b>${p.imageUrl ? `<br><img src="${esc(p.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
+            <td class="right nowrap">${won(p.price)} / ${esc(p.unit)}</td>
+            <td>${SETTLEMENT_LABELS[p.settlementType] || p.settlementType}</td>
             <td>${p.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
-            <td>${p.sortOrder}</td>
             <td class="actions">
               <button class="btn btn-sm" data-edit='${esc(JSON.stringify(p))}'>수정</button>
               <button class="btn btn-sm btn-danger" data-del="${p.id}" data-name="${esc(p.name)}">삭제</button>
@@ -531,16 +620,27 @@ async function renderProducts() {
 
 function productForm(p) {
   const e = p || {};
+  const catOpts = CAT_KEYS.map((c) => `<option value="${c.key}" ${e.catKey === c.key ? "selected" : ""}>${c.label}</option>`).join("");
+  const settleOpts = Object.keys(SETTLEMENT_LABELS).map((k) =>
+    `<option value="${k}" ${e.settlementType === k ? "selected" : ""}>${SETTLEMENT_LABELS[k]}</option>`).join("");
   openModal(p ? "상품 수정" : "상품 등록", `
     <div class="field-row">
-      <div class="field"><label>분류 *</label><input id="f_category" value="${esc(e.category || "")}" placeholder="예: 관·수의 / 접객 음식" /></div>
+      <div class="field"><label>카테고리 *</label><select id="f_catKey">${catOpts}</select></div>
+      <div class="field"><label>표시 분류 *</label><input id="f_category" value="${esc(e.category || "")}" placeholder="예: 접객 음식" /></div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>상품명 *</label><input id="f_name" value="${esc(e.name || "")}" /></div>
+      <div class="field"><label>정산 방식</label><select id="f_settlementType">${settleOpts}</select></div>
     </div>
     <div class="field-row">
       <div class="field"><label>가격(원) *</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : ""}" /></div>
       <div class="field"><label>단위</label><input id="f_unit" value="${esc(e.unit || "개")}" /></div>
     </div>
     <div class="field"><label>설명</label><textarea id="f_description">${esc(e.description || "")}</textarea></div>
+    <div class="field"><label>상품 이미지</label>
+      <input type="file" id="f_imageFile" accept="image/*" />
+      ${e.imageUrl ? `<p class="muted" style="margin-top:8px"><img src="${esc(e.imageUrl)}" alt="" style="max-width:120px;border-radius:6px"><br>현재 이미지 유지. 새 파일 선택 시 교체.</p>` : ""}
+    </div>
     <div class="field-row">
       <div class="field"><label>정렬 순서</label><input id="f_sortOrder" type="number" value="${e.sortOrder != null ? e.sortOrder : 0}" /></div>
       <div class="field" style="display:flex;gap:18px;align-items:flex-end">
@@ -552,12 +652,24 @@ function productForm(p) {
     { label: "취소", onClick: closeModal },
     { label: "저장", cls: "btn-primary", onClick: async () => {
       const body = {
-        category: val("f_category"), name: val("f_name"),
+        catKey: val("f_catKey"), category: val("f_category"), name: val("f_name"),
+        settlementType: val("f_settlementType"),
         price: Number(val("f_price")), unit: val("f_unit") || "개",
         description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
         taxable: checked("f_taxable"), active: checked("f_active"),
       };
-      if (!body.category || !body.name || !(body.price >= 0)) { toast("분류·상품명·가격을 입력하세요."); return; }
+      if (!body.catKey || !body.category || !body.name || !(body.price >= 0)) {
+        toast("카테고리·분류·상품명·가격을 입력하세요."); return;
+      }
+      const fileEl = document.getElementById("f_imageFile");
+      if (fileEl && fileEl.files && fileEl.files[0]) {
+        try {
+          const img = await uploadImage(fileEl.files[0]);
+          body.imageId = img.id;
+        } catch (err) { toast(err.message); return; }
+      } else if (p && p.imageId) {
+        body.imageId = p.imageId;
+      }
       try {
         if (p) await api("/products/" + p.id, { method: "PATCH", body });
         else await api("/products", { method: "POST", body });
@@ -609,27 +721,44 @@ async function renderOrders() {
 }
 
 function orderDetail(o) {
-  const rows = o.items.map((it) => `
+  const rows = o.items.map((it, idx) => `
     <tr>
-      <td>${esc(it.name)}</td>
+      <td>${esc(it.name)}${it.settlementType === "postpaid" ? ' <span class="tag pending">사후정산</span>' : ""}</td>
       <td class="right nowrap">${won(it.price)}</td>
       <td class="right">${it.qty}${esc(it.unit)}</td>
-      <td class="right nowrap">${won(it.price * it.qty)}</td>
+      <td class="right">${it.settlementType === "postpaid" ? (it.settled ? (it.finalQty + esc(it.unit)) : "미정산") : "-"}</td>
+      <td class="right nowrap">${it.settlementType === "postpaid" && !it.settled ? "-" : won(it.price * (it.settlementType === "postpaid" ? (it.finalQty || 0) : it.qty))}</td>
     </tr>`).join("");
+
+  const postpaidItems = o.items.filter((it) => it.settlementType === "postpaid" && !it.settled);
+  const settleHtml = postpaidItems.length > 0 ? `
+    <div class="block" style="margin-top:16px;padding:12px;background:#fafbfc;border:1px solid var(--line);border-radius:8px">
+      <h4 style="margin:0 0 10px">사후정산 (발인 전 수기 정산)</h4>
+      ${postpaidItems.map((it) => `
+        <div class="field-row" style="align-items:center;margin-bottom:8px">
+          <div class="field" style="flex:1"><label>${esc(it.name)} (예약 ${it.qty}${esc(it.unit)})</label></div>
+          <div class="field" style="max-width:120px">
+            <input type="number" min="0" id="settle_${it.productId}" placeholder="실사용" value="${it.qty}" />
+          </div>
+        </div>`).join("")}
+      <button class="btn btn-primary btn-sm" id="settleBtn">정산 반영</button>
+    </div>` : (o.postpaidSettledAt ? `<p class="muted">사후정산 완료: ${fmt(o.postpaidSettledAt)}</p>` : "");
+
   openModal(`주문 상세 · ${esc(o.orderNumber)}`, `
     <div class="detail-row"><b>상주</b><span>${o.family ? esc(o.family.name) + " (" + esc(o.family.username) + ")" : "-"}</span></div>
     <div class="detail-row"><b>빈소</b><span>${o.hall ? esc(o.hall.hallNumber) + (o.hall.deceasedName ? " / " + esc(o.hall.deceasedName) : "") : "-"}</span></div>
     <div class="detail-row"><b>주문일</b><span>${fmt(o.createdAt)}</span></div>
     <table class="grid" style="margin:12px 0">
-      <thead><tr><th>품목</th><th class="right">단가</th><th class="right">수량</th><th class="right">금액</th></tr></thead>
+      <thead><tr><th>품목</th><th class="right">단가</th><th class="right">예약</th><th class="right">실사용</th><th class="right">금액</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot>
-        <tr><td colspan="3" class="right">공급가액</td><td class="right nowrap">${won(o.supplyAmount)}</td></tr>
-        <tr><td colspan="3" class="right">부가세</td><td class="right nowrap">${won(o.vatAmount)}</td></tr>
-        <tr><td colspan="3" class="right"><b>합계</b></td><td class="right nowrap"><b>${won(o.totalAmount)}</b></td></tr>
+        <tr><td colspan="4" class="right">공급가액</td><td class="right nowrap">${won(o.supplyAmount)}</td></tr>
+        <tr><td colspan="4" class="right">부가세</td><td class="right nowrap">${won(o.vatAmount)}</td></tr>
+        <tr><td colspan="4" class="right"><b>합계</b></td><td class="right nowrap"><b>${won(o.totalAmount)}</b></td></tr>
       </tfoot>
     </table>
     ${o.memo ? `<div class="detail-row"><b>메모</b><span>${esc(o.memo)}</span></div>` : ""}
+    ${settleHtml}
     <div class="field"><label>상태 변경</label>
       <select id="f_status">
         ${Object.keys(ORDER_STATUS).map((k) => `<option value="${k}" ${o.status === k ? "selected" : ""}>${ORDER_STATUS[k]}</option>`).join("")}
@@ -647,6 +776,20 @@ function orderDetail(o) {
       catch (err) { toast(err.message); }
     } },
   ]);
+
+  const settleBtn = document.getElementById("settleBtn");
+  if (settleBtn) {
+    settleBtn.addEventListener("click", async () => {
+      const settleItems = postpaidItems.map((it) => ({
+        productId: it.productId,
+        finalQty: Number(document.getElementById("settle_" + it.productId).value) || 0,
+      }));
+      try {
+        await api("/orders/" + o.id + "/settle", { method: "PATCH", body: { items: settleItems } });
+        closeModal(); toast("사후정산이 반영되었습니다."); renderOrders();
+      } catch (err) { toast(err.message); }
+    });
+  }
 }
 
 /* ---------- 공통 삭제 확인 ---------- */

@@ -19,12 +19,19 @@ async function seedProducts() {
     return;
   }
   const samples = [
-    { category: "관·수의", name: "오동나무 관 (상)", price: 350000, unit: "개", sortOrder: 1 },
-    { category: "관·수의", name: "삼베 수의 (국내산)", price: 800000, unit: "벌", sortOrder: 2 },
-    { category: "접객 음식", name: "육개장 (1인)", price: 9000, unit: "식", sortOrder: 3 },
-    { category: "접객 음식", name: "편육 모둠", price: 60000, unit: "판", sortOrder: 4 },
-    { category: "근조 화환", name: "3단 근조화환", price: 90000, unit: "개", sortOrder: 5 },
-    { category: "운구·차량", name: "리무진 운구차", price: 400000, unit: "대", sortOrder: 6 },
+    { category: "관·횡대", catKey: "coffin", name: "오동나무 관 (상)", description: "가볍고 결이 고운 국산 오동나무 관", price: 350000, unit: "개", sortOrder: 1 },
+    { category: "관·횡대", catKey: "coffin", name: "향나무 관", description: "은은한 향과 견고함, 고급형", price: 480000, unit: "개", sortOrder: 2 },
+    { category: "수의(壽衣)", catKey: "shroud", name: "삼베 수의 (국내산)", description: "국내산 삼베 원단 수의", price: 800000, unit: "벌", sortOrder: 1 },
+    { category: "염습·부속 용품", catKey: "etc", name: "염지 세트", description: "염습용 기본 부속품", price: 120000, unit: "세트", sortOrder: 1 },
+    { category: "접객 음식", catKey: "food", name: "육개장 (1인)", description: "조문객 접대용 육개장", price: 9000, unit: "식", sortOrder: 1 },
+    { category: "접객 음식", catKey: "food", name: "편육 모둠", description: "편육·나물 등 모둠 상차림", price: 60000, unit: "판", sortOrder: 2 },
+    { category: "접객 음식", catKey: "food", name: "생수", description: "500ml 생수 — 소비 후 발인 전 정산", price: 500, unit: "병", settlementType: "postpaid", sortOrder: 3 },
+    { category: "접객 음식", catKey: "food", name: "음료수", description: "캔/페트 음료 — 소비 후 발인 전 정산", price: 1500, unit: "개", settlementType: "postpaid", sortOrder: 4 },
+    { category: "접객 음식", catKey: "food", name: "주류(별도)", description: "맥주·소주 등 — 소비 후 발인 전 정산", price: 5000, unit: "병", settlementType: "postpaid", sortOrder: 5 },
+    { category: "근조 화환", catKey: "flower", name: "3단 근조화환", description: "조문객용 3단 근조화환", price: 90000, unit: "개", sortOrder: 1 },
+    { category: "영정 사진", catKey: "photo", name: "영정사진 (14R)", description: "고인 영정사진 제작 및 액자", price: 80000, unit: "점", sortOrder: 1 },
+    { category: "상복 대여", catKey: "dress", name: "남성 상복 대여", description: "상·하의 세트 대여", price: 30000, unit: "벌", sortOrder: 1 },
+    { category: "운구·차량", catKey: "hearse", name: "리무진 운구차", description: "발인 운구 리무진", price: 400000, unit: "대", sortOrder: 1 },
   ];
   await Product.insertMany(samples);
   console.log(`+ 샘플 상품 ${samples.length}건 생성`);

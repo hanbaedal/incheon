@@ -4,24 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <title>상품 주문 | 상주 전용 서비스</title>
+  <title>장례 예약 | 상주 전용 서비스</title>
   <link rel="stylesheet" href="../../assets/css/member.css" />
 </head>
 <body>
   <header id="mHeader"></header>
   <div class="m-wrap">
-    <h1 class="m-title">장례 용품·서비스 주문</h1>
-    <p class="m-lead">필요하신 품목을 담아 온라인으로 주문하실 수 있습니다. 주문 내역은 관리자 확인 후 처리됩니다.</p>
+    <h1 class="m-title">장례 서비스 예약</h1>
+    <p class="m-lead">빈소 선택부터 장례 물품·접객 음식·화환·영정·상복·운구까지 미리 예약하실 수 있습니다. 생수·음료수·주류는 소비 후 발인 전 수기 정산됩니다.</p>
+
+    <div class="reserve-tabs" id="catTabs"></div>
 
     <div class="shop-grid">
-      <div id="prodArea" class="card"><div class="state">상품을 불러오는 중…</div></div>
-
+      <div id="mainArea" class="card"><div class="state">불러오는 중…</div></div>
       <div class="card cart">
-        <div class="card-head">장바구니</div>
+        <div class="card-head">예약 요약</div>
         <div class="card-body">
-          <div id="cartArea"><div class="cart-empty">담긴 상품이 없습니다.</div></div>
+          <div id="cartArea"><div class="cart-empty">담긴 항목이 없습니다.</div></div>
           <div id="cartSum"></div>
-          <button class="btn btn-gold btn-block" id="orderBtn" style="margin-top:14px" disabled>주문하기</button>
+          <button class="btn btn-gold btn-block" id="orderBtn" style="margin-top:14px" disabled>예약 제출</button>
         </div>
       </div>
     </div>
@@ -31,48 +32,118 @@
   <script>
     let ME = null;
     let PRODUCTS = [];
-    const cart = new Map(); // productId -> qty
+    let ACTIVE_CAT = "hall";
+    let HALLS = [];
+    let MY_HALL_REQ = null;
+    const cart = new Map();
 
     (async function () {
       ME = await memberHeader("shop");
       if (!ME) return;
+      renderTabs();
       try {
         PRODUCTS = (await mApi("/products")).items;
-        renderProducts();
+        await loadHallData();
+        renderMain();
       } catch (e) {
-        document.getElementById("prodArea").innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
+        document.getElementById("mainArea").innerHTML = `<div class="state">오류: ${mEsc(e.message)}</div>`;
       }
       document.getElementById("orderBtn").addEventListener("click", placeOrder);
     })();
 
-    function renderProducts() {
-      const area = document.getElementById("prodArea");
-      if (PRODUCTS.length === 0) { area.innerHTML = '<div class="state">현재 판매 중인 상품이 없습니다.</div>'; return; }
-      const byCat = {};
-      PRODUCTS.forEach((p) => { (byCat[p.category] = byCat[p.category] || []).push(p); });
-      let html = '<div class="card-body">';
-      Object.keys(byCat).forEach((cat) => {
-        html += `<div class="cat-title">${mEsc(cat)}</div>`;
-        byCat[cat].forEach((p) => {
+    function renderTabs() {
+      document.getElementById("catTabs").innerHTML = RESERVE_CATS.map((c) =>
+        `<button type="button" class="reserve-tab ${c.key === ACTIVE_CAT ? "active" : ""}" data-cat="${c.key}">${mEsc(c.label)}</button>`
+      ).join("");
+      document.querySelectorAll(".reserve-tab").forEach((b) =>
+        b.addEventListener("click", () => { ACTIVE_CAT = b.getAttribute("data-cat"); renderTabs(); renderMain(); }));
+    }
+
+    async function loadHallData() {
+      try {
+        HALLS = (await mApi("/hall-requests/available")).items;
+        const mine = (await mApi("/hall-requests/mine")).items;
+        MY_HALL_REQ = mine.find((r) => r.status === "pending") || mine.find((r) => r.status === "approved") || null;
+      } catch (e) {
+        HALLS = [];
+        MY_HALL_REQ = null;
+      }
+    }
+
+    function renderMain() {
+      const area = document.getElementById("mainArea");
+      if (ACTIVE_CAT === "hall") {
+        let html = '<div class="card-head">빈소선택</div><div class="card-body">';
+        if (ME.hallId) {
+          html += `<div class="notice-box">배정된 빈소가 있습니다. 아래 카테고리에서 장례 서비스를 예약해 주세요.</div>`;
+        } else if (MY_HALL_REQ) {
+          const st = MY_HALL_REQ.status === "pending" ? "승인 대기 중" : (MY_HALL_REQ.status === "approved" ? "승인 완료" : "거절됨");
+          html += `<div class="notice-box">신청 빈소: <b>${mEsc((MY_HALL_REQ.hall && MY_HALL_REQ.hall.hallNumber) || "-")}</b> · 상태: ${st}</div>`;
+        }
+        if (!ME.hallId && (!MY_HALL_REQ || MY_HALL_REQ.status === "rejected")) {
+          if (HALLS.length === 0) {
+            html += '<div class="state">현재 신청 가능한 빈소가 없습니다.</div>';
+          } else {
+            html += '<p style="margin:0 0 12px;color:var(--gray);font-size:14px">비어있는 빈소 중 선택하여 신청해 주세요. 관리자 승인 후 배정됩니다.</p>';
+            HALLS.forEach((h) => {
+              html += `
+                <div class="prod">
+                  <div class="info"><b>${mEsc(h.hallNumber)}</b><small>현재 비어있음</small></div>
+                  <button class="btn btn-sm btn-primary" data-hall="${h.id}">신청</button>
+                </div>`;
+            });
+          }
+        }
+        html += "</div>";
+        area.innerHTML = html;
+        area.querySelectorAll("[data-hall]").forEach((b) =>
+          b.addEventListener("click", () => requestHall(b.getAttribute("data-hall"))));
+        return;
+      }
+
+      const items = PRODUCTS.filter((p) => p.catKey === ACTIVE_CAT);
+      const cat = RESERVE_CATS.find((c) => c.key === ACTIVE_CAT);
+      let html = `<div class="card-head">${mEsc(cat ? cat.label : ACTIVE_CAT)}</div><div class="card-body">`;
+      if (items.length === 0) {
+        html += '<div class="state">등록된 상품이 없습니다.</div>';
+      } else {
+        html += '<div class="prod-grid">';
+        items.forEach((p) => {
           html += `
-            <div class="prod">
-              <div class="info"><b>${mEsc(p.name)}</b><small>${mEsc(p.description) || "&nbsp;"}</small></div>
-              <div style="display:flex;align-items:center;gap:12px">
-                <span class="price">${won(p.price)} / ${mEsc(p.unit)}</span>
+            <div class="prod-card">
+              ${p.imageUrl ? `<img src="${mEsc(p.imageUrl)}" alt="" class="prod-img">` : '<div class="prod-img placeholder">이미지 없음</div>'}
+              <div class="prod-card-body">
+                <b>${mEsc(p.name)}</b>
+                <small>${mEsc(p.description) || "&nbsp;"}</small>
+                <div class="prod-meta">
+                  <span class="price">${won(p.price)} / ${mEsc(p.unit)}</span>
+                  ${p.settlementType === "postpaid" ? '<span class="tag pending">발인 전 수기 정산</span>' : ""}
+                </div>
                 <button class="btn btn-sm btn-primary" data-add="${p.id}">담기</button>
               </div>
             </div>`;
         });
-      });
+        html += "</div>";
+      }
       html += "</div>";
       area.innerHTML = html;
       area.querySelectorAll("[data-add]").forEach((b) =>
         b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
     }
 
+    async function requestHall(hallId) {
+      if (!confirm("선택한 빈소를 신청하시겠습니까?")) return;
+      try {
+        await mApi("/hall-requests", { method: "POST", body: { hallId } });
+        mToast("빈소 신청이 접수되었습니다.");
+        await loadHallData();
+        renderMain();
+      } catch (e) { mToast(e.message); }
+    }
+
     function addToCart(id) {
       cart.set(id, (cart.get(id) || 0) + 1);
-      renderCart(); mToast("장바구니에 담았습니다.");
+      renderCart(); mToast("예약 목록에 담았습니다.");
     }
     function setQty(id, qty) {
       if (qty <= 0) cart.delete(id); else cart.set(id, qty);
@@ -84,31 +155,33 @@
       const sumArea = document.getElementById("cartSum");
       const btn = document.getElementById("orderBtn");
       if (cart.size === 0) {
-        area.innerHTML = '<div class="cart-empty">담긴 상품이 없습니다.</div>';
+        area.innerHTML = '<div class="cart-empty">담긴 항목이 없습니다.</div>';
         sumArea.innerHTML = ""; btn.disabled = true; return;
       }
       let supply = 0, vat = 0, html = "";
       cart.forEach((qty, id) => {
         const p = PRODUCTS.find((x) => x.id === id);
         if (!p) return;
-        const line = p.price * qty;
+        const isPostpaid = p.settlementType === "postpaid";
+        const line = isPostpaid ? 0 : p.price * qty;
         supply += line;
-        if (p.taxable) vat += Math.round(line * 0.1);
+        if (!isPostpaid && p.taxable) vat += Math.round(line * 0.1);
         html += `
           <div class="cart-item">
-            <span class="nm">${mEsc(p.name)}<br><span class="rm" data-rm="${id}">삭제</span></span>
+            <span class="nm">${mEsc(p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${id}">삭제</span></span>
             <span class="qtybox">
               <button data-minus="${id}">−</button><span>${qty}</span><button data-plus="${id}">+</button>
             </span>
-            <span class="nowrap" style="min-width:78px;text-align:right">${won(line)}</span>
+            <span class="nowrap" style="min-width:78px;text-align:right">${isPostpaid ? "정산" : won(line)}</span>
           </div>`;
       });
       area.innerHTML = html;
       sumArea.innerHTML = `
         <div class="cart-sum">
-          <div class="row"><span>공급가액</span><span>${won(supply)}</span></div>
-          <div class="row"><span>부가세</span><span>${won(vat)}</span></div>
-          <div class="row total"><span>합계</span><span>${won(supply + vat)}</span></div>
+          <div class="row"><span>선결제 공급가액</span><span>${won(supply)}</span></div>
+          <div class="row"><span>선결제 부가세</span><span>${won(vat)}</span></div>
+          <div class="row total"><span>선결제 합계</span><span>${won(supply + vat)}</span></div>
+          <p style="font-size:12px;color:var(--gray);margin:8px 0 0">* 생수·음료수·주류 등 사후정산 품목은 발인 전 수기 정산됩니다.</p>
         </div>`;
       btn.disabled = false;
       area.querySelectorAll("[data-plus]").forEach((b) => b.addEventListener("click", () => setQty(b.getAttribute("data-plus"), (cart.get(b.getAttribute("data-plus")) || 0) + 1)));
@@ -119,16 +192,16 @@
     async function placeOrder() {
       if (cart.size === 0) return;
       const items = Array.from(cart.entries()).map(([productId, qty]) => ({ productId, qty }));
-      const memo = prompt("배송/요청 사항이 있으면 입력해 주세요. (선택)", "") || "";
+      const memo = prompt("요청 사항이 있으면 입력해 주세요. (선택)", "") || "";
       const btn = document.getElementById("orderBtn");
-      btn.disabled = true; btn.textContent = "주문 처리 중…";
+      btn.disabled = true; btn.textContent = "예약 처리 중…";
       try {
         const d = await mApi("/orders", { method: "POST", body: { items, memo } });
-        mToast("주문이 접수되었습니다.");
+        mToast("예약이 접수되었습니다.");
         location.href = "/pages/member/orders.html?ok=" + encodeURIComponent(d.order.orderNumber);
       } catch (e) {
         mToast(e.message);
-        btn.disabled = false; btn.textContent = "주문하기";
+        btn.disabled = false; btn.textContent = "예약 제출";
       }
     }
   </script>
