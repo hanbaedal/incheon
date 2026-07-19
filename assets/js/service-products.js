@@ -187,11 +187,9 @@
   const PHOTO_LABELS = {
     portrait: "영정", frame: "액자", idphoto: "증명사진", instant: "즉석사진",
   };
-  const DRESS_LABELS = {
-    women: "여성예복", shirt: "와이셔츠", belt: "벨트", socks: "양말",
-    shoes: "구두", tie: "넥타이", undershirt: "런닝셔츠",
-  };
-  const DRESS_CAT_ORDER = ["women", "shirt", "belt", "socks", "shoes", "tie", "undershirt"];
+  const DRESS_ITEM_ORDER = [
+    "예복정장", "여성예복", "와이셔츠", "벨트", "양말", "구두", "넥타이", "런닝셔츠",
+  ];
   const HEARSE_LABELS = {
     cadillac: "캐딜락", limousine: "고급리무진",
   };
@@ -314,15 +312,19 @@
     let html = "";
 
     if (all.length > 0) {
-      const sorted = DRESS_CAT_ORDER.flatMap((cat) =>
-        all.filter((d) => d.dressCategory === cat)
-      ).concat(all.filter((d) => !DRESS_CAT_ORDER.includes(d.dressCategory)));
+      const order = new Map(DRESS_ITEM_ORDER.map((n, i) => [n, i]));
+      const sorted = all.slice().sort((a, b) => {
+        const ao = order.has(a.name) ? order.get(a.name) : 999;
+        const bo = order.has(b.name) ? order.get(b.name) : 999;
+        if (ao !== bo) return ao - bo;
+        return String(a.spec).localeCompare(String(b.spec), "ko");
+      });
       html += `<div class="block"><h3>상복 대여 품목</h3>`;
-      html += `<table class="tbl"><thead><tr><th>품목</th><th>규격</th><th>수량</th>${loggedIn ? "<th>가격</th>" : ""}</tr></thead><tbody>`;
+      html += `<table class="tbl"><thead><tr><th>품목</th><th>치수</th><th>수량</th>${loggedIn ? "<th>가격</th>" : ""}</tr></thead><tbody>`;
       html += sorted.map((d) => `
         <tr>
           <th>${esc(d.name)}</th>
-          <td>${esc(d.spec || "-")}</td>
+          <td>${esc(d.spec)}</td>
           <td>${esc(d.unit || "1개")}</td>
           ${loggedIn ? `<td class="nowrap">${won(d.price)}</td>` : ""}
         </tr>`).join("");

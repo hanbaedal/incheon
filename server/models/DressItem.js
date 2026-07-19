@@ -1,13 +1,12 @@
 "use strict";
 
 const mongoose = require("mongoose");
-const { DRESS_CATEGORIES } = require("../constants/dressCategories");
+const { DRESS_ITEM_NAMES } = require("../constants/dressCategories");
 
 const dressItemSchema = new mongoose.Schema(
   {
-    dressCategory: { type: String, enum: DRESS_CATEGORIES, required: true, index: true },
-    name: { type: String, required: true, trim: true },
-    spec: { type: String, default: "" },
+    name: { type: String, enum: DRESS_ITEM_NAMES, required: true, index: true },
+    spec: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     price: { type: Number, default: 0, min: 0 },
     unit: { type: String, default: "1개" },
@@ -19,12 +18,11 @@ const dressItemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-dressItemSchema.index({ dressCategory: 1, name: 1, spec: 1 }, { unique: true });
+dressItemSchema.index({ name: 1, spec: 1 }, { unique: true });
 
 dressItemSchema.methods.toJSONSafe = function toJSONSafe() {
   return {
     id: this._id,
-    dressCategory: this.dressCategory,
     name: this.name,
     spec: this.spec,
     description: this.description,

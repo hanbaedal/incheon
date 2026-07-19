@@ -64,11 +64,12 @@ function orderItemFromFood(ref, qty) {
 }
 
 function prepaidItem(itemType, ref, catKey, qty) {
+  const name = itemType === "dressItem" && ref.spec ? `${ref.name} ${ref.spec}` : ref.name;
   return {
     itemType,
     itemRefId: ref._id,
     catKey,
-    name: ref.name,
+    name,
     unit: ref.unit || "개",
     price: ref.price,
     qty,

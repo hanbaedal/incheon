@@ -116,12 +116,11 @@ async function upsertDressItems() {
   for (const sample of DRESS_SAMPLES) {
     const unit = sample.unit || "1개";
     const r = await DressItem.updateOne(
-      { dressCategory: sample.dressCategory, name: sample.name, spec: sample.spec || "" },
+      { name: sample.name, spec: sample.spec },
       {
         $set: {
-          dressCategory: sample.dressCategory,
           name: sample.name,
-          spec: sample.spec || "",
+          spec: sample.spec,
           description: sample.description || "",
           sortOrder: sample.sortOrder || 0,
           unit,

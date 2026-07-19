@@ -44,7 +44,6 @@
     let ACTIVE_FOOD_CAT = "meal";
     let ACTIVE_FLOWER_CAT = "altar";
     let ACTIVE_PHOTO_CAT = "portrait";
-    let ACTIVE_DRESS_CAT = "women";
     let ACTIVE_HEARSE_CAT = "cadillac";
     const FOOD_SUB_CATS = [
       { key: "meal", label: "식사류" },
@@ -68,15 +67,6 @@
       { key: "frame", label: "액자" },
       { key: "idphoto", label: "증명사진" },
       { key: "instant", label: "즉석사진" },
-    ];
-    const DRESS_SUB_CATS = [
-      { key: "women", label: "여성예복" },
-      { key: "shirt", label: "와이셔츠" },
-      { key: "belt", label: "벨트" },
-      { key: "socks", label: "양말" },
-      { key: "shoes", label: "구두" },
-      { key: "tie", label: "넥타이" },
-      { key: "undershirt", label: "런닝셔츠" },
     ];
     const HEARSE_SUB_CATS = [
       { key: "cadillac", label: "캐딜락" },
@@ -132,7 +122,6 @@
           if (ACTIVE_CAT === "food") ACTIVE_FOOD_CAT = "meal";
           if (ACTIVE_CAT === "flower") ACTIVE_FLOWER_CAT = "altar";
           if (ACTIVE_CAT === "photo") ACTIVE_PHOTO_CAT = "portrait";
-          if (ACTIVE_CAT === "dress") ACTIVE_DRESS_CAT = "women";
           if (ACTIVE_CAT === "hearse") ACTIVE_HEARSE_CAT = "cadillac";
           renderTabs(); renderMain();
         }));
@@ -411,23 +400,24 @@
       }
 
       if (ACTIVE_CAT === "dress") {
-        const items = DRESS_ITEMS.filter((d) => d.dressCategory === ACTIVE_DRESS_CAT);
-        const sub = DRESS_SUB_CATS.find((c) => c.key === ACTIVE_DRESS_CAT);
-        let html = `<div class="card-head">상복 대여 · ${mEsc(sub ? sub.label : ACTIVE_DRESS_CAT)}</div><div class="card-body">`;
-        html += '<div class="reserve-tabs" style="margin-bottom:14px;flex-wrap:wrap">';
-        html += DRESS_SUB_CATS.map((c) =>
-          `<button type="button" class="reserve-tab ${c.key === ACTIVE_DRESS_CAT ? "active" : ""}" data-drcat="${c.key}">${mEsc(c.label)}</button>`
-        ).join("");
-        html += "</div>";
+        const order = ["예복정장", "여성예복", "와이셔츠", "벨트", "양말", "구두", "넥타이", "런닝셔츠"];
+        const rank = new Map(order.map((n, i) => [n, i]));
+        const items = DRESS_ITEMS.slice().sort((a, b) => {
+          const ao = rank.has(a.name) ? rank.get(a.name) : 999;
+          const bo = rank.has(b.name) ? rank.get(b.name) : 999;
+          if (ao !== bo) return ao - bo;
+          return String(a.spec).localeCompare(String(b.spec), "ko");
+        });
+        let html = `<div class="card-head">상복 대여</div><div class="card-body">`;
         if (items.length === 0) {
           html += '<div class="state">등록된 품목이 없습니다.</div>';
         } else {
-          html += '<table class="tbl" style="width:100%"><thead><tr><th>품목</th><th>규격</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
+          html += '<table class="tbl" style="width:100%"><thead><tr><th>품목</th><th>치수</th><th>수량</th><th>가격</th><th></th></tr></thead><tbody>';
           items.forEach((d) => {
             html += `
               <tr>
                 <th>${mEsc(d.name)}</th>
-                <td>${mEsc(d.spec || "-")}</td>
+                <td>${mEsc(d.spec)}</td>
                 <td>${mEsc(d.unit || "1개")}</td>
                 <td class="nowrap">${won(d.price)}</td>
                 <td><button class="btn btn-sm btn-primary" data-add="dressItem:${d.id}">담기</button></td>
@@ -437,8 +427,6 @@
         }
         html += "</div>";
         area.innerHTML = html;
-        area.querySelectorAll("[data-drcat]").forEach((b) =>
-          b.addEventListener("click", () => { ACTIVE_DRESS_CAT = b.getAttribute("data-drcat"); renderMain(); }));
         area.querySelectorAll("[data-add]").forEach((b) =>
           b.addEventListener("click", () => addToCart(b.getAttribute("data-add"))));
         return;
@@ -545,7 +533,7 @@
         if (!isPostpaid && p.taxable !== false) vat += Math.round(line * 0.1);
         html += `
           <div class="cart-item">
-            <span class="nm">${mEsc(p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
+            <span class="nm">${mEsc(p.spec ? p.name + " " + p.spec : p.name)}${isPostpaid ? '<br><small style="color:#b8860b">발인 전 정산</small>' : ""}<br><span class="rm" data-rm="${key}">삭제</span></span>
             <span class="qtybox">
               <button data-minus="${key}">−</button><span>${qty}</span><button data-plus="${key}">+</button>
             </span>

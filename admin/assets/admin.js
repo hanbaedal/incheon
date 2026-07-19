@@ -117,13 +117,7 @@ const VIEWS = {
   prodPhotoFrame: { title: "액자 관리", render: () => renderPhotoItems("frame") },
   prodPhotoId: { title: "증명사진 관리", render: () => renderPhotoItems("idphoto") },
   prodPhotoInstant: { title: "즉석사진 관리", render: () => renderPhotoItems("instant") },
-  prodDressWomen: { title: "여성예복 관리", render: () => renderDressItems("women") },
-  prodDressShirt: { title: "와이셔츠 관리", render: () => renderDressItems("shirt") },
-  prodDressBelt: { title: "벨트 관리", render: () => renderDressItems("belt") },
-  prodDressSocks: { title: "양말 관리", render: () => renderDressItems("socks") },
-  prodDressShoes: { title: "구두 관리", render: () => renderDressItems("shoes") },
-  prodDressTie: { title: "넥타이 관리", render: () => renderDressItems("tie") },
-  prodDressUndershirt: { title: "런닝셔츠 관리", render: () => renderDressItems("undershirt") },
+  prodDress: { title: "상복 대여 관리", render: renderDressItems },
   prodHearseCadillac: { title: "캐딜락 관리", render: () => renderHearseItems("cadillac") },
   prodHearseLimousine: { title: "고급리무진 관리", render: () => renderHearseItems("limousine") },
   orders: { title: "주문 관리", render: renderOrders },
@@ -196,9 +190,12 @@ const FLOWER_CATEGORY_LABELS = {
 const PHOTO_CATEGORY_LABELS = {
   portrait: "영정", frame: "액자", idphoto: "증명사진", instant: "즉석사진",
 };
-const DRESS_CATEGORY_LABELS = {
-  women: "여성예복", shirt: "와이셔츠", belt: "벨트", socks: "양말",
-  shoes: "구두", tie: "넥타이", undershirt: "런닝셔츠",
+const DRESS_ITEM_NAMES = [
+  "예복정장", "여성예복", "와이셔츠", "벨트", "양말", "구두", "넥타이", "런닝셔츠",
+];
+const DRESS_ITEM_UNITS = {
+  예복정장: "1벌", 여성예복: "1벌", 와이셔츠: "1벌", 벨트: "1개",
+  양말: "1켤레", 구두: "1켤레", 넥타이: "1개", 런닝셔츠: "1벌",
 };
 const HEARSE_CATEGORY_LABELS = {
   cadillac: "캐딜락", limousine: "고급리무진",
@@ -1281,64 +1278,63 @@ function photoItemForm(p, photoCategory) {
   ]);
 }
 
-async function renderDressItems(dressCategory) {
-  const label = DRESS_CATEGORY_LABELS[dressCategory] || dressCategory;
-  const d = await api("/dress-items/admin/all?dressCategory=" + encodeURIComponent(dressCategory));
+async function renderDressItems() {
+  const d = await api("/dress-items/admin/all");
   content.innerHTML = `
     <div class="toolbar">
-      <button class="btn btn-primary" id="addDress">+ ${esc(label)} 등록</button>
-      ${dressCategory === "women" ? '<button class="btn" id="syncAmcDress">AMC 예복표 불러오기</button>' : ""}
+      <button class="btn btn-primary" id="addDress">+ 품목 등록</button>
+      <button class="btn" id="syncAmcDress">AMC 예복표 불러오기</button>
     </div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">등록된 품목이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>품목</th><th>규격</th><th>수량</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>품목</th><th>치수</th><th>수량</th><th class="right">가격</th><th>노출</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((it) => `
           <tr>
             <td><b>${esc(it.name)}</b>${it.imageUrl ? `<br><img src="${esc(it.imageUrl)}" alt="" style="max-width:48px;max-height:48px;margin-top:4px;border-radius:4px">` : ""}</td>
-            <td class="nowrap">${esc(it.spec || "-")}</td>
+            <td class="nowrap">${esc(it.spec)}</td>
             <td class="nowrap">${esc(it.unit)}</td>
             <td class="right nowrap">${won(it.price)}</td>
             <td>${it.active ? '<span class="tag free">판매</span>' : '<span class="tag gray">숨김</span>'}</td>
             <td class="actions">
               <button class="btn btn-sm" data-edit='${esc(JSON.stringify(it))}'>수정</button>
-              <button class="btn btn-sm btn-danger" data-del="${it.id}" data-name="${esc(it.name)}">삭제</button>
+              <button class="btn btn-sm btn-danger" data-del="${it.id}" data-name="${esc(it.name + " " + it.spec)}">삭제</button>
             </td>
           </tr>`).join("")}</tbody>
       </table>`}
     </div></div>`;
-  document.getElementById("addDress").addEventListener("click", () => dressItemForm(null, dressCategory));
-  const syncBtn = document.getElementById("syncAmcDress");
-  if (syncBtn) {
-    syncBtn.addEventListener("click", async () => {
-      try {
-        const r = await api("/dress-items/admin/sync-amc", { method: "POST", body: {} });
-        toast(r.message || "AMC 예복표를 불러왔습니다.");
-        route();
-      } catch (err) { toast(err.message); }
-    });
-  }
+  document.getElementById("addDress").addEventListener("click", () => dressItemForm(null));
+  document.getElementById("syncAmcDress").addEventListener("click", async () => {
+    try {
+      const r = await api("/dress-items/admin/sync-amc", { method: "POST", body: {} });
+      toast(r.message || "AMC 예복표를 불러왔습니다.");
+      route();
+    } catch (err) { toast(err.message); }
+  });
   content.querySelectorAll("[data-edit]").forEach((b) =>
-    b.addEventListener("click", () => dressItemForm(JSON.parse(b.getAttribute("data-edit")), dressCategory)));
+    b.addEventListener("click", () => dressItemForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>
-    b.addEventListener("click", () => confirmDelete(label, b.getAttribute("data-name"), async () => {
+    b.addEventListener("click", () => confirmDelete("상복", b.getAttribute("data-name"), async () => {
       await api("/dress-items/" + b.getAttribute("data-del"), { method: "DELETE" });
       toast("삭제되었습니다."); route();
     })));
 }
 
-function dressItemForm(it, dressCategory) {
+function dressItemForm(it) {
   const e = it || {};
-  const cat = dressCategory || e.dressCategory || "women";
-  const label = DRESS_CATEGORY_LABELS[cat] || cat;
-  openModal(it ? label + " 수정" : label + " 등록", `
-    <input type="hidden" id="f_dressCategory" value="${esc(cat)}" />
+  const defaultName = e.name || "예복정장";
+  const defaultUnit = DRESS_ITEM_UNITS[defaultName] || "1벌";
+  openModal(it ? "상복 품목 수정" : "상복 품목 등록", `
     <div class="field-row">
-      <div class="field"><label>품목 *</label><input id="f_name" value="${esc(e.name || label)}" /></div>
-      <div class="field"><label>규격</label><input id="f_spec" value="${esc(e.spec || "")}" placeholder="치수별, 95~110 등" /></div>
+      <div class="field"><label>품목 *</label>
+        <select id="f_name">${DRESS_ITEM_NAMES.map((n) =>
+          `<option value="${esc(n)}" ${defaultName === n ? "selected" : ""}>${esc(n)}</option>`
+        ).join("")}</select>
+      </div>
+      <div class="field"><label>치수 *</label><input id="f_spec" value="${esc(e.spec || "")}" placeholder="100, 44, 260, Free 등" /></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>수량(단위)</label><input id="f_unit" value="${esc(e.unit || "1벌")}" placeholder="1벌, 1켤레, 1개" /></div>
+      <div class="field"><label>수량(단위)</label><input id="f_unit" value="${esc(e.unit || defaultUnit)}" placeholder="1벌, 1켤레, 1개" /></div>
       <div class="field"><label>가격(원)</label><input id="f_price" type="number" min="0" value="${e.price != null ? e.price : 0}" /></div>
     </div>
     <div class="field-row">
@@ -1356,12 +1352,14 @@ function dressItemForm(it, dressCategory) {
     { label: "취소", onClick: closeModal },
     { label: "저장", cls: "btn-primary", onClick: async () => {
       const body = {
-        dressCategory: val("f_dressCategory"), name: val("f_name"), spec: val("f_spec"),
-        unit: val("f_unit") || "1개", price: Number(val("f_price")) || 0,
+        name: val("f_name"), spec: val("f_spec"),
+        unit: val("f_unit") || DRESS_ITEM_UNITS[val("f_name")] || "1개",
+        price: Number(val("f_price")) || 0,
         description: val("f_description"), sortOrder: Number(val("f_sortOrder")) || 0,
         taxable: checked("f_taxable"), active: checked("f_active"),
       };
-      if (!body.name) { toast("품목을 입력하세요."); return; }
+      if (!body.name) { toast("품목을 선택하세요."); return; }
+      if (!body.spec) { toast("치수를 입력하세요."); return; }
       const fileEl = document.getElementById("f_imageFile");
       if (fileEl && fileEl.files && fileEl.files[0]) {
         try { body.imageId = (await uploadImage(fileEl.files[0])).id; }
@@ -1374,6 +1372,13 @@ function dressItemForm(it, dressCategory) {
       } catch (err) { toast(err.message); }
     } },
   ]);
+  const nameEl = document.getElementById("f_name");
+  const unitEl = document.getElementById("f_unit");
+  if (nameEl && unitEl && !it) {
+    nameEl.addEventListener("change", () => {
+      unitEl.value = DRESS_ITEM_UNITS[nameEl.value] || "1개";
+    });
+  }
 }
 
 async function renderHearseItems(hearseCategory) {
