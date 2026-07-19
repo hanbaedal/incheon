@@ -353,8 +353,25 @@ p { margin: 0 0 1em; }
 .hero-eyebrow { color: var(--gold-soft); letter-spacing: 0.18em; font-size: 14px; margin: 0 0 16px; }
 .hero h1 { color: #fff; font-size: 46px; line-height: 1.25; margin: 0 0 20px; }
 .hero p { color: #d6dbe6; font-size: 18px; margin: 0 0 32px; }
-.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .hero-actions .btn { padding: 14px 30px; font-size: 16px; }
+.hero-ehaneul {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  line-height: 0;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.hero-ehaneul:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.hero-ehaneul img { display: block; height: 42px; width: auto; max-width: 148px; }
 .hero-actions .btn-gold { background: var(--gold); color: #fff; }
 .hero-actions .btn-gold:hover { background: var(--gold-soft); }
 .hero-actions .btn-ghost { background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.4); }
