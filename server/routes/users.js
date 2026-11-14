@@ -6,6 +6,7 @@ const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireStaff } = require("../middleware/auth");
 const { usageToHallSummary } = require("../utils/hallFormat");
+const { writeAudit } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -96,6 +97,8 @@ router.post(
       name,
       phone: phone || "",
       hallUsageId: hallUsageId || null,
+      mustChangePassword: true,
+      guideAcknowledgedAt: null,
     });
     await user.setPassword(password);
     await user.save();
@@ -103,6 +106,13 @@ router.post(
     if (hallUsageId) {
       await HallUsage.updateOne({ _id: hallUsageId }, { familyUserId: user._id, chiefMourner: name });
     }
+
+    await writeAudit(req, {
+      action: "create",
+      targetType: "user",
+      targetId: user._id,
+      summary: `상주 계정 생성: ${user.username} (${user.name})`,
+    });
 
     res.status(201).json({ user: user.toAdminJSON() });
   })
@@ -120,7 +130,10 @@ router.patch(
     if (typeof name === "string") user.name = name;
     if (typeof phone === "string") user.phone = phone;
     if (typeof active === "boolean") user.active = active;
-    if (password) await user.setPassword(password);
+    if (password) {
+      await user.setPassword(password);
+      user.mustChangePassword = true;
+    }
 
     if ("hallUsageId" in (req.body || {})) {
       if (user.hallUsageId && String(user.hallUsageId) !== String(hallUsageId || "")) {
@@ -144,6 +157,13 @@ router.patch(
     }
 
     await user.save();
+    await writeAudit(req, {
+      action: "update",
+      targetType: "user",
+      targetId: user._id,
+      summary: `상주 계정 수정: ${user.username}${password ? " (비밀번호 재설정)" : ""}`,
+      detail: { active: user.active, hallUsageId: user.hallUsageId },
+    });
     res.json({ user: user.toAdminJSON() });
   })
 );
@@ -155,10 +175,17 @@ router.delete(
   asyncHandler(async (req, res) => {
     const user = await User.findOne({ _id: req.params.id, role: "family" });
     if (!user) return res.status(404).json({ error: "상주 계정을 찾을 수 없습니다." });
+    const snap = { username: user.username, name: user.name };
     if (user.hallUsageId) {
       await HallUsage.updateOne({ _id: user.hallUsageId }, { familyUserId: null });
     }
     await user.deleteOne();
+    await writeAudit(req, {
+      action: "delete",
+      targetType: "user",
+      targetId: req.params.id,
+      summary: `상주 계정 삭제: ${snap.username} (${snap.name})`,
+    });
     res.json({ ok: true });
   })
 );

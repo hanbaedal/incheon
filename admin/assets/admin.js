@@ -200,7 +200,7 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 });
 
 /* ---------- 네비게이션 (상단 메가 메뉴) ---------- */
-const NAV_MENU = [
+const NAV_MENU_FULL = [
   { id: "dashboard", label: "대시보드", view: "dashboard" },
   { id: "ops", label: "시설 사용료", badgeId: "navHallReqBadge",
     items: [
@@ -282,7 +282,31 @@ const NAV_MENU = [
       { view: "memorials", label: "추모글 관리" },
     ],
   },
+  { id: "audit", label: "감사 로그", view: "audits" },
 ];
+
+/** 슈퍼바이저 간편 모드: 현황·승인·감사만 */
+const NAV_MENU_SIMPLE = [
+  { id: "dashboard", label: "대시보드", view: "dashboard" },
+  { id: "ops", label: "접수·현황", badgeId: "navHallReqBadge",
+    items: [
+      { view: "hallUsages", label: "빈소 이용" },
+      { view: "hallRequests", label: "빈소 신청" },
+      { view: "families", label: "회원 리스트" },
+    ],
+  },
+  { id: "orders", label: "주문·승인", view: "orders", badgeId: "navOrderBadge" },
+  { id: "board", label: "문의", badgeId: "navInqBadge",
+    items: [
+      { view: "inquiries", label: "온라인 문의" },
+    ],
+  },
+  { id: "audit", label: "감사 로그", view: "audits" },
+];
+
+function getNavMenu() {
+  return isSupervisor() ? NAV_MENU_SIMPLE : NAV_MENU_FULL;
+}
 
 function navFlatItems(sec) {
   if (sec.items) return sec.items;
@@ -292,11 +316,12 @@ function navFlatItems(sec) {
 }
 
 function navSectionForView(viewKey) {
-  for (const sec of NAV_MENU) {
+  const menu = getNavMenu();
+  for (const sec of menu) {
     if (sec.view === viewKey) return sec;
     if (navFlatItems(sec).some((it) => it.view === viewKey)) return sec;
   }
-  return NAV_MENU[0];
+  return menu[0];
 }
 
 function navDefaultView(sec) {
@@ -343,21 +368,53 @@ function syncNav(viewKey) {
   renderSubNav(sec, viewKey);
 }
 
+function closeMobileNav() {
+  document.body.classList.remove("nav-open");
+  const toggle = document.getElementById("navToggle");
+  const scrim = document.getElementById("navScrim");
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
+  if (scrim) scrim.hidden = true;
+}
+
+function openMobileNav() {
+  document.body.classList.add("nav-open");
+  const toggle = document.getElementById("navToggle");
+  const scrim = document.getElementById("navScrim");
+  if (toggle) toggle.setAttribute("aria-expanded", "true");
+  if (scrim) scrim.hidden = false;
+}
+
 function initNav() {
   const mainNav = document.getElementById("mainNav");
-  mainNav.innerHTML = NAV_MENU.map((sec) => {
+  const menu = getNavMenu();
+  mainNav.innerHTML = menu.map((sec) => {
     const badge = sec.badgeId ? `<span class="nav-badge" id="${sec.badgeId}"></span>` : "";
     return `<button type="button" class="main-nav-item" data-nav-id="${sec.id}">${esc(sec.label)}${badge}</button>`;
   }).join("");
   mainNav.querySelectorAll(".main-nav-item").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const sec = NAV_MENU.find((s) => s.id === btn.getAttribute("data-nav-id"));
+      const sec = menu.find((s) => s.id === btn.getAttribute("data-nav-id"));
       if (!sec) return;
       const target = navDefaultView(sec);
+      closeMobileNav();
       if (location.hash !== "#" + target) location.hash = target;
       else syncNav(target);
     });
   });
+
+  const toggle = document.getElementById("navToggle");
+  const scrim = document.getElementById("navScrim");
+  if (toggle && !toggle._bound) {
+    toggle._bound = true;
+    toggle.addEventListener("click", () => {
+      if (document.body.classList.contains("nav-open")) closeMobileNav();
+      else openMobileNav();
+    });
+  }
+  if (scrim && !scrim._bound) {
+    scrim._bound = true;
+    scrim.addEventListener("click", closeMobileNav);
+  }
 }
 
 function setNavBadge(id, count) {
@@ -411,15 +468,30 @@ const VIEWS = {
   funeralForms: { title: "관련서식 관리", render: renderFuneralForms },
   inquiries: { title: "온라인 문의", render: renderInquiries },
   memorials: { title: "추모글 관리", render: renderMemorials },
+  audits: { title: "감사 로그", render: renderAudits },
 };
 const content = document.getElementById("content");
 
 function currentView() {
-  const key = (location.hash || "#dashboard").slice(1);
-  return VIEWS[key] ? key : "dashboard";
+  let key = (location.hash || "#dashboard").slice(1);
+  if (!VIEWS[key]) key = "dashboard";
+  if (isSupervisor()) {
+    const menu = getNavMenu();
+    const allowed = new Set();
+    menu.forEach((sec) => {
+      if (sec.view) allowed.add(sec.view);
+      navFlatItems(sec).forEach((it) => allowed.add(it.view));
+    });
+    if (!allowed.has(key)) key = "dashboard";
+  }
+  return key;
 }
 async function route() {
   const key = currentView();
+  if ((location.hash || "#dashboard").slice(1) !== key) {
+    location.hash = key;
+    return;
+  }
   syncNav(key);
   const titleBase = VIEWS[key].title;
   document.getElementById("viewTitle").textContent =
@@ -446,8 +518,11 @@ async function refreshInquiryBadge() {
 
 async function refreshOrderBadge() {
   try {
-    const d = await api("/orders/admin/all?status=pending");
-    setNavBadge("navOrderBadge", d.items.length);
+    const [pending, awaiting] = await Promise.all([
+      api("/orders/admin/all?status=pending"),
+      api("/orders/admin/all?status=awaiting_supervisor"),
+    ]);
+    setNavBadge("navOrderBadge", (pending.items || []).length + (awaiting.items || []).length);
   } catch (e) {}
 }
 
@@ -2317,7 +2392,13 @@ function productForm(p, fixedCatKey) {
 /* ---------- 주문 관리 ---------- */
 let orderFilter = "";
 let lastOrders = [];
-const ORDER_STATUS = { pending: "접수", confirmed: "확인", paid: "결제완료", canceled: "취소" };
+const ORDER_STATUS = {
+  pending: "접수",
+  awaiting_supervisor: "슈퍼바이저 승인대기",
+  confirmed: "확인",
+  paid: "결제완료",
+  canceled: "취소",
+};
 
 function groupOrdersByFamily(orders) {
   const map = new Map();
@@ -2470,6 +2551,8 @@ function orderDetail(o) {
       </tfoot>
     </table>
     ${o.memo ? `<div class="detail-row"><b>메모</b><span>${esc(o.memo)}</span></div>` : ""}
+    ${o.status === "awaiting_supervisor" ? `<p class="orders-lead" style="margin:10px 0;color:var(--warn)">고액 주문 슈퍼바이저 승인 대기 중입니다.${o.totalAmount ? " 합계 " + won(o.totalAmount) : ""}</p>` : ""}
+    ${o.supervisorApprovedAt ? `<div class="detail-row"><b>슈퍼바이저 승인</b><span>${fmt(o.supervisorApprovedAt)}${o.supervisorApprovedBy ? " · " + esc(o.supervisorApprovedBy) : ""}</span></div>` : ""}
     ${settleHtml}
     <div class="field"><label>상태 변경</label>
       <select id="f_status">
@@ -2479,14 +2562,33 @@ function orderDetail(o) {
     <div class="toolbar" style="margin-top:8px">
       ${o.family && o.family.id ? familyDocButtons(o.family.id, "btn btn-sm") : ""}
       <button type="button" class="btn btn-sm" data-order-doc-inline="${esc(o.id)}">주문서</button>
+      ${o.status === "awaiting_supervisor" ? `<button type="button" class="btn btn-sm btn-primary" id="approveHighBtn" data-approve="1">슈퍼바이저 승인</button>` : ""}
     </div>
   `, [
     { label: "닫기", onClick: closeModal },
     { label: "상태 저장", cls: "btn-primary", onClick: async () => {
-      try { await api("/orders/" + o.id, { method: "PATCH", body: { status: val("f_status") } }); closeModal(); toast("저장되었습니다."); renderOrders(); }
-      catch (err) { toast(err.message); }
+      try {
+        const res = await api("/orders/" + o.id, { method: "PATCH", body: { status: val("f_status") } });
+        closeModal();
+        const st = res && res.order && res.order.status;
+        if (st === "awaiting_supervisor") toast("고액 주문이라 슈퍼바이저 승인 대기로 전환되었습니다.");
+        else toast("저장되었습니다.");
+        renderOrders();
+      } catch (err) { toast(err.message); }
     } },
   ]);
+
+  const approveHighBtn = document.getElementById("approveHighBtn");
+  if (approveHighBtn) {
+    approveHighBtn.addEventListener("click", async () => {
+      try {
+        await api("/orders/" + o.id, { method: "PATCH", body: { status: "confirmed" } });
+        closeModal();
+        toast("슈퍼바이저 승인이 완료되었습니다.");
+        renderOrders();
+      } catch (err) { toast(err.message); }
+    });
+  }
 
   const inlineDocBtn = document.querySelector("#modalBody [data-order-doc-inline]");
   if (inlineDocBtn) {
@@ -2521,6 +2623,52 @@ function orderDetail(o) {
   }
 }
 
+/* ---------- 감사 로그 ---------- */
+async function renderAudits() {
+  const q = (document.getElementById("auditQ") && document.getElementById("auditQ").value) || "";
+  const action = (document.getElementById("auditAction") && document.getElementById("auditAction").value) || "";
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (action) params.set("action", action);
+  params.set("limit", "100");
+  const d = await api("/audits/admin/all?" + params.toString());
+  const items = d.items || [];
+  const actionLabel = {
+    create: "생성", update: "수정", delete: "삭제", approve: "승인",
+    settle: "정산", login: "로그인", password: "비밀번호",
+  };
+  content.innerHTML = `
+    <div class="toolbar">
+      <input type="search" id="auditQ" placeholder="요약·아이디 검색" value="${esc(q)}" style="max-width:220px" />
+      <select id="auditAction">
+        <option value="">전체 유형</option>
+        ${Object.keys(actionLabel).map((k) => `<option value="${k}" ${action === k ? "selected" : ""}>${actionLabel[k]}</option>`).join("")}
+      </select>
+      <button type="button" class="btn btn-sm" id="auditReload">조회</button>
+    </div>
+    <p class="orders-lead">요금·계정·주문 승인 등 변경 이력을 확인할 수 있습니다.${isSupervisor() ? " (간편 모드)" : ""}</p>
+    <div class="panel"><div class="panel-body" style="padding:0;overflow:auto">
+      ${items.length === 0 ? '<div class="empty">기록이 없습니다.</div>' : `
+      <table class="grid">
+        <thead><tr><th>시각</th><th>유형</th><th>대상</th><th>요약</th><th>작업자</th></tr></thead>
+        <tbody>
+          ${items.map((a) => `
+            <tr>
+              <td class="nowrap">${fmt(a.createdAt)}</td>
+              <td class="nowrap"><span class="tag gray">${esc(actionLabel[a.action] || a.action)}</span></td>
+              <td class="nowrap">${esc(a.targetType)}${a.targetId ? " · " + esc(String(a.targetId).slice(-6)) : ""}</td>
+              <td>${esc(a.summary)}</td>
+              <td class="nowrap">${esc(a.actorName || "-")}${a.actorUsername ? " (" + esc(a.actorUsername) + ")" : ""}${a.actorRole ? " · " + esc(a.actorRole) : ""}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`}
+    </div></div>`;
+  document.getElementById("auditReload").addEventListener("click", () => renderAudits());
+  document.getElementById("auditQ").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") renderAudits();
+  });
+}
+
 /* ---------- 공통 삭제 확인 ---------- */
 function confirmDelete(kind, name, onOk) {
   openModal(kind + " 삭제", `<p>다음 ${esc(kind)}을(를) 삭제하시겠습니까?</p><p style="font-weight:700">${esc(name)}</p><p class="muted">삭제 후에는 복구할 수 없습니다.</p>`, [
@@ -2531,6 +2679,7 @@ function confirmDelete(kind, name, onOk) {
 
 /* ---------- 시작 ---------- */
 (async function () {
+  if (!(await guard())) return;
   initNav();
-  if (await guard()) route();
+  route();
 })();

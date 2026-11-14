@@ -16,6 +16,9 @@ const userSchema = new mongoose.Schema(
     hallUsageId: { type: mongoose.Schema.Types.ObjectId, ref: "HallUsage", default: null },
     active: { type: Boolean, default: true },
     lastLoginAt: { type: Date, default: null },
+    // 상주 최초 로그인 시 비밀번호 변경·이용안내 확인
+    mustChangePassword: { type: Boolean, default: false },
+    guideAcknowledgedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -39,6 +42,8 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     phone: this.phone,
     hallUsageId: this.hallUsageId,
     active: this.active,
+    mustChangePassword: !!this.mustChangePassword,
+    guideAcknowledged: !!this.guideAcknowledgedAt,
     createdAt: this.createdAt,
   };
 };

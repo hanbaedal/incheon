@@ -18,6 +18,8 @@ const env = {
   SUPERVISOR_USERNAME: process.env.SUPERVISOR_USERNAME || "basic",
   SUPERVISOR_PASSWORD: process.env.SUPERVISOR_PASSWORD || "basic4444",
   SUPERVISOR_NAME: process.env.SUPERVISOR_NAME || "슈퍼바이저",
+  // 고액 주문: 관리자 확인 시 슈퍼바이저 승인 대기 (원)
+  HIGH_VALUE_ORDER_THRESHOLD: parseInt(process.env.HIGH_VALUE_ORDER_THRESHOLD || "1000000", 10),
   TIMEZONE: process.env.TZ || "Asia/Seoul",
   get isProd() {
     return this.NODE_ENV === "production";

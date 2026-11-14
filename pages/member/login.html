@@ -57,9 +57,15 @@
       return d.user || null;
     }
 
-    function gotoAfterLogin(role) {
+    function gotoAfterLogin(userOrRole) {
+      const user = typeof userOrRole === "string" ? { role: userOrRole } : (userOrRole || {});
+      const role = user.role;
       if (nextUrl && (role === "admin" || role === "supervisor") && nextUrl.startsWith("/admin")) {
         location.href = nextUrl;
+        return;
+      }
+      if (role === "family" && (user.mustChangePassword || !user.guideAcknowledged)) {
+        location.href = "/pages/member/setup.html";
         return;
       }
       if (nextUrl && role === "family" && nextUrl.startsWith("/pages/member")) {
@@ -73,7 +79,7 @@
     (async function () {
       try {
         const me = await fetchCurrentUser();
-        if (me) gotoAfterLogin(me.role);
+        if (me) gotoAfterLogin(me);
       } catch (e) {}
     })();
 
@@ -106,7 +112,7 @@
           noRedirect: true,
           body: { username: document.getElementById("username").value.trim(), password: document.getElementById("password").value },
         });
-        gotoAfterLogin(d.user && d.user.role);
+        gotoAfterLogin(d.user);
       } catch (err) {
         errBox.textContent = err.message; errBox.style.display = "block";
         btn.disabled = false; btn.textContent = mT("login.submit");

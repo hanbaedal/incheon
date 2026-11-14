@@ -23,8 +23,14 @@ const { buildHallSnapshotFromUsage, hallSnapshotToSummary, usageToHallSummary } 
 const { orderHallForDisplay } = require("../utils/orderHallSnapshot");
 const { appendHallFeeOrderItem } = require("../utils/hallOrderItem");
 const HallUsage = require("../models/HallUsage");
+const env = require("../config/env");
+const { writeAudit } = require("../utils/auditLog");
+const { isAdmin } = require("../middleware/auth");
 
 const router = express.Router();
+
+const ALLOWED_ORDER_STATUS = ["pending", "awaiting_supervisor", "confirmed", "paid", "canceled"];
+
 
 function summaryHallFromOrders(orders, usage, hall) {
   const first = orders.find((o) => o.hallSnapshot && o.hallSnapshot.hallNumber);
@@ -399,16 +405,68 @@ router.get("/:id",
   })
 );
 
-// 관리자: 주문 상태/메모 수정
+// 관리자·슈퍼바이저: 주문 상태/메모 수정 (고액은 슈퍼바이저 2차 승인)
 router.patch(
   "/:id", requireStaff,
   asyncHandler(async (req, res) => {
     const { status, memo } = req.body || {};
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
-    if (status) order.status = status;
+
+    const prevStatus = order.status;
+    let nextStatus = status || null;
+    const threshold = env.HIGH_VALUE_ORDER_THRESHOLD || 1000000;
+    const isHighValue = (order.totalAmount || 0) >= threshold;
+
+    if (nextStatus) {
+      if (!ALLOWED_ORDER_STATUS.includes(nextStatus)) {
+        return res.status(400).json({ error: "허용되지 않는 주문 상태입니다." });
+      }
+
+      // 관리자가 고액 주문을 '확인'하면 슈퍼바이저 승인 대기로 전환
+      if (
+        nextStatus === "confirmed" &&
+        isAdmin(req.user) &&
+        isHighValue &&
+        prevStatus !== "confirmed" &&
+        prevStatus !== "paid" &&
+        prevStatus !== "awaiting_supervisor"
+      ) {
+        nextStatus = "awaiting_supervisor";
+      }
+
+      // awaiting_supervisor → confirmed: 슈퍼바이저 승인 (관리자도 긴급 확정 가능, 감사 기록)
+      if (prevStatus === "awaiting_supervisor" && nextStatus === "confirmed") {
+        order.supervisorApprovedAt = new Date();
+        order.supervisorApprovedBy = req.user.username || req.user.name || req.user.role || "";
+      }
+
+      order.status = nextStatus;
+    }
+
     if (typeof memo === "string") order.memo = memo;
     await order.save();
+
+    if (nextStatus && nextStatus !== prevStatus) {
+      const action =
+        nextStatus === "awaiting_supervisor" || (prevStatus === "awaiting_supervisor" && nextStatus === "confirmed")
+          ? "approve"
+          : "update";
+      await writeAudit(req, {
+        action,
+        targetType: "order",
+        targetId: order._id,
+        summary: `주문 ${order.orderNumber} 상태 ${prevStatus} → ${order.status}${isHighValue ? " (고액)" : ""}`,
+        detail: {
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          threshold,
+          from: prevStatus,
+          to: order.status,
+        },
+      });
+    }
+
     res.json({ order: order.toJSONSafe() });
   })
 );
@@ -453,6 +511,13 @@ router.patch(
 
     order.recalcTotals();
     await order.save();
+    await writeAudit(req, {
+      action: "settle",
+      targetType: "order",
+      targetId: order._id,
+      summary: `주문 ${order.orderNumber} 사후정산`,
+      detail: { totalAmount: order.totalAmount, postpaidSettledAt: order.postpaidSettledAt },
+    });
     res.json({ order: order.toJSONSafe() });
   })
 );

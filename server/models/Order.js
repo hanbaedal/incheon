@@ -43,10 +43,13 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "paid", "canceled"],
+      enum: ["pending", "awaiting_supervisor", "confirmed", "paid", "canceled"],
       default: "pending",
       index: true,
     },
+    /** 고액 주문 슈퍼바이저 승인 시각 */
+    supervisorApprovedAt: { type: Date, default: null },
+    supervisorApprovedBy: { type: String, default: "" },
     memo: { type: String, default: "" },
     postpaidSettledAt: { type: Date, default: null },
     /** 주문 접수 시점의 빈소·발인 정보 (변경 불가 스냅샷) */
@@ -101,6 +104,8 @@ orderSchema.methods.toJSONSafe = function toJSONSafe() {
     totalAmount: this.totalAmount,
     buyer: this.buyer,
     status: this.status,
+    supervisorApprovedAt: this.supervisorApprovedAt,
+    supervisorApprovedBy: this.supervisorApprovedBy,
     memo: this.memo,
     postpaidSettledAt: this.postpaidSettledAt,
     createdAt: this.createdAt,

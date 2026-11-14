@@ -26,3 +26,5 @@ services:
         value: basic4444
       - key: SUPERVISOR_NAME
         value: 슈퍼바이저
+      - key: HIGH_VALUE_ORDER_THRESHOLD
+        value: "1000000"

@@ -50,7 +50,13 @@ function mToast(msg) {
   mToastTimer = setTimeout(() => t.classList.remove("show"), 2200);
 }
 
-const MEMBER_STATUS = { pending: "pending", confirmed: "confirmed", paid: "paid", canceled: "canceled" };
+const MEMBER_STATUS = {
+  pending: "pending",
+  awaiting_supervisor: "awaiting_supervisor",
+  confirmed: "confirmed",
+  paid: "paid",
+  canceled: "canceled",
+};
 const DEFAULT_FUNERAL_DAY_OPTIONS = mDefaultFuneralDayOptions();
 
 function mToDateInputValue(s) {
@@ -194,13 +200,22 @@ const mMemberModal = (function () {
 
 const RESERVE_CATS = mReserveCats();
 
-/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' | 'guide' */
+/* 헤더 렌더 + 로그인 가드. active: 'shop' | 'orders' | 'guide' | 'setup' */
 async function memberHeader(active) {
   let me;
   try { me = (await mApi("/auth/me")).user; }
   catch (e) { return null; }
   if (!me || (me.role !== "family" && me.role !== "admin")) {
     location.href = "/pages/member/login.html"; return null;
+  }
+  // 상주 최초 설정(비밀번호·이용안내) 미완료 시 setup으로 이동
+  if (
+    me.role === "family" &&
+    active !== "setup" &&
+    (me.mustChangePassword || !me.guideAcknowledged)
+  ) {
+    location.href = "/pages/member/setup.html";
+    return null;
   }
   const host = document.getElementById("mHeader");
   if (host) {

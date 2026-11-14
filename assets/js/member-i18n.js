@@ -47,6 +47,7 @@
     "nav.whoSuffix": { ko: " 님", zh: " 先生/女士", en: "" },
 
     "status.pending": { ko: "접수", zh: "受理", en: "Received" },
+    "status.awaiting_supervisor": { ko: "승인대기", zh: "待督导确认", en: "Awaiting approval" },
     "status.confirmed": { ko: "확인", zh: "确认", en: "Confirmed" },
     "status.paid": { ko: "결제완료", zh: "付款完成", en: "Paid" },
     "status.canceled": { ko: "취소", zh: "取消", en: "Canceled" },

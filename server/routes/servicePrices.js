@@ -5,6 +5,7 @@ const ServicePrice = require("../models/ServicePrice");
 const { upsertServicePrices } = require("../utils/ensureServicePrices");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireStaff } = require("../middleware/auth");
+const { writeAudit } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -49,6 +50,13 @@ router.post(
       return res.status(400).json({ error: "구분과 항목명을 입력해 주세요." });
     }
     const doc = await ServicePrice.create(req.body);
+    await writeAudit(req, {
+      action: "create",
+      targetType: "servicePrice",
+      targetId: doc._id,
+      summary: `서비스 요금 추가: ${doc.name}`,
+      detail: { price: doc.price, group: doc.group },
+    });
     res.status(201).json({ item: doc.toJSONSafe() });
   })
 );
@@ -65,6 +73,13 @@ router.patch(
     for (const k of allowed) if (k in (req.body || {})) update[k] = req.body[k];
     const doc = await ServicePrice.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!doc) return res.status(404).json({ error: "서비스 요금 항목을 찾을 수 없습니다." });
+    await writeAudit(req, {
+      action: "update",
+      targetType: "servicePrice",
+      targetId: doc._id,
+      summary: `서비스 요금 수정: ${doc.name}`,
+      detail: update,
+    });
     res.json({ item: doc.toJSONSafe() });
   })
 );
@@ -75,6 +90,12 @@ router.delete(
   asyncHandler(async (req, res) => {
     const r = await ServicePrice.findByIdAndDelete(req.params.id);
     if (!r) return res.status(404).json({ error: "서비스 요금 항목을 찾을 수 없습니다." });
+    await writeAudit(req, {
+      action: "delete",
+      targetType: "servicePrice",
+      targetId: r._id,
+      summary: `서비스 요금 삭제: ${r.name}`,
+    });
     res.json({ ok: true });
   })
 );

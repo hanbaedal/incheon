@@ -5,6 +5,7 @@ const HallFacilityFee = require("../models/HallFacilityFee");
 const { upsertHallFacilityFees } = require("../utils/ensureHallFacilityFees");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireAdmin, requireStaff } = require("../middleware/auth");
+const { writeAudit } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -47,6 +48,13 @@ router.post(
     const { code, group } = req.body || {};
     if (!code || !group) return res.status(400).json({ error: "코드와 구분을 입력해 주세요." });
     const doc = await HallFacilityFee.create(req.body);
+    await writeAudit(req, {
+      action: "create",
+      targetType: "hallFee",
+      targetId: doc._id,
+      summary: `시설 사용료 추가: ${doc.name || doc.code}`,
+      detail: { price: doc.price, group: doc.group },
+    });
     res.status(201).json({ item: doc.toJSONSafe() });
   })
 );
@@ -63,6 +71,13 @@ router.patch(
     for (const k of allowed) if (k in (req.body || {})) update[k] = req.body[k];
     const doc = await HallFacilityFee.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!doc) return res.status(404).json({ error: "시설 사용료 항목을 찾을 수 없습니다." });
+    await writeAudit(req, {
+      action: "update",
+      targetType: "hallFee",
+      targetId: doc._id,
+      summary: `시설 사용료 수정: ${doc.name || doc.code}`,
+      detail: update,
+    });
     res.json({ item: doc.toJSONSafe() });
   })
 );
@@ -73,6 +88,12 @@ router.delete(
   asyncHandler(async (req, res) => {
     const r = await HallFacilityFee.findByIdAndDelete(req.params.id);
     if (!r) return res.status(404).json({ error: "시설 사용료 항목을 찾을 수 없습니다." });
+    await writeAudit(req, {
+      action: "delete",
+      targetType: "hallFee",
+      targetId: r._id,
+      summary: `시설 사용료 삭제: ${r.name || r.code}`,
+    });
     res.json({ ok: true });
   })
 );
