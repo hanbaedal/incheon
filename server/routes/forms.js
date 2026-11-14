@@ -5,7 +5,7 @@ const multer = require("multer");
 const FuneralForm = require("../models/FuneralForm");
 const FormFile = require("../models/FormFile");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -55,9 +55,7 @@ function encodeFilename(name) {
 }
 
 // 관리자: 전체 목록
-router.get(
-  "/admin/all",
-  requireAdmin,
+router.get("/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await FuneralForm.find({}).sort({ sortOrder: 1, createdAt: 1 });
     const fileMap = await loadFileMap(items);
@@ -68,8 +66,7 @@ router.get(
 );
 
 // 공개: 활성 서식 목록
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const items = await FuneralForm.find({ active: true }).sort({ sortOrder: 1, createdAt: 1 });
     const fileMap = await loadFileMap(items);
@@ -81,8 +78,7 @@ router.get(
 
 // 관리자: 파일 다운로드 (비공개 포함)
 router.get(
-  "/admin/:id/download",
-  requireAdmin,
+  "/admin/:id/download", requireStaff,
   asyncHandler(async (req, res) => {
     const form = await FuneralForm.findById(req.params.id);
     if (!form || !form.fileId) return res.status(404).json({ error: "다운로드할 서식을 찾을 수 없습니다." });
@@ -98,8 +94,7 @@ router.get(
 );
 
 // 공개: 파일 다운로드
-router.get(
-  "/:id/download",
+router.get("/:id/download",
   asyncHandler(async (req, res) => {
     const form = await FuneralForm.findOne({ _id: req.params.id, active: true });
     if (!form || !form.fileId) return res.status(404).json({ error: "다운로드할 서식을 찾을 수 없습니다." });

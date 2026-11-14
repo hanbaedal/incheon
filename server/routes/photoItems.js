@@ -4,12 +4,11 @@ const express = require("express");
 const PhotoItem = require("../models/PhotoItem");
 const { PHOTO_CATEGORIES } = require("../constants/photoCategories");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.photoCategory) filter.photoCategory = req.query.photoCategory;
@@ -19,8 +18,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const filter = {};
     if (req.query.photoCategory) filter.photoCategory = req.query.photoCategory;

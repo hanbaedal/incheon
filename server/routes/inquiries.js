@@ -3,13 +3,12 @@
 const express = require("express");
 const Inquiry = require("../models/Inquiry");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
 // 공개: 목록 (비공개글은 제목 마스킹)
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || "10", 10)));
@@ -70,8 +69,7 @@ router.post(
 
 // 관리자: 전체 목록(연락처 포함)
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const status = req.query.status;
     const filter = status ? { status } : {};

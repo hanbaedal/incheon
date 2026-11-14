@@ -3,14 +3,13 @@
 const express = require("express");
 const Product = require("../models/Product");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 const { CAT_KEYS, CAT_LABELS } = require("../constants/categories");
 
 const router = express.Router();
 
 // 공개: 판매 중 상품 목록
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.category) filter.category = req.query.category;
@@ -32,8 +31,7 @@ router.get(
 
 // 관리자: 전체 상품
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await Product.find({}).sort({ catKey: 1, sortOrder: 1, name: 1 });
     res.json({ items: items.map((p) => p.toJSONSafe()) });

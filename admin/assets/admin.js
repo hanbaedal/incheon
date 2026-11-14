@@ -148,12 +148,43 @@ function checked(id) { const el = document.getElementById(id); return el ? el.ch
 
 /* ---------- 인증 가드 ---------- */
 let ME = null;
+function isSupervisor() { return !!(ME && ME.role === "supervisor"); }
+function canWrite() { return !!(ME && ME.role === "admin"); }
+
+/** 슈퍼바이저: 조회·승인만 (등록/수정/삭제 UI 숨김, 승인·정산은 유지) */
+function applyRoleUi() {
+  if (!isSupervisor()) {
+    document.body.classList.remove("role-supervisor");
+    return;
+  }
+  document.body.classList.add("role-supervisor");
+  content.querySelectorAll(
+    ".toolbar .btn-primary, [data-edit], [data-del], [data-fee-del], [data-rmfile], [data-upload], #addFam, #addNotice, #addForm, #addCoffin, #addHallUsage, #addHallFacilityFee"
+  ).forEach((el) => {
+    if (el.hasAttribute("data-approve")) return;
+    el.style.display = "none";
+  });
+  content.querySelectorAll(".btn-danger").forEach((el) => {
+    if (el.hasAttribute("data-reject")) return;
+    el.style.display = "none";
+  });
+  content.querySelectorAll("[data-view]").forEach((el) => {
+    // 문의 보기·답변 버튼은 유지 (저장은 서버에서 관리자만 허용)
+  });
+}
+
 async function guard() {
   try {
     const d = await api("/auth/me");
-    if (!d.user || d.user.role !== "admin") { location.href = ADMIN_LOGIN_URL; return false; }
+    if (!d.user || (d.user.role !== "admin" && d.user.role !== "supervisor")) {
+      location.href = ADMIN_LOGIN_URL;
+      return false;
+    }
     ME = d.user;
-    document.getElementById("whoName").textContent = ME.name + " 님";
+    const roleLabel = ME.role === "supervisor" ? "슈퍼바이저" : "관리자";
+    document.getElementById("whoName").textContent = `${ME.name} 님 · ${roleLabel}`;
+    const brand = document.querySelector(".admin-brand strong");
+    if (brand && ME.role === "supervisor") brand.textContent = "슈퍼바이저 콘솔";
     return true;
   } catch (e) { location.href = ADMIN_LOGIN_URL; return false; }
 }
@@ -176,7 +207,7 @@ const NAV_MENU = [
       { view: "halls", label: "빈소 목록" },
       { view: "hallUsages", label: "빈소 이용" },
       { view: "hallRegister", label: "빈소 이용 등록" },
-      { view: "families", label: "상주 계정" },
+      { view: "families", label: "회원 리스트" },
       { view: "hallRequests", label: "빈소 신청" },
       { view: "hallFacilityEnshrine", label: "안치료" },
       { view: "hallFacilityAdmission", label: "입관실" },
@@ -346,7 +377,7 @@ const VIEWS = {
   halls: { title: "빈소 목록", render: renderHalls },
   hallUsages: { title: "빈소 이용", render: renderHallUsages },
   hallRegister: { title: "빈소 이용 등록", render: renderHallRegister },
-  families: { title: "상주 계정 관리", render: renderFamilies },
+  families: { title: "회원 리스트", render: renderFamilies },
   hallRequests: { title: "빈소 신청", render: renderHallRequests },
   hallFacilityEnshrine: { title: "안치료", render: () => renderHallFacilityFeePage("enshrine", "안치료") },
   hallFacilityAdmission: { title: "입관실", render: () => renderHallFacilityFeePage("admission", "입관실") },
@@ -390,10 +421,16 @@ function currentView() {
 async function route() {
   const key = currentView();
   syncNav(key);
-  document.getElementById("viewTitle").textContent = VIEWS[key].title;
+  const titleBase = VIEWS[key].title;
+  document.getElementById("viewTitle").textContent =
+    isSupervisor() ? titleBase + " (조회·승인)" : titleBase;
   content.innerHTML = '<div class="empty">불러오는 중…</div>';
-  try { await VIEWS[key].render(); }
-  catch (e) { content.innerHTML = `<div class="empty">오류: ${esc(e.message)}</div>`; }
+  try {
+    await VIEWS[key].render();
+    applyRoleUi();
+  } catch (e) {
+    content.innerHTML = `<div class="empty">오류: ${esc(e.message)}</div>`;
+  }
   refreshInquiryBadge();
   refreshOrderBadge();
   refreshHallReqBadge();
@@ -733,6 +770,10 @@ async function renderHallUsages() {
 
 async function renderHallRegister() {
   await renderHallUsages();
+  if (!canWrite()) {
+    toast("빈소 이용 등록은 관리자만 가능합니다. 조회·승인은 빈소 신청·주문 메뉴를 이용해 주세요.");
+    return;
+  }
   hallUsageForm(null);
 }
 
@@ -1004,8 +1045,8 @@ async function renderInquiries() {
             <td class="nowrap">${esc(i.phone) || "-"}</td>
             <td class="nowrap">${fmtDay(i.createdAt)}</td>
             <td class="actions">
-              <button class="btn btn-sm btn-primary" data-view='${esc(JSON.stringify(i))}'>보기·답변</button>
-              <button class="btn btn-sm btn-danger" data-del="${i.id}" data-name="${esc(i.title)}">삭제</button>
+              <button class="btn btn-sm btn-primary" data-view='${esc(JSON.stringify(i))}'>${canWrite() ? "보기·답변" : "보기"}</button>
+              ${canWrite() ? `<button class="btn btn-sm btn-danger" data-del="${i.id}" data-name="${esc(i.title)}">삭제</button>` : ""}
             </td>
           </tr>`).join("")}</tbody>
       </table>`}
@@ -1022,6 +1063,16 @@ async function renderInquiries() {
 }
 
 function inquiryDetail(i) {
+  const write = canWrite();
+  const foot = [{ label: "닫기", onClick: closeModal }];
+  if (write) {
+    foot.push({ label: "저장", cls: "btn-primary", onClick: async () => {
+      try {
+        await api("/inquiries/" + i.id, { method: "PATCH", body: { answer: val("f_answer"), status: val("f_status") } });
+        closeModal(); toast("저장되었습니다."); renderInquiries();
+      } catch (err) { toast(err.message); }
+    } });
+  }
   openModal("문의 상세", `
     <div class="detail-row"><b>작성자</b><span>${esc(i.name)} / ${esc(i.phone) || "-"} / ${esc(i.email) || "-"}</span></div>
     <div class="detail-row"><b>분류</b><span>${esc(i.category)} ${i.isPrivate ? "(비공개)" : ""}</span></div>
@@ -1030,23 +1081,17 @@ function inquiryDetail(i) {
     <div class="field" style="margin-top:14px"><label>문의 내용</label>
       <div style="white-space:pre-wrap;background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:12px">${esc(i.message)}</div>
     </div>
-    <div class="field"><label>답변</label><textarea id="f_answer">${esc(i.answer || "")}</textarea></div>
+    <div class="field"><label>답변</label>
+      ${write ? `<textarea id="f_answer">${esc(i.answer || "")}</textarea>` : `<div style="white-space:pre-wrap;background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:12px">${esc(i.answer || "(답변 없음)")}</div>`}
+    </div>
     <div class="field"><label>상태</label>
-      <select id="f_status">
+      ${write ? `<select id="f_status">
         <option value="pending" ${i.status === "pending" ? "selected" : ""}>대기</option>
         <option value="answered" ${i.status === "answered" ? "selected" : ""}>답변완료</option>
         <option value="closed" ${i.status === "closed" ? "selected" : ""}>종료</option>
-      </select>
+      </select>` : `<div>${esc(i.status)}</div>`}
     </div>
-  `, [
-    { label: "닫기", onClick: closeModal },
-    { label: "저장", cls: "btn-primary", onClick: async () => {
-      try {
-        await api("/inquiries/" + i.id, { method: "PATCH", body: { answer: val("f_answer"), status: val("f_status") } });
-        closeModal(); toast("저장되었습니다."); renderInquiries();
-      } catch (err) { toast(err.message); }
-    } },
-  ]);
+  `, foot);
 }
 
 /* ---------- 추모글 관리 ---------- */
@@ -1085,54 +1130,73 @@ async function renderMemorials() {
     })));
 }
 
-/* ---------- 상주 계정 관리 ---------- */
+/* ---------- 회원 리스트 (관리자·상주 아이디/비밀번호) ---------- */
 async function renderFamilies() {
-  const [d, admins] = await Promise.all([
-    api("/users/admin/all"),
-    api("/users/admin/admins").catch(() => ({ items: [] })),
-  ]);
-  const adminRows = (admins.items || []).map((u) => `
-    <tr>
-      <td><span class="tag answered">관리자</span></td>
-      <td><b>${esc(u.username)}</b></td>
-      <td>${esc(u.name)}</td>
-      <td><code style="font-size:13px">${esc(u.password) || '<span class="muted">미저장 — 비밀번호 재설정 필요</span>'}</code></td>
-      <td class="nowrap">${fmtDay(u.lastLoginAt)}</td>
-    </tr>`).join("");
+  const d = await api("/users/admin/members");
+  const admins = d.admins || [];
+  const supervisors = d.supervisors || [];
+  const families = d.families || [];
+
+  const accountRows = (list, roleTag) =>
+    list.length === 0
+      ? `<tr><td colspan="5" class="empty">등록된 계정이 없습니다.</td></tr>`
+      : list.map((u) => `
+          <tr>
+            <td>${roleTag}</td>
+            <td><b>${esc(u.username)}</b></td>
+            <td>${esc(u.name)}</td>
+            <td><code class="pw-code">${esc(u.password) || '<span class="muted">미저장</span>'}</code></td>
+            <td class="nowrap">${fmtDay(u.lastLoginAt)}</td>
+          </tr>`).join("");
 
   content.innerHTML = `
+    <p class="orders-lead">관리자·상주(유족) 계정의 <strong>아이디·비밀번호</strong>를 확인할 수 있습니다. 비밀번호는 입력한 값 그대로 저장·표시됩니다.${isSupervisor() ? " 슈퍼바이저는 조회만 가능합니다." : ""}</p>
+
     <div class="panel" style="margin-bottom:14px">
-      <div class="panel-body">
-        <p class="muted" style="margin:0 0 10px">관리자·상주 계정 비밀번호는 입력한 값 그대로 저장되어 이 화면에서 확인할 수 있습니다. (로그인 검증용 해시와 함께 보관)</p>
+      <div class="panel-body" style="padding:0">
+        <div class="member-section-head">관리자 계정</div>
         <table class="grid">
           <thead><tr><th>구분</th><th>아이디</th><th>이름</th><th>비밀번호</th><th>최근 로그인</th></tr></thead>
-          <tbody>${adminRows || '<tr><td colspan="5" class="empty">관리자 계정이 없습니다.</td></tr>'}</tbody>
+          <tbody>${accountRows(admins, '<span class="tag answered">관리자</span>')}</tbody>
         </table>
       </div>
     </div>
-    <div class="toolbar"><button class="btn btn-primary" id="addFam">+ 상주 계정 발급</button></div>
+
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-body" style="padding:0">
+        <div class="member-section-head">슈퍼바이저 계정</div>
+        <table class="grid">
+          <thead><tr><th>구분</th><th>아이디</th><th>이름</th><th>비밀번호</th><th>최근 로그인</th></tr></thead>
+          <tbody>${accountRows(supervisors, '<span class="tag pending">슈퍼바이저</span>')}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="toolbar">${canWrite() ? '<button class="btn btn-primary" id="addFam">+ 상주 계정 발급</button>' : '<span class="muted">상주 계정 발급·수정은 관리자만 가능합니다.</span>'}</div>
     <div class="panel"><div class="panel-body" style="padding:0">
-      ${d.items.length === 0 ? '<div class="empty">발급된 상주 계정이 없습니다.</div>' : `
+      <div class="member-section-head">상주(유족) 계정</div>
+      ${families.length === 0 ? '<div class="empty">발급된 상주 계정이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>아이디</th><th>이름</th><th>비밀번호</th><th>연락처</th><th>연결 빈소</th><th>상태</th><th>최근 로그인</th><th class="right">관리</th></tr></thead>
-        <tbody>${d.items.map((u) => `
+        <thead><tr><th>아이디</th><th>이름</th><th>비밀번호</th><th>연락처</th><th>연결 빈소</th><th>상태</th><th>최근 로그인</th>${canWrite() ? '<th class="right">관리</th>' : ""}</tr></thead>
+        <tbody>${families.map((u) => `
           <tr>
             <td><b>${esc(u.username)}</b></td>
             <td>${esc(u.name)}</td>
-            <td><code style="font-size:13px">${esc(u.password) || '<span class="muted">-</span>'}</code></td>
+            <td><code class="pw-code">${esc(u.password) || '<span class="muted">-</span>'}</code></td>
             <td class="nowrap">${esc(u.phone) || "-"}</td>
             <td class="nowrap">${u.hall ? esc(u.hall.hallNumber) + (u.hall.deceasedName ? " / " + esc(u.hall.deceasedName) : "") : "-"}</td>
             <td>${u.active ? '<span class="tag free">사용</span>' : '<span class="tag gray">정지</span>'}</td>
             <td class="nowrap">${fmtDay(u.lastLoginAt)}</td>
-            <td class="actions">
+            ${canWrite() ? `<td class="actions">
               <button class="btn btn-sm" data-edit='${esc(JSON.stringify(u))}'>수정</button>
               <button class="btn btn-sm btn-danger" data-del="${u.id}" data-name="${esc(u.username)}">삭제</button>
-            </td>
+            </td>` : ""}
           </tr>`).join("")}</tbody>
       </table>`}
     </div></div>`;
 
-  document.getElementById("addFam").addEventListener("click", () => familyForm(null));
+  const addBtn = document.getElementById("addFam");
+  if (addBtn) addBtn.addEventListener("click", () => familyForm(null));
   content.querySelectorAll("[data-edit]").forEach((b) =>
     b.addEventListener("click", () => familyForm(JSON.parse(b.getAttribute("data-edit")))));
   content.querySelectorAll("[data-del]").forEach((b) =>

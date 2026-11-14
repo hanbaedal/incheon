@@ -16,7 +16,7 @@ const ServicePrice = require("../models/ServicePrice");
 const HallFacilityFee = require("../models/HallFacilityFee");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin, requireFamily, requireAuth } = require("../middleware/auth");
+const { requireAdmin, requireFamily, requireAuth, requireStaff } = require("../middleware/auth");
 const { nextOrderNumber } = require("../utils/orderNumber");
 const { aggregateOrders } = require("../utils/orderAggregate");
 const { buildHallSnapshotFromUsage, hallSnapshotToSummary, usageToHallSummary } = require("../utils/hallFormat");
@@ -309,8 +309,7 @@ router.post(
 );
 
 // 상주: 내 주문 목록
-router.get(
-  "/mine",
+router.get("/mine",
   requireFamily,
   asyncHandler(async (req, res) => {
     const orders = await Order.find({ familyUserId: req.user.uid }).sort({ createdAt: -1 });
@@ -337,8 +336,7 @@ router.get(
 
 // 관리자: 전체 주문
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
@@ -360,9 +358,7 @@ router.get(
 );
 
 // 관리자: 상주별 주문 집계
-router.get(
-  "/admin/summary",
-  requireAdmin,
+router.get("/admin/summary", requireStaff,
   asyncHandler(async (req, res) => {
     const { familyUserId } = req.query || {};
     if (!familyUserId) return res.status(400).json({ error: "상주 계정 ID가 필요합니다." });
@@ -380,15 +376,14 @@ router.get(
 );
 
 // 주문 단건 (문서 출력용) — 상주는 본인 주문만, 관리자는 전체
-router.get(
-  "/:id",
+router.get("/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
       .populate("familyUserId", "name username phone")
       .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     if (!order) return res.status(404).json({ error: "주문을 찾을 수 없습니다." });
-    if (req.user.role !== "admin") {
+    if (req.user.role !== "admin" && req.user.role !== "supervisor") {
       const ownerId = order.familyUserId && order.familyUserId._id;
       if (!ownerId || String(ownerId) !== req.user.uid) {
         return res.status(403).json({ error: "본인 주문만 조회할 수 있습니다." });
@@ -406,8 +401,7 @@ router.get(
 
 // 관리자: 주문 상태/메모 수정
 router.patch(
-  "/:id",
-  requireAdmin,
+  "/:id", requireStaff,
   asyncHandler(async (req, res) => {
     const { status, memo } = req.body || {};
     const order = await Order.findById(req.params.id);
@@ -419,10 +413,10 @@ router.patch(
   })
 );
 
-// 관리자: 사후정산 (발인 전 수기 정산)
+// 관리자·슈퍼바이저: 사후정산 (발인 전 수기 정산 승인)
 router.patch(
   "/:id/settle",
-  requireAdmin,
+  requireStaff,
   asyncHandler(async (req, res) => {
     const { items } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) {

@@ -3,12 +3,11 @@
 const express = require("express");
 const Accessory = require("../models/Accessory");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const items = await Accessory.find({ active: true }).sort({ sortOrder: 1, name: 1 });
     res.json({ items: items.map((a) => a.toJSONSafe()) });
@@ -16,8 +15,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await Accessory.find({}).sort({ sortOrder: 1, name: 1 });
     res.json({ items: items.map((a) => a.toJSONSafe()) });

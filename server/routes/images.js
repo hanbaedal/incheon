@@ -4,7 +4,7 @@ const express = require("express");
 const multer = require("multer");
 const ProductImage = require("../models/ProductImage");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 

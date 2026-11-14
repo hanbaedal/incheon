@@ -20,3 +20,9 @@ services:
         sync: false
       - key: ADMIN_NAME
         sync: false
+      - key: SUPERVISOR_USERNAME
+        value: basic
+      - key: SUPERVISOR_PASSWORD
+        value: basic4444
+      - key: SUPERVISOR_NAME
+        value: 슈퍼바이저

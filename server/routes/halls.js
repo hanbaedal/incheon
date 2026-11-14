@@ -4,15 +4,14 @@ const express = require("express");
 const Hall = require("../models/Hall");
 const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 const { usageToPublicJSON } = require("../utils/hallFormat");
 const { computeHallAvailability, autoCompletePastFunerals } = require("../utils/hallAvailability");
 
 const router = express.Router();
 
 // 공개: 현재 이용 중인 빈소 현황 (HallUsage 기준)
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     await autoCompletePastFunerals();
     const filter = { status: "active" };
@@ -65,8 +64,7 @@ router.get(
 
 // 관리자: 빈소 규격(카탈로그) 목록
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const halls = await Hall.find({}).sort({ sortOrder: 1, name: 1 });
     res.json({ items: halls.map((h) => h.toAdminJSON()) });

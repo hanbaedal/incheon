@@ -7,6 +7,7 @@ const env = require("./config/env");
 const { connectDB } = require("./config/db");
 const { createApp } = require("./app");
 const { ensureAdmin } = require("./utils/ensureAdmin");
+const { ensureSupervisor } = require("./utils/ensureSupervisor");
 const { ensureAmcCatalog } = require("./utils/ensureCatalog");
 const { ensureServicePrices } = require("./utils/ensureServicePrices");
 const { ensureHallFacilityFees } = require("./utils/ensureHallFacilityFees");
@@ -28,6 +29,13 @@ async function main() {
     await ensureAdmin();
   } catch (err) {
     console.error("[ADMIN] 자동 시딩 실패:", err.message);
+  }
+
+  // 슈퍼바이저 계정 (기본: basic / basic4444)
+  try {
+    await ensureSupervisor();
+  } catch (err) {
+    console.error("[SUPERVISOR] 자동 시딩 실패:", err.message);
   }
 
   // AMC 장례용품 규격표 — 서버 시작 시 자동 등록 (Render Shell 불필요)

@@ -4,12 +4,11 @@ const express = require("express");
 const FlowerItem = require("../models/FlowerItem");
 const { FLOWER_CATEGORIES } = require("../constants/flowerCategories");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.flowerCategory) filter.flowerCategory = req.query.flowerCategory;
@@ -19,8 +18,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const filter = {};
     if (req.query.flowerCategory) filter.flowerCategory = req.query.flowerCategory;

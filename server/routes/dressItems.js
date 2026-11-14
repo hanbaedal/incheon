@@ -4,7 +4,7 @@ const express = require("express");
 const DressItem = require("../models/DressItem");
 const { DRESS_ITEM_NAMES } = require("../constants/dressCategories");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -19,8 +19,7 @@ function sortDressItems(items) {
   });
 }
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.name) filter.name = req.query.name;
@@ -30,8 +29,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const filter = {};
     if (req.query.name) filter.name = req.query.name;

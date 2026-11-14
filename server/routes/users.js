@@ -4,40 +4,70 @@ const express = require("express");
 const User = require("../models/User");
 const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 const { usageToHallSummary } = require("../utils/hallFormat");
 
 const router = express.Router();
 
-// 관리자: 상주(family) 계정 목록 (연결 빈소 이용 정보·비밀번호 포함)
+function mapFamily(u) {
+  return {
+    ...u.toAdminJSON(),
+    hall: usageToHallSummary(u.hallUsageId, u.hallUsageId && u.hallUsageId.hallId),
+    lastLoginAt: u.lastLoginAt,
+  };
+}
+
+function mapAccount(u) {
+  return {
+    ...u.toAdminJSON(),
+    lastLoginAt: u.lastLoginAt,
+  };
+}
+
+// 상주(family) 계정 목록 (아이디·비밀번호 포함)
 router.get(
   "/admin/all",
-  requireAdmin,
+  requireStaff,
   asyncHandler(async (req, res) => {
     const users = await User.find({ role: "family" })
       .sort({ createdAt: -1 })
       .populate({ path: "hallUsageId", populate: { path: "hallId" } });
-    res.json({
-      items: users.map((u) => ({
-        ...u.toAdminJSON(),
-        hall: usageToHallSummary(u.hallUsageId, u.hallUsageId && u.hallUsageId.hallId),
-        lastLoginAt: u.lastLoginAt,
-      })),
-    });
+    res.json({ items: users.map(mapFamily) });
   })
 );
 
-// 관리자: 관리자 계정 정보(아이디·비밀번호 표시용)
+// 관리자 계정 목록 (아이디·비밀번호 포함)
 router.get(
   "/admin/admins",
-  requireAdmin,
+  requireStaff,
   asyncHandler(async (req, res) => {
     const admins = await User.find({ role: "admin" }).sort({ username: 1 });
+    res.json({ items: admins.map(mapAccount) });
+  })
+);
+
+// 회원 리스트 통합 (관리자 + 상주 + 슈퍼바이저) — 아이디·비밀번호 표시
+router.get(
+  "/admin/members",
+  requireStaff,
+  asyncHandler(async (req, res) => {
+    const [admins, supervisors, families] = await Promise.all([
+      User.find({ role: "admin" }).sort({ username: 1 }),
+      User.find({ role: "supervisor" }).sort({ username: 1 }),
+      User.find({ role: "family" })
+        .sort({ createdAt: -1 })
+        .populate({ path: "hallUsageId", populate: { path: "hallId" } }),
+    ]);
+
     res.json({
-      items: admins.map((u) => ({
-        ...u.toAdminJSON(),
-        lastLoginAt: u.lastLoginAt,
-      })),
+      admins: admins.map(mapAccount),
+      supervisors: supervisors.map(mapAccount),
+      families: families.map(mapFamily),
+      items: [
+        ...admins.map((u) => ({ ...mapAccount(u), roleLabel: "관리자" })),
+        ...supervisors.map((u) => ({ ...mapAccount(u), roleLabel: "슈퍼바이저" })),
+        ...families.map((u) => ({ ...mapFamily(u), roleLabel: "상주" })),
+      ],
     });
   })
 );
@@ -78,7 +108,7 @@ router.post(
   })
 );
 
-// 관리자: 상주 계정 수정 (이름/연락처/빈소 이용/활성/비밀번호 재설정)
+// 관리자: 상주 계정 수정
 router.patch(
   "/:id",
   requireAdmin,

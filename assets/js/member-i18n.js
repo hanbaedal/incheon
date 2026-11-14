@@ -53,7 +53,7 @@
 
     "login.pageTitle": { ko: "로그인 | 근로복지공단 인천병원 장례식장", zh: "登录 | 仁川医院殡仪馆", en: "Login | Incheon Funeral Hall" },
     "login.title": { ko: "로그인", zh: "登录", en: "Login" },
-    "login.sub": { ko: "상주(유족)·관리자 통합 로그인입니다.\n계정에 맞는 화면으로 자동 이동합니다.", zh: "丧主（家属）·管理员统一登录。\n将根据账号自动进入相应页面。", en: "Sign in for family members or administrators.\nYou will be redirected to the appropriate page." },
+    "login.sub": { ko: "상주(유족)·관리자·슈퍼바이저 통합 로그인입니다.\n계정에 맞는 화면으로 자동 이동합니다.", zh: "丧主（家属）·管理员·督导统一登录。\n将根据账号自动进入相应页面。", en: "Sign in for family, admin, or supervisor.\nYou will be redirected to the appropriate page." },
     "login.username": { ko: "아이디", zh: "用户名", en: "Username" },
     "login.password": { ko: "비밀번호", zh: "密码", en: "Password" },
     "login.submit": { ko: "로그인", zh: "登录", en: "Sign in" },

@@ -4,7 +4,7 @@ const express = require("express");
 const HallFacilityFee = require("../models/HallFacilityFee");
 const { upsertHallFacilityFees } = require("../utils/ensureHallFacilityFees");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -15,8 +15,7 @@ async function listFees(filter) {
   return items.map((f) => f.toJSONSafe());
 }
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const filter = { active: true };
     if (req.query.orderable === "1") filter.orderable = true;
@@ -25,8 +24,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     res.json({ items: await listFees({}) });
   })

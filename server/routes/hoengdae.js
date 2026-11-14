@@ -3,12 +3,11 @@
 const express = require("express");
 const Hoengdae = require("../models/Hoengdae");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const items = await Hoengdae.find({ active: true }).sort({ sortOrder: 1, name: 1 });
     res.json({ items: items.map((h) => h.toJSONSafe()) });
@@ -16,8 +15,7 @@ router.get(
 );
 
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await Hoengdae.find({}).sort({ sortOrder: 1, name: 1 });
     res.json({ items: items.map((h) => h.toJSONSafe()) });

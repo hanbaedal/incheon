@@ -3,13 +3,12 @@
 const express = require("express");
 const Notice = require("../models/Notice");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 
 const router = express.Router();
 
 // 공개: 목록 (고정글 우선, 최신순)
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit || "10", 10)));
@@ -32,8 +31,7 @@ router.get(
 
 // 관리자: 전체 목록 (미공개 포함)
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await Notice.find({}).sort({ pinned: -1, createdAt: -1 });
     res.json({ items: items.map((n) => n.toJSONSafe()) });
@@ -41,8 +39,7 @@ router.get(
 );
 
 // 공개: 상세 (조회수 증가)
-router.get(
-  "/:id",
+router.get("/:id",
   asyncHandler(async (req, res) => {
     const notice = await Notice.findOneAndUpdate(
       { _id: req.params.id, published: true },

@@ -12,7 +12,8 @@ const COOKIE_NAMES = {
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7일
 
 function cookieNameForRole(role) {
-  return role === "admin" ? COOKIE_NAMES.admin : COOKIE_NAMES.family;
+  // 관리자·슈퍼바이저는 동일 관리 콘솔(/admin) 세션 쿠키 사용
+  return role === "family" ? COOKIE_NAMES.family : COOKIE_NAMES.admin;
 }
 
 function signToken(payload) {

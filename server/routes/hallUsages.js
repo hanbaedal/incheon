@@ -5,7 +5,7 @@ const Hall = require("../models/Hall");
 const HallUsage = require("../models/HallUsage");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin, requireFamily } = require("../middleware/auth");
+const { requireAdmin, requireFamily, requireStaff } = require("../middleware/auth");
 const { usageToAdminJSON } = require("../utils/hallFormat");
 const { autoCompletePastFunerals } = require("../utils/hallAvailability");
 const {
@@ -83,8 +83,7 @@ async function loadUsage(id) {
 }
 
 // 상주: 내 빈소 이용 정보
-router.get(
-  "/mine",
+router.get("/mine",
   requireFamily,
   asyncHandler(async (req, res) => {
     await autoCompletePastFunerals();
@@ -129,8 +128,7 @@ router.patch(
 
 // 관리자: 빈소 이용 목록
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     await autoCompletePastFunerals();
     const filter = {};
@@ -146,9 +144,7 @@ router.get(
 );
 
 // 관리자: 상주 연결용 활성 빈소 이용 옵션
-router.get(
-  "/admin/active-options",
-  requireAdmin,
+router.get("/admin/active-options", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await HallUsage.find({ status: "active" })
       .sort({ createdAt: -1 })

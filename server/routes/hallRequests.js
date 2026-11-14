@@ -6,7 +6,7 @@ const HallUsage = require("../models/HallUsage");
 const HallRequest = require("../models/HallRequest");
 const User = require("../models/User");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin, requireFamily } = require("../middleware/auth");
+const { requireAdmin, requireFamily, requireStaff } = require("../middleware/auth");
 const { computeHallAvailability } = require("../utils/hallAvailability");
 const {
   ALLOWED_FUNERAL_DAYS,
@@ -84,8 +84,7 @@ function validateFuneralDays(hall, funeralDays) {
 }
 
 // 상주: 신청 가능한 빈소 규격 목록 + 가능 일자
-router.get(
-  "/available",
+router.get("/available",
   requireFamily,
   asyncHandler(async (req, res) => {
     const availability = await computeHallAvailability();
@@ -191,8 +190,7 @@ router.get(
 
 // 관리자: 전체 빈소 신청
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
@@ -211,10 +209,10 @@ router.get(
   })
 );
 
-// 관리자: 빈소 신청 승인/거절
+// 관리자·슈퍼바이저: 빈소 신청 승인/거절
 router.patch(
   "/:id",
-  requireAdmin,
+  requireStaff,
   asyncHandler(async (req, res) => {
     const { status, note } = req.body || {};
     if (!["approved", "rejected"].includes(status)) {

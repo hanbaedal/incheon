@@ -4,7 +4,7 @@ const express = require("express");
 const Memorial = require("../models/Memorial");
 const HallUsage = require("../models/HallUsage");
 const asyncHandler = require("../utils/asyncHandler");
-const { requireAdmin } = require("../middleware/auth");
+const { requireAdmin, requireStaff } = require("../middleware/auth");
 const { usageToHallSummary } = require("../utils/hallFormat");
 
 const router = express.Router();
@@ -14,8 +14,7 @@ function resolveUsageId(query, body) {
 }
 
 // 공개: 특정 빈소 이용의 추모글 목록
-router.get(
-  "/",
+router.get("/",
   asyncHandler(async (req, res) => {
     const hallUsageId = resolveUsageId(req.query, {});
     if (!hallUsageId) return res.status(400).json({ error: "hallUsageId 가 필요합니다." });
@@ -26,8 +25,7 @@ router.get(
 
 // 관리자: 전체 추모글 (숨김 포함, 빈소 이용 정보 병합)
 router.get(
-  "/admin/all",
-  requireAdmin,
+  "/admin/all", requireStaff,
   asyncHandler(async (req, res) => {
     const items = await Memorial.find({})
       .sort({ createdAt: -1 })

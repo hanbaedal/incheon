@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     // 관리자 화면에서 안내·전달용으로 입력 비밀번호를 그대로 보관
     passwordPlain: { type: String, default: "" },
-    role: { type: String, enum: ["admin", "family"], required: true, index: true },
+    role: { type: String, enum: ["admin", "supervisor", "family"], required: true, index: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: "" },
     // 상주(family) 계정이 연결된 빈소 이용
