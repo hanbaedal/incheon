@@ -39,5 +39,6 @@ router.use("/forms", require("./forms"));
 router.use("/hall-usages", require("./hallUsages"));
 router.use("/hall-requests", require("./hallRequests"));
 router.use("/audits", require("./audits"));
+router.use("/cms", require("./cms"));
 
 module.exports = router;

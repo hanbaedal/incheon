@@ -283,6 +283,7 @@ const NAV_MENU_FULL = [
     ],
   },
   { id: "audit", label: "감사 로그", view: "audits" },
+  { id: "cms", label: "홈페이지 CMS", view: "homeCms" },
 ];
 
 /** 슈퍼바이저 간편 모드: 현황·승인·감사만 */
@@ -302,6 +303,7 @@ const NAV_MENU_SIMPLE = [
     ],
   },
   { id: "audit", label: "감사 로그", view: "audits" },
+  { id: "cms", label: "홈페이지 CMS", view: "homeCms" },
 ];
 
 function getNavMenu() {
@@ -469,6 +471,7 @@ const VIEWS = {
   inquiries: { title: "온라인 문의", render: renderInquiries },
   memorials: { title: "추모글 관리", render: renderMemorials },
   audits: { title: "감사 로그", render: renderAudits },
+  homeCms: { title: "홈페이지 편집", render: renderHomeCms },
 };
 const content = document.getElementById("content");
 

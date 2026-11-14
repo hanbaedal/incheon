@@ -399,6 +399,7 @@
   /* ---------------- 페이지 본문 언어 적용 ---------------- */
   function applyPageLang(content) {
     if (!content) return;
+    if (PAGE.home && window.CMS_HOME) return; // 홈은 CMS 다국어 슬롯 사용
     if (LANG === "ko") return; // 한국어는 원문 유지
     var dict = window.PAGE_I18N;
     if (dict && typeof dict[LANG] === "string") {
@@ -421,6 +422,9 @@
     body.appendChild(buildFooter());
     wireHeaderScroll();
     if (typeof window.initHomeGuide === "function") window.initHomeGuide();
+    if (typeof window.cmsHydrate === "function") {
+      window.cmsHydrate({ page: window.CMS_PAGE || "home", lang: LANG });
+    }
     return;
     }
 

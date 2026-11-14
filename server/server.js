@@ -85,6 +85,14 @@ async function main() {
   }
 
   try {
+    const { ensureCmsHome } = require("./utils/ensureCmsHome");
+    const r = await ensureCmsHome();
+    if (r.created > 0) console.log(`[CMS] 홈 슬롯 ${r.created}건 등록 (전체 ${r.total}키)`);
+  } catch (err) {
+    console.error("[CMS] 홈 슬롯 시드 실패:", err.message);
+  }
+
+  try {
     const r = await autoCompletePastFunerals();
     if (r.completed > 0) console.log(`[HALL] 발인 경과 ${r.completed}건 자동 발인완료 처리`);
   } catch (err) {

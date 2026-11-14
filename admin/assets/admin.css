@@ -318,3 +318,31 @@ body.role-supervisor .admin-brand strong::after {
   .stat { flex: 1 1 calc(50% - 8px); }
   .admin-user .home-link { display: none; }
 }
+
+.cms-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 340px);
+  gap: 16px;
+  align-items: start;
+  min-height: 70vh;
+}
+.cms-preview-wrap { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); overflow: hidden; }
+.cms-preview-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 10px 12px; border-bottom: 1px solid var(--line); background: #fafbfc;
+}
+.cms-frame { display: block; width: 100%; height: min(75vh, 900px); border: 0; background: #f4f5f7; }
+.cms-panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); position: sticky; top: 12px; }
+.cms-panel-head { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.cms-panel-body { padding: 14px; max-height: 75vh; overflow-y: auto; }
+.cms-lang-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.cms-lang-tab {
+  flex: 1; padding: 8px 6px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--white); font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.cms-lang-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+@media (max-width: 900px) {
+  .cms-layout { grid-template-columns: 1fr; }
+  .cms-panel { position: static; }
+  .cms-frame { height: 55vh; }
+}

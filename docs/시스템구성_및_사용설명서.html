@@ -218,14 +218,14 @@
       <p>
         가로형 페이지를 기준으로 <strong>왼쪽은 화면 구성(와이어프레임)</strong>,
         <strong>오른쪽은 사용설명</strong>입니다. 현재 시스템은 정적 홈페이지 + Express/MongoDB API로 동작하며,
-        로그인 역할은 <strong>상주(family)</strong>와 <strong>관리자(admin)</strong>입니다.
-        슈퍼바이저는 아직 코드에 없으며, 운영 필요에 맞춘 <strong>권장 역할 설계</strong>로 정리했습니다.
+        로그인 역할은 <strong>상주(family)</strong> · <strong>관리자(admin)</strong> · <strong>슈퍼바이저(supervisor)</strong>입니다.
+        시각은 <strong>한국시간(KST, Asia/Seoul)</strong> 기준이며, 변경 이력은 감사 로그에 남습니다.
       </p>
       <div class="meta">
         <div><b>배포 URL</b><span>incheon.onrender.com</span></div>
         <div><b>스택</b><span>HTML/CSS/JS + Express + MongoDB</span></div>
-        <div><b>현재 역할</b><span>게스트 · 상주 · 관리자</span></div>
-        <div><b>제안 역할</b><span>슈퍼바이저 (미구현)</span></div>
+        <div><b>역할</b><span>게스트 · 상주 · 관리자 · 슈퍼바이저</span></div>
+        <div><b>시간대</b><span>Asia/Seoul (KST)</span></div>
       </div>
     </section>
 
@@ -242,9 +242,10 @@
           <span class="chip">MongoDB</span>
         </div>
         <p style="margin:14px 0 0;color:var(--muted);font-size:13px;">
-          공개 홈페이지는 누구나 열람합니다. 상주·관리자는
+          공개 홈페이지는 누구나 열람합니다. 상주·관리자·슈퍼바이저는
           <code>/pages/member/login.html</code> 통합 로그인 후 역할에 따라
-          상주 포털(<code>/pages/member/*</code>) 또는 관리자(<code>/admin/</code>)로 이동합니다.
+          상주 포털(<code>/pages/member/*</code>) 또는 관리 콘솔(<code>/admin/</code>)로 이동합니다.
+          슈퍼바이저도 동일 콘솔을 쓰며, <strong>간편 모드(조회·승인·감사)</strong>로 메뉴가 축소됩니다.
         </p>
       </div>
       <div class="panel">
@@ -262,17 +263,17 @@
             <tr>
               <td>상주 (family)</td>
               <td><span class="badge ok">운영 중</span></td>
-              <td>빈소 신청·장례 예약·내 예약·문서</td>
+              <td>최초설정 · 빈소 신청 · 장례 예약 · 내 예약 · 문서</td>
             </tr>
             <tr>
               <td>관리자 (admin)</td>
               <td><span class="badge ok">운영 중</span></td>
-              <td>시설·품목·요금·주문·게시 전체 관리</td>
+              <td>시설·품목·요금·주문·게시·계정 전체 관리</td>
             </tr>
             <tr>
-              <td>슈퍼바이저</td>
-              <td><span class="badge warn">미구현</span></td>
-              <td>조회·승인·감사 (수정 제한 권장)</td>
+              <td>슈퍼바이저 (supervisor)</td>
+              <td><span class="badge ok">운영 중</span></td>
+              <td>조회 · 빈소/고액 주문 승인 · 정산 · 감사 로그</td>
             </tr>
           </tbody>
         </table>
@@ -361,7 +362,7 @@
     <article class="spread">
       <div class="left">
         <div class="mock">
-          <div class="bar"><b>통합 로그인</b><span>상주 · 관리자</span></div>
+          <div class="bar"><b>통합 로그인</b><span>상주 · 관리자 · 슈퍼바이저</span></div>
           <div class="body">
             <div class="card" style="max-width:220px;margin:12px auto;padding:14px;">
               <b style="font-size:13px;margin-bottom:8px;">로그인</b>
@@ -374,13 +375,38 @@
       </div>
       <div class="right">
         <h3>로그인</h3>
-        <p class="lead">주소: <code>/pages/member/login.html</code> — 상주·관리자 통합 로그인입니다.</p>
+        <p class="lead">주소: <code>/pages/member/login.html</code> — 상주·관리자·슈퍼바이저 통합 로그인입니다.</p>
         <ol>
           <li>장례식장에서 발급한 <strong>상주 계정(아이디/비밀번호)</strong>으로 로그인합니다.</li>
-          <li>role이 <code>family</code>이면 상주 포털로, <code>admin</code>이면 관리자 화면으로 이동합니다.</li>
+          <li><code>family</code> → 상주 포털, <code>admin</code>/<code>supervisor</code> → <code>/admin/</code>으로 이동합니다.</li>
           <li>계정이 없으면 상담실(032-524-4444)에 발급을 요청합니다.</li>
         </ol>
-        <div class="tip">관리자가 「상주 계정」 메뉴에서 발급·빈소 이용 연결·비밀번호 재설정을 합니다.</div>
+        <div class="tip">관리자가 「회원 리스트」에서 상주 발급·빈소 연결·비밀번호 재설정을 합니다. 재설정 시 상주는 다음 로그인에 비밀번호를 다시 바꿔야 합니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>최초 설정</b><span>/pages/member/setup.html</span></div>
+          <div class="body">
+            <div class="cards">
+              <div class="card"><b>1. 비밀번호 변경</b>현재 → 새 비밀번호</div>
+              <div class="card"><b>2. 이용 안내</b>체크리스트 4항목</div>
+            </div>
+            <div class="row"><span>완료 후 장례 예약으로 이동</span><span>필수</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>최초 로그인 설정</h3>
+        <p class="lead">신규 상주(또는 비밀번호 재설정 후)는 서비스 이용 전 설정을 마쳐야 합니다.</p>
+        <ol>
+          <li><strong>비밀번호 변경</strong> — 발급받은 임시 비밀번호를 본인 비밀번호로 바꿉니다(4자 이상).</li>
+          <li><strong>이용 안내 확인</strong> — 예약·정산·발인 고정·안내 메뉴에 대한 체크리스트를 모두 확인합니다.</li>
+          <li>완료되면 <code>/pages/member/shop.html</code> 등 상주 메뉴를 이용할 수 있습니다.</li>
+        </ol>
+        <div class="tip">설정이 끝나지 않으면 예약·내 예약·안내 페이지 진입 시 자동으로 setup 화면으로 돌아갑니다.</div>
       </div>
     </article>
 
@@ -411,10 +437,10 @@
         <ol>
           <li>카테고리에서 빈소 / 관 / 수의 / 음식 / 화환 / 사진 / 상복 / 운구 / 서비스를 선택합니다.</li>
           <li>빈소는 가능 일자를 확인한 뒤 고인·상주·발인 정보를 입력해 신청합니다.</li>
-          <li>품목을 담아 주문하면 관리자 승인·정산 흐름으로 넘어갑니다.</li>
-          <li><strong>내 예약</strong>에서 상태(대기/확정/결제/취소)와 정산 문서를 확인합니다.</li>
+          <li>품목을 담아 주문하면 관리자 확인·(고액 시) 슈퍼바이저 승인·정산 흐름으로 넘어갑니다.</li>
+          <li><strong>내 예약</strong>에서 상태(접수/승인대기/확인/결제/취소)와 정산 문서를 확인합니다.</li>
         </ol>
-        <div class="tip">발인 일정이 잠기면( scheduleLocked ) 상주가 발인 일시를 임의 변경할 수 없습니다.</div>
+        <div class="tip">발인 정보가 주문에 고정되면 상주가 발인 일시를 임의 변경할 수 없습니다. 합계 100만 원 이상 주문은 관리자 확인 후 슈퍼바이저 승인을 거칩니다.</div>
       </div>
     </article>
 
@@ -443,7 +469,7 @@
           <li><strong>관련서식</strong> — 관리자가 등록한 PDF/HWP 등 다운로드</li>
           <li>문서 유형: 주문서 / 거래명세서 / 세금계산서성 집계 출력</li>
         </ul>
-        <div class="tip">사후정산 품목은 발인 전 관리자가 실사용 수량을 확정한 뒤 최종 금액이 확정됩니다.</div>
+        <div class="tip">사후정산 품목은 발인 전 관리자·슈퍼바이저가 실사용 수량을 확정한 뒤 최종 금액이 확정됩니다.</div>
       </div>
     </article>
 
@@ -458,18 +484,18 @@
         <div class="mock">
           <div class="bar"><b>관리자</b><span>대시보드</span></div>
           <div class="nav">
-            <i class="on">대시보드</i><i>시설 사용료</i><i>장례 물품</i><i>접객·서비스</i><i>주문·정산</i><i>게시·문의</i>
+            <i class="on">대시보드</i><i>시설 사용료</i><i>장례 물품</i><i>접객·서비스</i><i>주문·정산</i><i>게시·문의</i><i>감사 로그</i>
           </div>
           <div class="body">
             <div class="cards">
               <div class="card"><b>대기 문의</b>3</div>
               <div class="card"><b>대기 주문</b>5</div>
               <div class="card"><b>빈소 신청</b>2</div>
-              <div class="card"><b>상주 계정</b>8</div>
+              <div class="card"><b>승인대기</b>고액 1</div>
             </div>
             <div class="table">
               <div class="head"><span>주문</span><span>상주</span><span>합계</span><span>상태</span></div>
-              <div><span>ORD-01</span><span>김○○</span><span>980,000</span><span>pending</span></div>
+              <div><span>ORD-01</span><span>김○○</span><span>1,250,000</span><span>승인대기</span></div>
             </div>
           </div>
         </div>
@@ -479,25 +505,26 @@
         <p class="lead">운영 현황을 한눈에 보고, 대기 업무로 바로 이동합니다.</p>
         <ol>
           <li>관리자 계정으로 로그인하면 <code>/admin/</code> 대시보드가 열립니다.</li>
-          <li>대기 문의·대기 주문·빈소 신청 배지를 확인합니다.</li>
+          <li>대기 문의·접수/승인대기 주문·빈소 신청 배지를 확인합니다.</li>
           <li>최근 주문/이용 현황을 점검한 뒤 해당 메뉴로 처리합니다.</li>
+          <li>모바일에서는 상단 <strong>햄버거 메뉴</strong>로 메인 네비를 엽니다.</li>
         </ol>
-        <div class="tip">관리자 비밀번호는 환경변수(ADMIN_USERNAME/PASSWORD)로 최초 시딩됩니다. 운영 환경에서는 반드시 변경하세요.</div>
+        <div class="tip">관리자·슈퍼바이저 계정은 환경변수로 시딩됩니다(ADMIN_*, SUPERVISOR_*). 운영 환경에서는 반드시 변경하세요. 표시 시각은 KST입니다.</div>
       </div>
     </article>
 
     <article class="spread">
       <div class="left">
         <div class="mock">
-          <div class="bar"><b>시설 사용료</b><span>빈소 · 상주</span></div>
+          <div class="bar"><b>시설 사용료</b><span>빈소 · 회원</span></div>
           <div class="nav">
-            <i class="on">빈소 목록</i><i>빈소 이용</i><i>이용 등록</i><i>상주 계정</i><i>빈소 신청</i><i>안치료</i><i>입관실</i>
+            <i class="on">빈소 목록</i><i>빈소 이용</i><i>이용 등록</i><i>회원 리스트</i><i>빈소 신청</i><i>안치료</i><i>입관실</i>
           </div>
           <div class="body">
             <div class="table">
-              <div class="head"><span>상태</span><span>빈소</span><span>고인</span><span>상주</span></div>
-              <div><span>이용중</span><span>101호</span><span>박○○</span><span>박○○</span></div>
-              <div><span>대기</span><span>103호</span><span>최○○</span><span>최○○</span></div>
+              <div class="head"><span>역할</span><span>아이디</span><span>비밀번호</span><span>이름</span></div>
+              <div><span>관리자</span><span>admin</span><span>표시</span><span>관리자</span></div>
+              <div><span>상주</span><span>hong</span><span>표시</span><span>홍○○</span></div>
             </div>
           </div>
         </div>
@@ -508,155 +535,186 @@
           <li><strong>빈소 목록</strong> — 101·102·103·109 등 호실/평형 관리</li>
           <li><strong>빈소 이용</strong> — 이용 기간·고인·발인·접근코드·상주 연결</li>
           <li><strong>빈소 이용 등록</strong> — 접수 시 수동 등록</li>
-          <li><strong>상주 계정</strong> — 발급·수정·비활성·비밀번호 재설정</li>
+          <li><strong>회원 리스트</strong> — 관리자·슈퍼바이저·상주 아이디·비밀번호 확인(전달용)</li>
           <li><strong>빈소 신청</strong> — 상주 온라인 신청 승인/거절</li>
           <li><strong>안치료·입관실</strong> — 1일 기준 사용료, 주문 가능 여부</li>
         </ul>
-        <div class="tip">상주 1계정 ↔ 활성 빈소 이용 1건 연결이 기본 규칙입니다.</div>
+        <div class="tip">상주 1계정 ↔ 활성 빈소 이용 1건 연결이 기본입니다. 비밀번호는 입력값을 그대로 보관·표시하므로 전달 후 상주가 최초 설정에서 변경하도록 안내하세요.</div>
       </div>
     </article>
 
     <article class="spread">
       <div class="left">
         <div class="mock">
-          <div class="bar"><b>장례 물품 · 접객</b><span>품목 CRUD</span></div>
+          <div class="bar"><b>장례 물품 · 접객 · 감사</b><span>품목 · 주문 · 로그</span></div>
           <div class="body">
             <div class="side">
               <div class="side-nav">
-                <i class="on">관</i><i>횡대</i><i>수의</i><i>부속</i><i>음식</i><i>화환</i><i>사진</i><i>상복</i><i>운구</i><i>요금</i>
+                <i class="on">관</i><i>횡대</i><i>수의</i><i>부속</i><i>음식</i><i>화환</i><i>요금</i><i>주문</i><i>로그</i>
               </div>
               <div class="table">
-                <div class="head"><span>품명</span><span>규격</span><span>가격</span><span>공개</span></div>
-                <div><span>오동집성관</span><span>1.5분</span><span>···</span><span>Y</span></div>
-                <div><span>천상수의</span><span>7호</span><span>···</span><span>Y</span></div>
+                <div class="head"><span>시각</span><span>유형</span><span>요약</span></div>
+                <div><span>14:20</span><span>수정</span><span>서비스 요금 …</span></div>
+                <div><span>14:05</span><span>승인</span><span>주문 … 고액</span></div>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div class="right">
-        <h3>품목·요금·주문·게시</h3>
+        <h3>품목·요금·주문·게시·감사</h3>
         <ul>
           <li><strong>장례 물품</strong> — 관/횡대/수의/부속물품 등록·수정·정렬·공개</li>
           <li><strong>접객·서비스</strong> — 식사·안주·떡·과일·제사상·식음료·공산품, 화환, 사진, 상복, 운구, 서비스 요금</li>
-          <li><strong>주문·정산</strong> — 상주 주문 확인, 사후정산, 문서 출력</li>
+          <li><strong>주문·정산</strong> — 접수→확인(고액은 슈퍼바이저 승인대기)→결제, 사후정산, 문서 출력</li>
           <li><strong>게시·문의</strong> — 알림 소식, 관련서식 업로드, 온라인 문의 답변, 추모글 관리</li>
+          <li><strong>감사 로그</strong> — 계정·요금·주문 승인·로그인·비밀번호 변경 이력 조회</li>
+          <li><strong>홈페이지 CMS</strong> — 메인 홈과 동일 배치 미리보기에서 문구·이미지 클릭 편집(한·중·영 슬롯)</li>
         </ul>
-        <div class="tip">「상주 예약·청구 가능」 체크를 끄면 안내 전용(가격 미노출/주문 불가)으로 둘 수 있습니다.</div>
+        <div class="tip">고액 기준은 기본 <strong>100만 원</strong>(환경변수 <code>HIGH_VALUE_ORDER_THRESHOLD</code>). 관리자가 「확인」을 눌러도 고액이면 자동으로 슈퍼바이저 승인대기가 됩니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>홈페이지 CMS</b><span>동일 배치</span></div>
+          <div class="body">
+            <div class="side">
+              <div class="side-nav"><i class="on">홈 미리보기</i><i>슬롯 클릭</i><i>한·중·영</i></div>
+              <div class="row"><span>히어로 · 인사말 · 시설 · CTA</span><span>저장 → 즉시 반영</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>홈페이지 비주얼 CMS</h3>
+        <ol>
+          <li>관리자 콘솔 <strong>홈페이지 CMS</strong> 메뉴로 이동합니다.</li>
+          <li>왼쪽은 공개 홈(<code>index.html</code>)과 동일한 화면입니다. 편집할 텍스트·이미지를 클릭합니다.</li>
+          <li>오른쪽 패널에서 한국어·中文·English를 고르고 내용을 수정한 뒤 저장합니다.</li>
+          <li>공개 홈은 <code>/api/cms/public/home</code> 슬롯을 불러와 표시합니다(언어는 상단 언어 선택과 연동).</li>
+        </ol>
+        <div class="tip">슈퍼바이저는 CMS 조회·미리보기만 가능하고 저장은 관리자만 할 수 있습니다. 하위 안내 페이지(장례절차 등) CMS는 2차 확장 예정입니다.</div>
       </div>
     </article>
 
     <!-- 4. 슈퍼바이저 -->
     <div class="section-title" id="supervisor">
       <h2>4. 슈퍼바이저</h2>
-      <span>구현됨 · basic / basic4444</span>
+      <span>운영 중 · 간편 모드 · basic / basic4444</span>
     </div>
 
     <article class="spread">
       <div class="left">
         <div class="mock">
-          <div class="bar"><b>슈퍼바이저</b><span class="badge ok">운영 중</span></div>
+          <div class="bar"><b>슈퍼바이저 콘솔</b><span class="badge ok">간편 모드</span></div>
           <div class="nav">
-            <i class="on">현황 조회</i><i>승인 대기</i><i>정산 감사</i><i>계정 감사</i><i>로그</i>
+            <i class="on">대시보드</i><i>접수·현황</i><i>주문·승인</i><i>문의</i><i>감사 로그</i>
           </div>
           <div class="body">
             <div class="cards">
-              <div class="card"><b>승인 대기</b>주문 3 · 빈소 1</div>
-              <div class="card"><b>오늘 발인</b>2건</div>
-              <div class="card"><b>미정산</b>1건</div>
-              <div class="card"><b>관리자 변경</b>요금 2건</div>
+              <div class="card"><b>승인 대기</b>고액 주문 1</div>
+              <div class="card"><b>빈소 신청</b>2</div>
+              <div class="card"><b>회원 리스트</b>조회</div>
+              <div class="card"><b>감사 로그</b>최근 변경</div>
             </div>
-            <div class="row"><span>조회 중심 · 삭제/단가 수정 제한</span><span>감사 로그</span></div>
+            <div class="row"><span>조회·승인 · 등록/단가 수정 숨김</span><span>동일 /admin</span></div>
           </div>
         </div>
       </div>
       <div class="right">
-        <h3>왜 필요한가</h3>
-        <p class="lead">현재는 관리자 1등급이 품목 단가·계정·정산을 모두 다룹니다. 병원/공단 운영에서는 <strong>현장 관리자</strong>와 <strong>감독(슈퍼바이저)</strong>을 나누는 편이 안전합니다.</p>
+        <h3>역할과 로그인</h3>
+        <p class="lead">현장 관리자(admin)와 감독(supervisor)을 나눕니다. 슈퍼바이저도 <code>/admin/</code>에 들어가지만 <strong>간편 모드 메뉴</strong>만 보입니다.</p>
         <ol>
-          <li><strong>조회</strong>: 빈소 이용, 주문, 문의, 정산 현황 열람</li>
-          <li><strong>승인</strong>: 고액 주문·할인·사후정산 확정 승인 (선택)</li>
-          <li><strong>감사</strong>: 요금/계정 변경 이력, 발인 정산 문서 점검</li>
-          <li><strong>제한</strong>: 품목 단가·상주 계정 삭제·시드 데이터 초기화는 금지</li>
+          <li>기본 계정: 아이디 <code>basic</code> / 비밀번호 <code>basic4444</code> (환경변수 <code>SUPERVISOR_*</code>로 변경 가능).</li>
+          <li><strong>조회</strong>: 빈소 이용, 회원 리스트(아이디·비밀번호), 주문, 문의, 감사 로그.</li>
+          <li><strong>승인</strong>: 빈소 신청 승인/거절, 고액 주문(<code>awaiting_supervisor</code>) 확정, 사후정산.</li>
+          <li><strong>제한</strong>: 품목·요금 등록/수정/삭제, 상주 계정 생성·삭제 UI·API는 관리자 전용.</li>
         </ol>
-        <div class="tip">구현 시 User.role에 <code>supervisor</code> 추가, requireSupervisor 미들웨어, 관리자 메뉴를 읽기/승인 전용으로 분기하는 방식이 적합합니다.</div>
+        <div class="tip">고액 주문 상세에서 「슈퍼바이저 승인」을 누르면 상태가 확인(confirmed)으로 바뀌고 감사 로그에 기록됩니다.</div>
       </div>
     </article>
 
     <article class="spread">
       <div class="left">
         <div class="mock">
-          <div class="bar"><b>권한 매트릭스</b><span>제안</span></div>
+          <div class="bar"><b>권한 매트릭스</b><span>현재</span></div>
           <div class="body">
             <div class="table">
               <div class="head"><span>기능</span><span>상주</span><span>관리자</span><span>슈퍼</span></div>
               <div><span>공개 페이지</span><span>○</span><span>○</span><span>○</span></div>
-              <div><span>예약/주문</span><span>○</span><span>△</span><span>조회</span></div>
+              <div><span>예약/주문</span><span>○</span><span>△</span><span>조회·승인</span></div>
               <div><span>품목·요금 수정</span><span>×</span><span>○</span><span>×</span></div>
-              <div><span>정산 확정</span><span>×</span><span>○</span><span>승인</span></div>
+              <div><span>고액 주문 확정</span><span>×</span><span>대기전환</span><span>○</span></div>
               <div><span>계정 발급</span><span>×</span><span>○</span><span>조회</span></div>
+              <div><span>감사 로그</span><span>×</span><span>○</span><span>○</span></div>
             </div>
           </div>
         </div>
       </div>
       <div class="right">
-        <h3>권한 구분 제안</h3>
+        <h3>권한 구분 (현재)</h3>
         <ul>
-          <li><strong>상주</strong> — 본인 장례 건만 예약·조회·문서</li>
-          <li><strong>관리자</strong> — 일 운영(접수, 품목, 문의 답변, 정산 입력)</li>
-          <li><strong>슈퍼바이저</strong> — 감독·승인·감사(수정 최소화)</li>
+          <li><strong>상주</strong> — 최초설정 후 본인 건만 예약·조회·문서</li>
+          <li><strong>관리자</strong> — 일 운영(접수, 품목, 문의 답변, 정산 입력, 계정 발급)</li>
+          <li><strong>슈퍼바이저</strong> — 감독·승인·감사(수정 최소화, 간편 모드)</li>
         </ul>
-        <p class="lead" style="margin-top:12px;">당장 구현하지 않아도, 운영 규정에 “고액 할인/정산 확정은 2인 확인”을 두면 슈퍼바이저 도입 전까지 리스크를 줄일 수 있습니다.</p>
+        <p class="lead" style="margin-top:12px;">고액 주문은 관리자 확인 → 슈퍼바이저 승인으로 <strong>2인 확인</strong>이 적용됩니다. 긴급 시 관리자도 승인대기→확인 전환이 가능하며, 이 역시 감사 로그에 남습니다.</p>
       </div>
     </article>
 
     <!-- 5. 의견 -->
     <div class="section-title" id="opinion">
       <h2>5. 정리 및 의견</h2>
-      <span>현재 상태 평가 · 우선 개선안</span>
+      <span>현재 상태 · 운영 체크리스트</span>
     </div>
 
     <section class="opinion">
       <h3>한 줄 평가</h3>
       <p style="margin:0;color:var(--muted);">
-        공개 안내 → 상주 예약 → 관리자 정산으로 이어지는 <strong>실무형 구조가 이미 잘 잡혀 있습니다.</strong>
-        다만 역할이 admin/family 2단이라, 병원·공단 조직의 “감독” 니즈에는 슈퍼바이저(또는 최소 감사 로그)가 필요합니다.
+        공개 안내 → 상주 예약 → 관리자 정산 → 슈퍼바이저 승인·감사까지 이어지는
+        <strong>3역할 실무 구조가 구현되어 있습니다.</strong>
+        운영 시 기본 계정 비밀번호 변경과 고액 기준(100만 원)만 현장 규정에 맞게 조정하면 됩니다.
       </p>
 
       <div class="grid">
         <div class="box">
-          <h4>잘 된 점</h4>
+          <h4>반영된 기능</h4>
           <ul>
-            <li>통합 로그인으로 상주/관리자 진입 경로가 단순함</li>
-            <li>빈소 이용 ↔ 상주 계정 연결, 주문·문서 출력까지 업무 흐름이 연결됨</li>
-            <li>홈페이지 메뉴가 절차·서비스·조문·도움말·지원으로 체계적</li>
-            <li>다국어(한/중/영)와 e하늘 연계로 현장 안내가 수월</li>
+            <li>슈퍼바이저 역할 · 간편 모드 메뉴</li>
+            <li>변경 감사 로그(계정·요금·주문·로그인)</li>
+            <li>상주 최초 비밀번호 변경·이용 안내 체크리스트</li>
+            <li>고액 주문 슈퍼바이저 2차 승인</li>
+            <li>회원 리스트(아이디·비밀번호)·KST·모바일 햄버거 메뉴</li>
+            <li>홈페이지 비주얼 CMS(메인 홈 슬롯 편집)</li>
           </ul>
         </div>
         <div class="box">
-          <h4>보완하면 좋은 점</h4>
+          <h4>운영 시 확인</h4>
           <ul>
-            <li>슈퍼바이저 역할 또는 최소 “변경 감사 로그”</li>
-            <li>관리자 메뉴가 많아 현장 직원용 “간편 모드(접수·승인만)” 분리 검토</li>
-            <li>상주 첫 로그인 시 비밀번호 강제 변경·이용 안내 체크리스트</li>
-            <li>모바일에서 관리자 메가메뉴 사용성 개선</li>
+            <li>ADMIN_* / SUPERVISOR_* 비밀번호 교체</li>
+            <li>HIGH_VALUE_ORDER_THRESHOLD 현장 기준 조정</li>
+            <li>상주 계정 전달 후 최초 설정 완료 여부 확인</li>
+            <li>발인 전 사후정산·문서 출력 점검</li>
           </ul>
         </div>
         <div class="box">
           <h4>권장 운영 순서</h4>
           <ul>
             <li>1) 관리자: 빈소 이용 등록 → 상주 계정 발급</li>
-            <li>2) 상주: 로그인 → 장례 예약 → 내 예약 확인</li>
-            <li>3) 관리자: 주문 확정·사후정산 → 문서 출력</li>
-            <li>4) (제안) 슈퍼바이저: 고액/할인/최종 정산 승인</li>
+            <li>2) 상주: 로그인 → 최초 설정 → 장례 예약</li>
+            <li>3) 관리자: 주문 확인·사후정산 → 문서 출력</li>
+            <li>4) 슈퍼바이저: 고액 승인·감사 로그·빈소 신청 점검</li>
           </ul>
         </div>
         <div class="box">
-          <h4>바로 적용 가능한 의견</h4>
+          <h4>역할 유지 원칙</h4>
           <ul>
-            <li>지금은 슈퍼바이저 화면을 새로 만들기보다, <strong>관리자 권한 분리(운영자/감독자)</strong>부터 설계하는 것이 효율적</li>
-            <li>홈페이지는 게스트용 “안내”, 상주 포털은 “거래”, 관리자는 “운영”으로 역할을 명확히 유지</li>
-            <li>설명서 파일: <code>docs/시스템구성_및_사용설명서.html</code> (가로 인쇄 지원)</li>
+            <li>홈페이지 = 게스트 「안내」</li>
+            <li>상주 포털 = 「거래·예약」</li>
+            <li>관리자 = 「운영」 / 슈퍼바이저 = 「감독·승인」</li>
+            <li>설명서: <code>docs/시스템구성_및_사용설명서.html</code> (가로 인쇄 권장)</li>
           </ul>
         </div>
       </div>
@@ -664,7 +722,7 @@
 
     <p class="footer-note">
       인천병원장례식장(인천중앙병원장례식장) · 시스템 구성 및 사용설명서 · 로컬 파일:
-      docs/시스템구성_및_사용설명서.html · 인쇄 시 가로(landscape) 권장
+      docs/시스템구성_및_사용설명서.html · 인쇄 시 가로(landscape) 권장 · 최종 반영: 슈퍼바이저·감사로그·최초설정·고액승인·모바일메뉴
     </p>
   </div>
 </body>

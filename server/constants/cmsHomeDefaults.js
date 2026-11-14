@@ -1,0 +1,68 @@
+"use strict";
+
+/** 홈(index) CMS 슬롯 초기값 — page: home */
+module.exports = [
+  { key: "hero.eyebrow", type: "text", label: "히어로 상단 문구", valueKo: "INCHEON HOSPITAL FUNERAL HALL", valueZh: "INCHEON HOSPITAL FUNERAL HALL", valueEn: "INCHEON HOSPITAL FUNERAL HALL" },
+  { key: "hero.title", type: "html", label: "히어로 제목", valueKo: "고인의 마지막 길을<br />정성을 다해 모시겠습니다", valueZh: "以至诚之心<br />护送逝者最后一程", valueEn: "Honoring the final journey<br />with heartfelt devotion" },
+  { key: "hero.lead", type: "html", label: "히어로 설명", valueKo: "인천병원장례식장(인천중앙병원장례식장)은 품격 있는 시설과 24시간 전문 상담으로<br />유가족의 슬픔을 함께 나누고 정성껏 예를 갖추어 돕겠습니다.", valueZh: "仁川医院殡仪馆(仁川中央医院殡仪馆)以高品质设施与24小时专业咨询，<br />与遗属共担悲伤，恭敬周到地协助治丧事宜。", valueEn: "With dignified facilities and 24-hour professional consultation,<br />Incheon Hospital Funeral Hall (Incheon Central Hospital) shares your grief and helps with sincere respect." },
+  { key: "hero.btnHall", type: "text", label: "버튼: 빈소 찾기", valueKo: "빈소 찾기", valueZh: "灵堂查询", valueEn: "Find a Hall" },
+  { key: "hero.btnDirections", type: "text", label: "버튼: 찾아오시는 길", valueKo: "찾아오시는 길", valueZh: "交通指南", valueEn: "Directions" },
+  { key: "hero.ehaneulImg", type: "image", label: "e하늘 로고 이미지", valueKo: "assets/images/ehaneul-logo.png", valueZh: "assets/images/ehaneul-logo.png", valueEn: "assets/images/ehaneul-logo.png" },
+  { key: "hero.ehaneulAlt", type: "text", label: "e하늘 로고 대체텍스트", valueKo: "e하늘 장사정보시스템", valueZh: "e하늘 장사정보시스템", valueEn: "e하늘 장사정보시스템" },
+
+  { key: "quick1.title", type: "text", label: "퀵메뉴1 제목", valueKo: "빈소·객실 정보", valueZh: "灵堂·客室信息", valueEn: "Halls & Rooms" },
+  { key: "quick1.sub", type: "text", label: "퀵메뉴1 부제", valueKo: "빈소 3개 · 안치 6구", valueZh: "灵堂3间 · 安置6具", valueEn: "3 halls · 6 enshrinements" },
+  { key: "quick2.title", type: "text", label: "퀵메뉴2 제목", valueKo: "장례 물품", valueZh: "殡葬用品", valueEn: "Supplies" },
+  { key: "quick2.sub", type: "text", label: "퀵메뉴2 부제", valueKo: "관·수의·물품 안내", valueZh: "棺木·寿衣·物品", valueEn: "Coffins, shrouds & more" },
+  { key: "quick3.title", type: "text", label: "퀵메뉴3 제목", valueKo: "장례 도움말", valueZh: "殡葬知识", valueEn: "Resources" },
+  { key: "quick3.sub", type: "text", label: "퀵메뉴3 부제", valueKo: "절차·예법", valueZh: "流程·礼节", valueEn: "Process & etiquette" },
+  { key: "quick4.title", type: "text", label: "퀵메뉴4 제목", valueKo: "온라인 추모", valueZh: "网上吊唁", valueEn: "Online Tribute" },
+  { key: "quick4.sub", type: "text", label: "퀵메뉴4 부제", valueKo: "온라인 추모글 작성", valueZh: "在线撰写吊唁", valueEn: "Leave a message online" },
+
+  { key: "greeting.eye", type: "text", label: "인사말 눈금", valueKo: "GREETING", valueZh: "GREETING", valueEn: "GREETING" },
+  { key: "greeting.title", type: "text", label: "인사말 제목", valueKo: "인사말", valueZh: "致辞", valueEn: "Greeting" },
+  { key: "greeting.text", type: "text", label: "인사말 본문", valueKo: "인천병원장례식장(인천중앙병원장례식장)은 유가족의 슬픔을 함께 나누며 고인의 마지막 길을 정성과 예우로 모시는 공간입니다. 쾌적한 시설과 체계적인 장례 서비스를 바탕으로 편안하고 품격 있는 장례를 지원하며, 유가족의 마음까지 세심하게 배려하는 따뜻한 동행이 되겠습니다.", valueZh: "仁川医院殡仪馆(仁川中央医院殡仪馆)是与遗属共担悲伤、以诚意与礼遇护送逝者最后一程的空间。我们以舒适的设施与系统化的殡葬服务为基础，支持安心而有品格的葬礼，并细致体贴遗属的心情，成为温暖的同行者。", valueEn: "Incheon Hospital Funeral Hall (Incheon Central Hospital) is a place that shares the family's grief and honors the deceased's final journey with sincerity and respect. Based on comfortable facilities and systematic funeral services, we support a peaceful, dignified farewell and become a warm companion who cares even for the hearts of the bereaved." },
+
+  { key: "facility.eye", type: "text", label: "시설 안내 눈금", valueKo: "FACILITY INFO", valueZh: "FACILITY INFO", valueEn: "FACILITY INFO" },
+  { key: "facility.title", type: "text", label: "시설 안내 제목", valueKo: "장례식장 기본 정보", valueZh: "殡仪馆基本信息", valueEn: "Facility Information" },
+  { key: "facility.lead", type: "text", label: "시설 안내 설명", valueKo: "인천병원장례식장(인천중앙병원장례식장)의 주소, 지역, 주요 시설 정보입니다.", valueZh: "仁川医院殡仪馆(仁川中央医院殡仪馆)的地址、地区及主要设施信息。", valueEn: "Address, region, and key facility details for Incheon Hospital Funeral Hall." },
+  { key: "facility.stat1.n", type: "text", label: "통계1 숫자", valueKo: "6", valueZh: "6", valueEn: "6" },
+  { key: "facility.stat1.l", type: "text", label: "통계1 라벨", valueKo: "안치능력 (구)", valueZh: "安置能力 (具)", valueEn: "Enshrinement" },
+  { key: "facility.stat2.n", type: "text", label: "통계2 숫자", valueKo: "3", valueZh: "3", valueEn: "3" },
+  { key: "facility.stat2.l", type: "text", label: "통계2 라벨", valueKo: "빈소 (개)", valueZh: "灵堂 (间)", valueEn: "Funeral Halls" },
+  { key: "facility.stat3.n", type: "text", label: "통계3 숫자", valueKo: "400", valueZh: "400", valueEn: "400" },
+  { key: "facility.stat3.l", type: "text", label: "통계3 라벨", valueKo: "주차 가능 (대)", valueZh: "停车位 (辆)", valueEn: "Parking Spaces" },
+  { key: "facility.stat4.n", type: "text", label: "통계4 숫자", valueKo: "인천", valueZh: "仁川", valueEn: "Incheon" },
+  { key: "facility.stat4.l", type: "text", label: "통계4 라벨", valueKo: "지역", valueZh: "地区", valueEn: "Region" },
+  { key: "facility.td.name", type: "text", label: "표: 장례식장명", valueKo: "인천병원장례식장 (인천중앙병원장례식장)", valueZh: "仁川医院殡仪馆 (仁川中央医院殡仪馆)", valueEn: "Incheon Hospital Funeral Hall (Incheon Central Hospital)" },
+  { key: "facility.td.address", type: "text", label: "표: 주소", valueKo: "인천광역시 부평구 무네미로 446 (구산동, 인천중앙병원)", valueZh: "仁川广域市富平区无内美路446 (九山洞, 仁川中央医院)", valueEn: "446 Munaemi-ro, Bupyeong-gu, Incheon (Gusan-dong, Incheon Central Hospital)" },
+  { key: "facility.td.region", type: "text", label: "표: 지역", valueKo: "인천", valueZh: "仁川", valueEn: "Incheon" },
+  { key: "facility.td.type", type: "text", label: "표: 시설 형태", valueKo: "사설", valueZh: "私立", valueEn: "Private" },
+  { key: "facility.td.enshrine", type: "text", label: "표: 안치능력", valueKo: "6 구", valueZh: "6 具", valueEn: "6" },
+  { key: "facility.td.hall", type: "text", label: "표: 빈소", valueKo: "3 개", valueZh: "3 间", valueEn: "3" },
+  { key: "facility.td.parking", type: "text", label: "표: 주차", valueKo: "400 대", valueZh: "400 辆", valueEn: "400 spaces" },
+  { key: "facility.td.phone", type: "text", label: "표: 전화", valueKo: "032-524-4444", valueZh: "032-524-4444", valueEn: "032-524-4444" },
+
+  { key: "guide.eye", type: "text", label: "맞춤안내 눈금", valueKo: "CUSTOM GUIDE", valueZh: "CUSTOM GUIDE", valueEn: "CUSTOM GUIDE" },
+  { key: "guide.title", type: "text", label: "맞춤안내 제목", valueKo: "빈소 평형을 선택해 주세요", valueZh: "请选择灵堂坪数", valueEn: "Choose a hall size" },
+  { key: "guide.lead", type: "text", label: "맞춤안내 설명", valueKo: "인천병원장례식장(인천중앙병원장례식장) 관련 맞춤 안내를 위해 몇 가지 질문을 드립니다.", valueZh: "为提供仁川医院殡仪馆(仁川中央医院殡仪馆)的个性化指南，请先回答以下问题。", valueEn: "To provide tailored guidance for Incheon Hospital Funeral Hall, please answer a few questions." },
+
+  { key: "features.eye", type: "text", label: "특징 눈금", valueKo: "WHY INCHEON", valueZh: "WHY INCHEON", valueEn: "WHY INCHEON" },
+  { key: "features.title", type: "text", label: "특징 제목", valueKo: "인천병원장례식장이 함께합니다", valueZh: "仁川医院殡仪馆与您同在", valueEn: "Incheon Hospital Funeral Hall is with you" },
+  { key: "features.lead", type: "text", label: "특징 설명", valueKo: "슬픔의 순간, 가장 필요한 것은 진심 어린 배려와 흔들림 없는 준비입니다.", valueZh: "在悲伤的时刻，最需要的是真诚的关怀与稳妥的准备。", valueEn: "In moments of grief, what matters most is genuine care and steady preparation." },
+  { key: "features.f1.title", type: "text", label: "특징1 제목", valueKo: "24시간 장례 상담", valueZh: "24小时殡葬咨询", valueEn: "24-Hour Consultation" },
+  { key: "features.f1.text", type: "text", label: "특징1 본문", valueKo: "임종 순간부터 발인까지, 연중무휴 전문 상담원이 전 과정을 안내해 드립니다.", valueZh: "从临终到出殡，全年无休的专业咨询员为您指导全过程。", valueEn: "From passing to the funeral procession, our staff guides you through every step, year-round." },
+  { key: "features.f2.title", type: "text", label: "특징2 제목", valueKo: "품격 있는 시설", valueZh: "高品质设施", valueEn: "Dignified Facilities" },
+  { key: "features.f2.text", type: "text", label: "특징2 본문", valueKo: "빈소 3개, 안치 6구, 주차 400대 규모의 시설과 유가족 휴게 공간을 정갈하고 쾌적하게 갖추고 있습니다.", valueZh: "灵堂3间、安置6具、停车位400辆，家属休息空间整洁舒适。", valueEn: "3 funeral halls, 6 enshrinements, 400 parking spaces, and comfortable family rest areas." },
+  { key: "features.f3.title", type: "text", label: "특징3 제목", valueKo: "합리적인 장례 물품", valueZh: "合理的殡葬用品", valueEn: "Fair-Priced Supplies" },
+  { key: "features.f3.text", type: "text", label: "특징3 본문", valueKo: "관·수의·제단 장식 등 정직한 가격의 장례 물품과 서비스를 제공합니다.", valueZh: "棺木·寿衣·祭坛装饰等，以诚实的价格提供用品与服务。", valueEn: "Coffins, shrouds, altar decorations and more at honest prices, with full service." },
+
+  { key: "sitemenu.eye", type: "text", label: "전체안내 눈금", valueKo: "SITE MENU", valueZh: "SITE MENU", valueEn: "SITE MENU" },
+  { key: "sitemenu.title", type: "text", label: "전체안내 제목", valueKo: "전체 안내", valueZh: "全部指南", valueEn: "All Information" },
+  { key: "sitemenu.lead", type: "text", label: "전체안내 설명", valueKo: "필요하신 정보를 빠르게 찾아보실 수 있습니다.", valueZh: "可快速查找您需要的信息。", valueEn: "Quickly find the information you need." },
+
+  { key: "cta.title", type: "text", label: "CTA 제목", valueKo: "언제든지 상담해 드리겠습니다", valueZh: "我们随时为您咨询", valueEn: "We are here to help, anytime" },
+  { key: "cta.lead", type: "text", label: "CTA 설명", valueKo: "연중무휴 24시간 장례 상담 및 예약 접수", valueZh: "全年无休 24小时殡葬咨询及预约受理", valueEn: "24-hour funeral consultation and reservations, year-round" },
+  { key: "cta.tel", type: "text", label: "CTA 전화", valueKo: "032-524-4444", valueZh: "032-524-4444", valueEn: "032-524-4444" },
+  { key: "cta.sub", type: "text", label: "CTA 주소", valueKo: "인천광역시 부평구 무네미로 446 (구산동, 인천중앙병원) 인천병원장례식장", valueZh: "仁川广域市富平区无内美路446 (九山洞, 仁川中央医院) 仁川医院殡仪馆", valueEn: "446 Munaemi-ro, Bupyeong-gu, Incheon (Incheon Central Hospital)" },
+];
