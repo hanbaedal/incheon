@@ -9,7 +9,7 @@ const { usageToHallSummary } = require("../utils/hallFormat");
 
 const router = express.Router();
 
-// 관리자: 상주(family) 계정 목록 (연결 빈소 이용 정보 포함)
+// 관리자: 상주(family) 계정 목록 (연결 빈소 이용 정보·비밀번호 포함)
 router.get(
   "/admin/all",
   requireAdmin,
@@ -19,8 +19,23 @@ router.get(
       .populate({ path: "hallUsageId", populate: { path: "hallId" } });
     res.json({
       items: users.map((u) => ({
-        ...u.toSafeJSON(),
+        ...u.toAdminJSON(),
         hall: usageToHallSummary(u.hallUsageId, u.hallUsageId && u.hallUsageId.hallId),
+        lastLoginAt: u.lastLoginAt,
+      })),
+    });
+  })
+);
+
+// 관리자: 관리자 계정 정보(아이디·비밀번호 표시용)
+router.get(
+  "/admin/admins",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const admins = await User.find({ role: "admin" }).sort({ username: 1 });
+    res.json({
+      items: admins.map((u) => ({
+        ...u.toAdminJSON(),
         lastLoginAt: u.lastLoginAt,
       })),
     });
@@ -59,7 +74,7 @@ router.post(
       await HallUsage.updateOne({ _id: hallUsageId }, { familyUserId: user._id, chiefMourner: name });
     }
 
-    res.status(201).json({ user: user.toSafeJSON() });
+    res.status(201).json({ user: user.toAdminJSON() });
   })
 );
 
@@ -99,7 +114,7 @@ router.patch(
     }
 
     await user.save();
-    res.json({ user: user.toSafeJSON() });
+    res.json({ user: user.toAdminJSON() });
   })
 );
 

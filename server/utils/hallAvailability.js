@@ -5,38 +5,13 @@ const HallUsage = require("../models/HallUsage");
 const User = require("../models/User");
 const { PHYSICAL_HALL_CAPACITY } = require("../constants/facility");
 const { hallToCatalogJSON } = require("./hallFormat");
-
-function startOfDay(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function formatYmd(d) {
-  if (!d) return "";
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-function diffCalendarDays(from, to) {
-  const a = startOfDay(from).getTime();
-  const b = startOfDay(to).getTime();
-  return Math.round((b - a) / 86400000);
-}
-
-function parseFuneralAt(funeralDate, funeralTime) {
-  const ds = String(funeralDate || "").trim();
-  if (!ds) return null;
-  const m = ds.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]) - 1;
-  const day = Number(m[3]);
-  const ts = String(funeralTime || "").trim();
-  const tm = ts.match(/^(\d{1,2}):(\d{2})/);
-  if (tm) return new Date(y, mo, day, Number(tm[1]), Number(tm[2]), 0, 0);
-  return new Date(y, mo, day, 23, 59, 0, 0);
-}
+const {
+  startOfDay,
+  formatYmd,
+  parseFuneralAt,
+  diffCalendarDays,
+  now,
+} = require("./koreaTime");
 
 function formatAvailabilityLabel(daysUntil, availableFrom) {
   const dateLabel = formatYmd(availableFrom);
@@ -103,7 +78,7 @@ async function completeHallUsage(usage) {
   }
 }
 
-async function autoCompletePastFunerals(now = new Date()) {
+async function autoCompletePastFunerals(at = now()) {
   const usages = await HallUsage.find({
     status: "active",
     funeralDate: { $exists: true, $nin: ["", null] },
@@ -111,18 +86,18 @@ async function autoCompletePastFunerals(now = new Date()) {
 
   let completed = 0;
   for (const usage of usages) {
-    const at = parseFuneralAt(usage.funeralDate, usage.funeralTime);
-    if (!at || now.getTime() < at.getTime()) continue;
+    const funeralAt = parseFuneralAt(usage.funeralDate, usage.funeralTime);
+    if (!funeralAt || at.getTime() < funeralAt.getTime()) continue;
     await completeHallUsage(usage);
     completed += 1;
   }
   return { completed, checked: usages.length };
 }
 
-/** 호실별(101·102·103·109) 발인 일자 역산 */
+/** 호실별(101·102·103·109) 발인 일자 역산 — 일자 기준은 한국시간 */
 async function computeHallAvailability() {
   await autoCompletePastFunerals();
-  const today = startOfDay(new Date());
+  const today = startOfDay(now());
   const [halls, usages] = await Promise.all([
     Hall.find({ active: true }).sort({ sortOrder: 1, name: 1 }),
     HallUsage.find({ status: "active" }).populate("hallId").sort({ funeralDate: 1, createdAt: 1 }),
@@ -179,6 +154,7 @@ async function computeHallAvailability() {
     nextAvailableFrom: nextBusy ? nextBusy.availableFrom : (freePhysicalSlots > 0 ? formatYmd(today) : null),
     nextAvailableLabel: nextBusy ? nextBusy.availableLabel : (freePhysicalSlots > 0 ? "즉시 신청 가능" : null),
     daysUntilNextSlot: nextBusy ? nextBusy.daysUntil : 0,
+    timezone: "Asia/Seoul",
     activeUsages: allSlots.map((s) => ({
       ...s,
       funeralAt: s.funeralAt ? s.funeralAt.toISOString() : null,

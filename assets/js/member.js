@@ -26,8 +26,19 @@ function mEsc(s) {
 function won(n) { return (Number(n) || 0).toLocaleString(mLang() === "en" ? "en-US" : "ko-KR") + mT("common.won"); }
 function mFmtDay(iso) {
   if (!iso) return "-";
-  const d = new Date(iso); const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  if (typeof KoreaTime !== "undefined" && KoreaTime.fmtDay) return KoreaTime.fmtDay(iso);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  const map = {};
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d).forEach((p) => {
+    if (p.type !== "literal") map[p.type] = p.value;
+  });
+  return `${map.year}-${map.month}-${map.day}`;
 }
 
 let mToastTimer = null;

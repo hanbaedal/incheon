@@ -26,17 +26,36 @@ function esc(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+function kstParts(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const fmtParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const map = {};
+  fmtParts.formatToParts(d).forEach((part) => {
+    if (part.type !== "literal") map[part.type] = part.value;
+  });
+  return map;
+}
 function fmt(iso) {
   if (!iso) return "-";
-  const d = new Date(iso);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const map = kstParts(iso);
+  if (!map) return "-";
+  const hour = map.hour === "24" ? "00" : map.hour;
+  return `${map.year}-${map.month}-${map.day} ${hour}:${map.minute}`;
 }
 function fmtDay(iso) {
   if (!iso) return "-";
-  const d = new Date(iso);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const map = kstParts(iso);
+  if (!map) return "-";
+  return `${map.year}-${map.month}-${map.day}`;
 }
 /** 발인 일자 등 date input용 YYYY-MM-DD */
 function toDateInputValue(s) {
@@ -1068,17 +1087,39 @@ async function renderMemorials() {
 
 /* ---------- 상주 계정 관리 ---------- */
 async function renderFamilies() {
-  const d = await api("/users/admin/all");
+  const [d, admins] = await Promise.all([
+    api("/users/admin/all"),
+    api("/users/admin/admins").catch(() => ({ items: [] })),
+  ]);
+  const adminRows = (admins.items || []).map((u) => `
+    <tr>
+      <td><span class="tag answered">관리자</span></td>
+      <td><b>${esc(u.username)}</b></td>
+      <td>${esc(u.name)}</td>
+      <td><code style="font-size:13px">${esc(u.password) || '<span class="muted">미저장 — 비밀번호 재설정 필요</span>'}</code></td>
+      <td class="nowrap">${fmtDay(u.lastLoginAt)}</td>
+    </tr>`).join("");
+
   content.innerHTML = `
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-body">
+        <p class="muted" style="margin:0 0 10px">관리자·상주 계정 비밀번호는 입력한 값 그대로 저장되어 이 화면에서 확인할 수 있습니다. (로그인 검증용 해시와 함께 보관)</p>
+        <table class="grid">
+          <thead><tr><th>구분</th><th>아이디</th><th>이름</th><th>비밀번호</th><th>최근 로그인</th></tr></thead>
+          <tbody>${adminRows || '<tr><td colspan="5" class="empty">관리자 계정이 없습니다.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
     <div class="toolbar"><button class="btn btn-primary" id="addFam">+ 상주 계정 발급</button></div>
     <div class="panel"><div class="panel-body" style="padding:0">
       ${d.items.length === 0 ? '<div class="empty">발급된 상주 계정이 없습니다.</div>' : `
       <table class="grid">
-        <thead><tr><th>아이디</th><th>이름</th><th>연락처</th><th>연결 빈소</th><th>상태</th><th>최근 로그인</th><th class="right">관리</th></tr></thead>
+        <thead><tr><th>아이디</th><th>이름</th><th>비밀번호</th><th>연락처</th><th>연결 빈소</th><th>상태</th><th>최근 로그인</th><th class="right">관리</th></tr></thead>
         <tbody>${d.items.map((u) => `
           <tr>
             <td><b>${esc(u.username)}</b></td>
             <td>${esc(u.name)}</td>
+            <td><code style="font-size:13px">${esc(u.password) || '<span class="muted">-</span>'}</code></td>
             <td class="nowrap">${esc(u.phone) || "-"}</td>
             <td class="nowrap">${u.hall ? esc(u.hall.hallNumber) + (u.hall.deceasedName ? " / " + esc(u.hall.deceasedName) : "") : "-"}</td>
             <td>${u.active ? '<span class="tag free">사용</span>' : '<span class="tag gray">정지</span>'}</td>
@@ -1123,7 +1164,10 @@ async function familyForm(u) {
       <div class="field"><label>연락처</label><input id="f_phone" value="${esc(e.phone || "")}" placeholder="010-0000-0000" /></div>
       <div class="field"><label>연결 빈소 이용</label><select id="f_hall">${hallOptions}</select></div>
     </div>
-    <div class="field"><label>${u ? "비밀번호 재설정 (미입력 시 유지)" : "비밀번호 *"}</label><input id="f_password" type="text" placeholder="${u ? "변경할 때만 입력" : "초기 비밀번호"}" /></div>
+    <div class="field">
+      <label>${u ? "비밀번호 (현재 값 표시 · 변경 시 덮어씀)" : "비밀번호 *"}</label>
+      <input id="f_password" type="text" value="${esc(e.password || "")}" placeholder="${u ? "현재 비밀번호 또는 새 비밀번호" : "초기 비밀번호"}" autocomplete="off" />
+    </div>
     ${u ? `<div class="field"><label class="check"><input type="checkbox" id="f_active" ${e.active ? "checked" : ""}/> 계정 사용(활성)</label></div>` : ""}
   `, [
     { label: "취소", onClick: closeModal },
@@ -1131,7 +1175,8 @@ async function familyForm(u) {
       const hallUsageId = val("f_hall");
       if (u) {
         const body = { name: val("f_name"), phone: val("f_phone"), hallUsageId: hallUsageId || null, active: checked("f_active") };
-        const pw = val("f_password"); if (pw) body.password = pw;
+        const pw = val("f_password");
+        if (pw) body.password = pw;
         if (!body.name) { toast("이름을 입력하세요."); return; }
         try { await api("/users/" + u.id, { method: "PATCH", body }); closeModal(); toast("저장되었습니다."); route(); }
         catch (err) { toast(err.message); }

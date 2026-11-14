@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>인천병원장례식장 — 시스템 구성 및 사용설명서</title>
+  <style>
+    :root {
+      --ink: #1a2332;
+      --muted: #5c6b7a;
+      --line: #d8dee6;
+      --paper: #f7f5f1;
+      --card: #ffffff;
+      --navy: #1e3a5f;
+      --gold: #a67c3a;
+      --soft: #eef2f6;
+      --warn: #8a4b12;
+      --ok: #1f5c3a;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.55;
+    }
+    a { color: var(--navy); }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      background: var(--navy); color: #fff;
+      padding: 14px 24px;
+      display: flex; flex-wrap: wrap; gap: 12px 24px;
+      align-items: center; justify-content: space-between;
+    }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+    .topbar nav { display: flex; flex-wrap: wrap; gap: 8px; }
+    .topbar a {
+      color: #dce6f2; text-decoration: none; font-size: 13px;
+      padding: 6px 10px; border-radius: 999px; border: 1px solid transparent;
+    }
+    .topbar a:hover { border-color: rgba(255,255,255,.25); color: #fff; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+    .hero {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 16px; padding: 28px 28px 24px; margin-bottom: 28px;
+    }
+    .hero .eye { color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    .hero h2 { margin: 6px 0 10px; font-size: 28px; letter-spacing: -0.03em; }
+    .hero p { margin: 0; color: var(--muted); max-width: 70ch; }
+    .meta {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px;
+    }
+    .meta div {
+      background: var(--soft); border-radius: 10px; padding: 12px 14px;
+    }
+    .meta b { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .meta span { font-size: 14px; font-weight: 700; }
+    .arch {
+      display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; margin-bottom: 28px;
+    }
+    .panel {
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+    }
+    .panel h3 { margin: 0 0 12px; font-size: 16px; }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .chip {
+      background: var(--soft); border: 1px solid var(--line); border-radius: 8px;
+      padding: 8px 12px; font-size: 13px; font-weight: 600;
+    }
+    .chip.accent { background: #e8eef6; border-color: #c5d3e6; color: var(--navy); }
+    .chip.warn { background: #fff4e8; border-color: #efd2ad; color: var(--warn); }
+    .arrow { color: var(--muted); font-size: 14px; }
+    table.role {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    table.role th, table.role td {
+      border-bottom: 1px solid var(--line); text-align: left; padding: 10px 8px; vertical-align: top;
+    }
+    table.role th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 999px; background: #e8eef6; color: var(--navy);
+    }
+    .badge.ok { background: #e5f3ea; color: var(--ok); }
+    .badge.warn { background: #fff1df; color: var(--warn); }
+    .section-title {
+      margin: 36px 0 14px; display: flex; align-items: baseline; gap: 12px;
+    }
+    .section-title h2 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+    .section-title span { color: var(--muted); font-size: 13px; }
+    .spread {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      overflow: hidden; margin-bottom: 16px;
+      min-height: 340px;
+    }
+    .spread .left {
+      background: linear-gradient(180deg, #eef2f6 0%, #e6ebf1 100%);
+      border-right: 1px solid var(--line);
+      padding: 18px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .spread .right { padding: 20px 22px; }
+    .spread .right h3 { margin: 0 0 8px; font-size: 17px; }
+    .spread .right .lead { margin: 0 0 14px; color: var(--muted); font-size: 13.5px; }
+    .spread .right ol, .spread .right ul { margin: 0; padding-left: 18px; }
+    .spread .right li { margin: 0 0 8px; font-size: 13.5px; }
+    .spread .right .tip {
+      margin-top: 14px; padding: 10px 12px; border-radius: 8px;
+      background: #fff8ef; border: 1px solid #efd2ad; color: var(--warn); font-size: 12.5px;
+    }
+    .mock {
+      background: #fff; border: 1px solid #c9d2dd; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(30,58,95,.08);
+      overflow: hidden; flex: 1;
+      font-size: 11px; color: #334155;
+    }
+    .mock .bar {
+      background: var(--navy); color: #fff; padding: 8px 10px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .mock .bar b { font-size: 11px; }
+    .mock .bar span { opacity: .75; font-size: 10px; }
+    .mock .nav {
+      display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px;
+      border-bottom: 1px solid var(--line); background: #f8fafc;
+    }
+    .mock .nav i {
+      font-style: normal; background: #e2e8f0; border-radius: 4px;
+      padding: 3px 6px; font-size: 9px; white-space: nowrap;
+    }
+    .mock .nav i.on { background: var(--gold); color: #fff; }
+    .mock .body { padding: 10px; display: grid; gap: 8px; }
+    .mock .hero-box {
+      background: linear-gradient(135deg, #1e3a5f, #2d4f75);
+      color: #fff; border-radius: 8px; padding: 12px;
+    }
+    .mock .hero-box strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .mock .hero-box p { margin: 0; opacity: .85; font-size: 10px; }
+    .mock .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .mock .card {
+      border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: #fff;
+    }
+    .mock .card b { display: block; margin-bottom: 2px; }
+    .mock .row {
+      display: flex; justify-content: space-between; gap: 8px;
+      border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; background: #fff;
+    }
+    .mock .side {
+      display: grid; grid-template-columns: 90px 1fr; gap: 8px; min-height: 160px;
+    }
+    .mock .side-nav {
+      background: #f1f5f9; border-radius: 6px; padding: 6px; display: grid; gap: 4px;
+    }
+    .mock .side-nav i {
+      font-style: normal; display: block; padding: 5px 6px; border-radius: 4px;
+      background: transparent; font-size: 9px;
+    }
+    .mock .side-nav i.on { background: var(--navy); color: #fff; }
+    .mock .table {
+      border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    }
+    .mock .table div {
+      display: grid; grid-template-columns: 1.2fr 1fr .8fr .8fr;
+      gap: 4px; padding: 5px 6px; border-bottom: 1px solid var(--line); font-size: 9px;
+    }
+    .mock .table div:last-child { border-bottom: 0; }
+    .mock .table div.head { background: #f8fafc; font-weight: 700; }
+    .opinion {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 24px; margin-top: 12px;
+    }
+    .opinion h3 { margin: 0 0 10px; }
+    .opinion .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .opinion .box {
+      border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: #fff;
+    }
+    .opinion .box h4 { margin: 0 0 8px; font-size: 14px; }
+    .opinion .box ul { margin: 0; padding-left: 18px; }
+    .opinion .box li { margin-bottom: 6px; font-size: 13px; }
+    .footer-note {
+      margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center;
+    }
+    @media (max-width: 900px) {
+      .meta, .arch, .spread, .opinion .grid { grid-template-columns: 1fr; }
+      .spread .left { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+    @media print {
+      @page { size: landscape; margin: 12mm; }
+      .topbar { position: static; }
+      .topbar nav { display: none; }
+      .spread { break-inside: avoid; page-break-inside: avoid; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>인천병원장례식장 · 시스템 구성 및 사용설명서</h1>
+    <nav>
+      <a href="#arch">구성</a>
+      <a href="#public">1. 홈페이지</a>
+      <a href="#family">2. 상주</a>
+      <a href="#admin">3. 관리자</a>
+      <a href="#supervisor">4. 슈퍼바이저</a>
+      <a href="#opinion">5. 정리·의견</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <section class="hero">
+      <div class="eye">SYSTEM MANUAL</div>
+      <h2>역할별 화면 구성과 사용 방법</h2>
+      <p>
+        가로형 페이지를 기준으로 <strong>왼쪽은 화면 구성(와이어프레임)</strong>,
+        <strong>오른쪽은 사용설명</strong>입니다. 현재 시스템은 정적 홈페이지 + Express/MongoDB API로 동작하며,
+        로그인 역할은 <strong>상주(family)</strong>와 <strong>관리자(admin)</strong>입니다.
+        슈퍼바이저는 아직 코드에 없으며, 운영 필요에 맞춘 <strong>권장 역할 설계</strong>로 정리했습니다.
+      </p>
+      <div class="meta">
+        <div><b>배포 URL</b><span>incheon.onrender.com</span></div>
+        <div><b>스택</b><span>HTML/CSS/JS + Express + MongoDB</span></div>
+        <div><b>현재 역할</b><span>게스트 · 상주 · 관리자</span></div>
+        <div><b>제안 역할</b><span>슈퍼바이저 (미구현)</span></div>
+      </div>
+    </section>
+
+    <section id="arch" class="arch">
+      <div class="panel">
+        <h3>시스템 흐름</h3>
+        <div class="flow">
+          <span class="chip">브라우저</span>
+          <span class="arrow">→</span>
+          <span class="chip accent">정적 페이지 (index / pages)</span>
+          <span class="arrow">→</span>
+          <span class="chip accent">Express API (/api)</span>
+          <span class="arrow">→</span>
+          <span class="chip">MongoDB</span>
+        </div>
+        <p style="margin:14px 0 0;color:var(--muted);font-size:13px;">
+          공개 홈페이지는 누구나 열람합니다. 상주·관리자는
+          <code>/pages/member/login.html</code> 통합 로그인 후 역할에 따라
+          상주 포털(<code>/pages/member/*</code>) 또는 관리자(<code>/admin/</code>)로 이동합니다.
+        </p>
+      </div>
+      <div class="panel">
+        <h3>역할 권한 요약</h3>
+        <table class="role">
+          <thead>
+            <tr><th>역할</th><th>상태</th><th>핵심 권한</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>게스트(홈페이지)</td>
+              <td><span class="badge ok">운영 중</span></td>
+              <td>안내·빈소 찾기·추모글·문의</td>
+            </tr>
+            <tr>
+              <td>상주 (family)</td>
+              <td><span class="badge ok">운영 중</span></td>
+              <td>빈소 신청·장례 예약·내 예약·문서</td>
+            </tr>
+            <tr>
+              <td>관리자 (admin)</td>
+              <td><span class="badge ok">운영 중</span></td>
+              <td>시설·품목·요금·주문·게시 전체 관리</td>
+            </tr>
+            <tr>
+              <td>슈퍼바이저</td>
+              <td><span class="badge warn">미구현</span></td>
+              <td>조회·승인·감사 (수정 제한 권장)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 1. 홈페이지 -->
+    <div class="section-title" id="public">
+      <h2>1. 홈페이지 (게스트)</h2>
+      <span>공개 안내 · 로그인 불필요</span>
+    </div>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>인천병원장례식장</b><span>KO / ZH / EN · 로그인</span></div>
+          <div class="nav">
+            <i class="on">HOME</i><i>장례 절차</i><i>이용 정보</i><i>장례 서비스</i><i>조문 안내</i><i>도움말</i><i>고객지원</i>
+          </div>
+          <div class="body">
+            <div class="hero-box">
+              <strong>고인의 마지막 길을 정성을 다해 모시겠습니다</strong>
+              <p>빈소 찾기 · e하늘 · 찾아오시는 길</p>
+            </div>
+            <div class="cards">
+              <div class="card"><b>빈소·객실</b>3개 · 안치 6구</div>
+              <div class="card"><b>장례 물품</b>관·수의·화환</div>
+              <div class="card"><b>장례 도움말</b>절차·예법</div>
+              <div class="card"><b>온라인 추모</b>추모글 작성</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>메인 홈 (/index.html)</h3>
+        <p class="lead">시설 소개, 기본 정보(빈소 3·안치 6·주차 400), 맞춤 안내, 전체 메뉴 바로가기를 제공합니다.</p>
+        <ol>
+          <li>상단에서 언어(한국어/中文/English)를 선택합니다.</li>
+          <li><strong>빈소 찾기</strong>로 고인·상주명 검색, <strong>찾아오시는 길</strong>로 위치 확인합니다.</li>
+          <li>퀵 메뉴로 빈소·물품·도움말·추모 페이지로 이동합니다.</li>
+          <li>상주·관리자는 우측 상단 <strong>로그인</strong>으로 진입합니다.</li>
+        </ol>
+        <div class="tip">전화 상담: 032-524-4444 (연중무휴 24시간). 주소: 부평구 무네미로 446(인천중앙병원).</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>조문 안내</b><span>빈소 찾기</span></div>
+          <div class="body">
+            <div class="row"><span>검색창: 고인명 / 상주명 / 빈소</span><span>조회</span></div>
+            <div class="table">
+              <div class="head"><span>빈소</span><span>고인</span><span>상주</span><span>발인</span></div>
+              <div><span>101호</span><span>김○○</span><span>김○○</span><span>11/14 08:00</span></div>
+              <div><span>102호</span><span>이○○</span><span>이○○</span><span>11/15 09:30</span></div>
+            </div>
+            <div class="cards">
+              <div class="card"><b>온라인 추모</b>추모글 남기기</div>
+              <div class="card"><b>주차 정보</b>주차 안내</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>주요 공개 메뉴</h3>
+        <p class="lead">GNB 6개 영역으로 장례 전 과정을 안내합니다.</p>
+        <ul>
+          <li><strong>장례 절차 안내</strong> — 임종직후·진행중·발인직후, 사망신고, 상속·세무</li>
+          <li><strong>이용 정보</strong> — 빈소·휴게실·전시관·편의시설·진행절차</li>
+          <li><strong>장례 서비스</strong> — 가격표, 관/수의, 음식, 화환, 사진, 상복, 운구</li>
+          <li><strong>조문 안내</strong> — 빈소 찾기, 온라인 추모, 오시는 길, 주차</li>
+          <li><strong>장례 도움말</strong> — 제례, 절하는 법, 종교별 장례방식</li>
+          <li><strong>고객 지원</strong> — 알림, FAQ, 문의, 화장장·납골당·묘지</li>
+        </ul>
+        <div class="tip">서비스 품목·가격 상세/온라인 예약은 상주 로그인 후 열립니다.</div>
+      </div>
+    </article>
+
+    <!-- 2. 상주 -->
+    <div class="section-title" id="family">
+      <h2>2. 상주 (family)</h2>
+      <span>유족 전용 포털 · /pages/member/*</span>
+    </div>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>통합 로그인</b><span>상주 · 관리자</span></div>
+          <div class="body">
+            <div class="card" style="max-width:220px;margin:12px auto;padding:14px;">
+              <b style="font-size:13px;margin-bottom:8px;">로그인</b>
+              <div class="row" style="margin-bottom:6px;"><span>아이디</span><span>····</span></div>
+              <div class="row" style="margin-bottom:8px;"><span>비밀번호</span><span>····</span></div>
+              <div class="hero-box" style="padding:8px;text-align:center;">로그인</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>로그인</h3>
+        <p class="lead">주소: <code>/pages/member/login.html</code> — 상주·관리자 통합 로그인입니다.</p>
+        <ol>
+          <li>장례식장에서 발급한 <strong>상주 계정(아이디/비밀번호)</strong>으로 로그인합니다.</li>
+          <li>role이 <code>family</code>이면 상주 포털로, <code>admin</code>이면 관리자 화면으로 이동합니다.</li>
+          <li>계정이 없으면 상담실(032-524-4444)에 발급을 요청합니다.</li>
+        </ol>
+        <div class="tip">관리자가 「상주 계정」 메뉴에서 발급·빈소 이용 연결·비밀번호 재설정을 합니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>상주 전용 서비스</b><span>장례 예약</span></div>
+          <div class="nav">
+            <i class="on">장례 예약</i><i>내 예약</i><i>장례안내</i><i>서식</i>
+          </div>
+          <div class="body">
+            <div class="side">
+              <div class="side-nav">
+                <i class="on">빈소</i><i>관·횡대</i><i>수의</i><i>음식</i><i>화환</i><i>사진</i><i>상복</i><i>운구</i>
+              </div>
+              <div>
+                <div class="row" style="margin-bottom:6px;"><span>101호 35평</span><span>신청</span></div>
+                <div class="row" style="margin-bottom:6px;"><span>102호 50평</span><span>신청</span></div>
+                <div class="row"><span>안치료·입관실</span><span>자동 청구</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>장례 예약 (/pages/member/shop.html)</h3>
+        <p class="lead">빈소 신청과 장례 물품·서비스를 장바구니처럼 예약·청구합니다.</p>
+        <ol>
+          <li>카테고리에서 빈소 / 관 / 수의 / 음식 / 화환 / 사진 / 상복 / 운구 / 서비스를 선택합니다.</li>
+          <li>빈소는 가능 일자를 확인한 뒤 고인·상주·발인 정보를 입력해 신청합니다.</li>
+          <li>품목을 담아 주문하면 관리자 승인·정산 흐름으로 넘어갑니다.</li>
+          <li><strong>내 예약</strong>에서 상태(대기/확정/결제/취소)와 정산 문서를 확인합니다.</li>
+        </ol>
+        <div class="tip">발인 일정이 잠기면( scheduleLocked ) 상주가 발인 일시를 임의 변경할 수 없습니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>내 예약</b><span>주문·문서</span></div>
+          <div class="body">
+            <div class="table">
+              <div class="head"><span>주문번호</span><span>합계</span><span>상태</span><span>문서</span></div>
+              <div><span>ORD-2411-01</span><span>1,250,000</span><span>확정</span><span>보기</span></div>
+              <div><span>ORD-2411-02</span><span>380,000</span><span>대기</span><span>보기</span></div>
+            </div>
+            <div class="cards">
+              <div class="card"><b>주문서</b>미리보기·인쇄</div>
+              <div class="card"><b>거래명세</b>발인 정산</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>내 예약 · 문서 · 안내</h3>
+        <ul>
+          <li><strong>내 예약</strong> — 주문 목록, 상태 확인, 문서 모달 출력</li>
+          <li><strong>장례안내</strong> — 상주용 진행·예법 요약</li>
+          <li><strong>관련서식</strong> — 관리자가 등록한 PDF/HWP 등 다운로드</li>
+          <li>문서 유형: 주문서 / 거래명세서 / 세금계산서성 집계 출력</li>
+        </ul>
+        <div class="tip">사후정산 품목은 발인 전 관리자가 실사용 수량을 확정한 뒤 최종 금액이 확정됩니다.</div>
+      </div>
+    </article>
+
+    <!-- 3. 관리자 -->
+    <div class="section-title" id="admin">
+      <h2>3. 관리자 (admin)</h2>
+      <span>운영 콘솔 · /admin/</span>
+    </div>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>관리자</b><span>대시보드</span></div>
+          <div class="nav">
+            <i class="on">대시보드</i><i>시설 사용료</i><i>장례 물품</i><i>접객·서비스</i><i>주문·정산</i><i>게시·문의</i>
+          </div>
+          <div class="body">
+            <div class="cards">
+              <div class="card"><b>대기 문의</b>3</div>
+              <div class="card"><b>대기 주문</b>5</div>
+              <div class="card"><b>빈소 신청</b>2</div>
+              <div class="card"><b>상주 계정</b>8</div>
+            </div>
+            <div class="table">
+              <div class="head"><span>주문</span><span>상주</span><span>합계</span><span>상태</span></div>
+              <div><span>ORD-01</span><span>김○○</span><span>980,000</span><span>pending</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>대시보드</h3>
+        <p class="lead">운영 현황을 한눈에 보고, 대기 업무로 바로 이동합니다.</p>
+        <ol>
+          <li>관리자 계정으로 로그인하면 <code>/admin/</code> 대시보드가 열립니다.</li>
+          <li>대기 문의·대기 주문·빈소 신청 배지를 확인합니다.</li>
+          <li>최근 주문/이용 현황을 점검한 뒤 해당 메뉴로 처리합니다.</li>
+        </ol>
+        <div class="tip">관리자 비밀번호는 환경변수(ADMIN_USERNAME/PASSWORD)로 최초 시딩됩니다. 운영 환경에서는 반드시 변경하세요.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>시설 사용료</b><span>빈소 · 상주</span></div>
+          <div class="nav">
+            <i class="on">빈소 목록</i><i>빈소 이용</i><i>이용 등록</i><i>상주 계정</i><i>빈소 신청</i><i>안치료</i><i>입관실</i>
+          </div>
+          <div class="body">
+            <div class="table">
+              <div class="head"><span>상태</span><span>빈소</span><span>고인</span><span>상주</span></div>
+              <div><span>이용중</span><span>101호</span><span>박○○</span><span>박○○</span></div>
+              <div><span>대기</span><span>103호</span><span>최○○</span><span>최○○</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>시설 사용료 메뉴</h3>
+        <ul>
+          <li><strong>빈소 목록</strong> — 101·102·103·109 등 호실/평형 관리</li>
+          <li><strong>빈소 이용</strong> — 이용 기간·고인·발인·접근코드·상주 연결</li>
+          <li><strong>빈소 이용 등록</strong> — 접수 시 수동 등록</li>
+          <li><strong>상주 계정</strong> — 발급·수정·비활성·비밀번호 재설정</li>
+          <li><strong>빈소 신청</strong> — 상주 온라인 신청 승인/거절</li>
+          <li><strong>안치료·입관실</strong> — 1일 기준 사용료, 주문 가능 여부</li>
+        </ul>
+        <div class="tip">상주 1계정 ↔ 활성 빈소 이용 1건 연결이 기본 규칙입니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>장례 물품 · 접객</b><span>품목 CRUD</span></div>
+          <div class="body">
+            <div class="side">
+              <div class="side-nav">
+                <i class="on">관</i><i>횡대</i><i>수의</i><i>부속</i><i>음식</i><i>화환</i><i>사진</i><i>상복</i><i>운구</i><i>요금</i>
+              </div>
+              <div class="table">
+                <div class="head"><span>품명</span><span>규격</span><span>가격</span><span>공개</span></div>
+                <div><span>오동집성관</span><span>1.5분</span><span>···</span><span>Y</span></div>
+                <div><span>천상수의</span><span>7호</span><span>···</span><span>Y</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>품목·요금·주문·게시</h3>
+        <ul>
+          <li><strong>장례 물품</strong> — 관/횡대/수의/부속물품 등록·수정·정렬·공개</li>
+          <li><strong>접객·서비스</strong> — 식사·안주·떡·과일·제사상·식음료·공산품, 화환, 사진, 상복, 운구, 서비스 요금</li>
+          <li><strong>주문·정산</strong> — 상주 주문 확인, 사후정산, 문서 출력</li>
+          <li><strong>게시·문의</strong> — 알림 소식, 관련서식 업로드, 온라인 문의 답변, 추모글 관리</li>
+        </ul>
+        <div class="tip">「상주 예약·청구 가능」 체크를 끄면 안내 전용(가격 미노출/주문 불가)으로 둘 수 있습니다.</div>
+      </div>
+    </article>
+
+    <!-- 4. 슈퍼바이저 -->
+    <div class="section-title" id="supervisor">
+      <h2>4. 슈퍼바이저 (제안)</h2>
+      <span>현재 미구현 · 권장 설계</span>
+    </div>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>슈퍼바이저</b><span class="badge warn" style="background:#fff1df;color:#8a4b12;">제안안</span></div>
+          <div class="nav">
+            <i class="on">현황 조회</i><i>승인 대기</i><i>정산 감사</i><i>계정 감사</i><i>로그</i>
+          </div>
+          <div class="body">
+            <div class="cards">
+              <div class="card"><b>승인 대기</b>주문 3 · 빈소 1</div>
+              <div class="card"><b>오늘 발인</b>2건</div>
+              <div class="card"><b>미정산</b>1건</div>
+              <div class="card"><b>관리자 변경</b>요금 2건</div>
+            </div>
+            <div class="row"><span>조회 중심 · 삭제/단가 수정 제한</span><span>감사 로그</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>왜 필요한가</h3>
+        <p class="lead">현재는 관리자 1등급이 품목 단가·계정·정산을 모두 다룹니다. 병원/공단 운영에서는 <strong>현장 관리자</strong>와 <strong>감독(슈퍼바이저)</strong>을 나누는 편이 안전합니다.</p>
+        <ol>
+          <li><strong>조회</strong>: 빈소 이용, 주문, 문의, 정산 현황 열람</li>
+          <li><strong>승인</strong>: 고액 주문·할인·사후정산 확정 승인 (선택)</li>
+          <li><strong>감사</strong>: 요금/계정 변경 이력, 발인 정산 문서 점검</li>
+          <li><strong>제한</strong>: 품목 단가·상주 계정 삭제·시드 데이터 초기화는 금지</li>
+        </ol>
+        <div class="tip">구현 시 User.role에 <code>supervisor</code> 추가, requireSupervisor 미들웨어, 관리자 메뉴를 읽기/승인 전용으로 분기하는 방식이 적합합니다.</div>
+      </div>
+    </article>
+
+    <article class="spread">
+      <div class="left">
+        <div class="mock">
+          <div class="bar"><b>권한 매트릭스</b><span>제안</span></div>
+          <div class="body">
+            <div class="table">
+              <div class="head"><span>기능</span><span>상주</span><span>관리자</span><span>슈퍼</span></div>
+              <div><span>공개 페이지</span><span>○</span><span>○</span><span>○</span></div>
+              <div><span>예약/주문</span><span>○</span><span>△</span><span>조회</span></div>
+              <div><span>품목·요금 수정</span><span>×</span><span>○</span><span>×</span></div>
+              <div><span>정산 확정</span><span>×</span><span>○</span><span>승인</span></div>
+              <div><span>계정 발급</span><span>×</span><span>○</span><span>조회</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="right">
+        <h3>권한 구분 제안</h3>
+        <ul>
+          <li><strong>상주</strong> — 본인 장례 건만 예약·조회·문서</li>
+          <li><strong>관리자</strong> — 일 운영(접수, 품목, 문의 답변, 정산 입력)</li>
+          <li><strong>슈퍼바이저</strong> — 감독·승인·감사(수정 최소화)</li>
+        </ul>
+        <p class="lead" style="margin-top:12px;">당장 구현하지 않아도, 운영 규정에 “고액 할인/정산 확정은 2인 확인”을 두면 슈퍼바이저 도입 전까지 리스크를 줄일 수 있습니다.</p>
+      </div>
+    </article>
+
+    <!-- 5. 의견 -->
+    <div class="section-title" id="opinion">
+      <h2>5. 정리 및 의견</h2>
+      <span>현재 상태 평가 · 우선 개선안</span>
+    </div>
+
+    <section class="opinion">
+      <h3>한 줄 평가</h3>
+      <p style="margin:0;color:var(--muted);">
+        공개 안내 → 상주 예약 → 관리자 정산으로 이어지는 <strong>실무형 구조가 이미 잘 잡혀 있습니다.</strong>
+        다만 역할이 admin/family 2단이라, 병원·공단 조직의 “감독” 니즈에는 슈퍼바이저(또는 최소 감사 로그)가 필요합니다.
+      </p>
+
+      <div class="grid">
+        <div class="box">
+          <h4>잘 된 점</h4>
+          <ul>
+            <li>통합 로그인으로 상주/관리자 진입 경로가 단순함</li>
+            <li>빈소 이용 ↔ 상주 계정 연결, 주문·문서 출력까지 업무 흐름이 연결됨</li>
+            <li>홈페이지 메뉴가 절차·서비스·조문·도움말·지원으로 체계적</li>
+            <li>다국어(한/중/영)와 e하늘 연계로 현장 안내가 수월</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>보완하면 좋은 점</h4>
+          <ul>
+            <li>슈퍼바이저 역할 또는 최소 “변경 감사 로그”</li>
+            <li>관리자 메뉴가 많아 현장 직원용 “간편 모드(접수·승인만)” 분리 검토</li>
+            <li>상주 첫 로그인 시 비밀번호 강제 변경·이용 안내 체크리스트</li>
+            <li>모바일에서 관리자 메가메뉴 사용성 개선</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>권장 운영 순서</h4>
+          <ul>
+            <li>1) 관리자: 빈소 이용 등록 → 상주 계정 발급</li>
+            <li>2) 상주: 로그인 → 장례 예약 → 내 예약 확인</li>
+            <li>3) 관리자: 주문 확정·사후정산 → 문서 출력</li>
+            <li>4) (제안) 슈퍼바이저: 고액/할인/최종 정산 승인</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>바로 적용 가능한 의견</h4>
+          <ul>
+            <li>지금은 슈퍼바이저 화면을 새로 만들기보다, <strong>관리자 권한 분리(운영자/감독자)</strong>부터 설계하는 것이 효율적</li>
+            <li>홈페이지는 게스트용 “안내”, 상주 포털은 “거래”, 관리자는 “운영”으로 역할을 명확히 유지</li>
+            <li>설명서 파일: <code>docs/시스템구성_및_사용설명서.html</code> (가로 인쇄 지원)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      인천병원장례식장(인천중앙병원장례식장) · 시스템 구성 및 사용설명서 · 로컬 파일:
+      docs/시스템구성_및_사용설명서.html · 인쇄 시 가로(landscape) 권장
+    </p>
+  </div>
+</body>
+</html>

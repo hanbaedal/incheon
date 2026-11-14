@@ -1,10 +1,19 @@
 "use strict";
 
 const express = require("express");
+const { toKstISOString, formatYmdHm, TIMEZONE } = require("../utils/koreaTime");
 
 const router = express.Router();
 
-router.get("/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+router.get("/health", (req, res) =>
+  res.json({
+    ok: true,
+    timezone: TIMEZONE,
+    time: toKstISOString(),
+    timeKst: formatYmdHm(),
+    timeUtc: new Date().toISOString(),
+  })
+);
 
 router.use("/auth", require("./auth"));
 router.use("/notices", require("./notices"));

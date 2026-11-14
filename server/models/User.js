@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema(
   {
     username: { type: String, required: true, unique: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
+    // 관리자 화면에서 안내·전달용으로 입력 비밀번호를 그대로 보관
+    passwordPlain: { type: String, default: "" },
     role: { type: String, enum: ["admin", "family"], required: true, index: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, trim: true, default: "" },
@@ -19,7 +21,9 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.methods.setPassword = async function setPassword(plain) {
-  this.passwordHash = await bcrypt.hash(plain, 10);
+  const value = String(plain == null ? "" : plain);
+  this.passwordHash = await bcrypt.hash(value, 10);
+  this.passwordPlain = value;
 };
 
 userSchema.methods.verifyPassword = function verifyPassword(plain) {
@@ -36,6 +40,13 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     hallUsageId: this.hallUsageId,
     active: this.active,
     createdAt: this.createdAt,
+  };
+};
+
+userSchema.methods.toAdminJSON = function toAdminJSON() {
+  return {
+    ...this.toSafeJSON(),
+    password: this.passwordPlain || "",
   };
 };
 

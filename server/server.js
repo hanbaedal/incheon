@@ -1,5 +1,8 @@
 "use strict";
 
+// 서버 프로세스 기준 시간대를 한국(KST)으로 고정 (Render 등 UTC 환경 대비)
+process.env.TZ = process.env.TZ || "Asia/Seoul";
+
 const env = require("./config/env");
 const { connectDB } = require("./config/db");
 const { createApp } = require("./app");

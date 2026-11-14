@@ -27,11 +27,38 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   };
 
+  function kstParts(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const map = {};
+    fmt.formatToParts(d).forEach((part) => {
+      if (part.type !== "literal") map[part.type] = part.value;
+    });
+    return map;
+  }
+
   window.fmtDay = function (iso) {
     if (!iso) return "-";
-    const d = new Date(iso);
-    const p = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const map = kstParts(iso);
+    if (!map) return "-";
+    return `${map.year}-${map.month}-${map.day}`;
+  };
+
+  window.fmt = function (iso) {
+    if (!iso) return "-";
+    const map = kstParts(iso);
+    if (!map) return "-";
+    const hour = map.hour === "24" ? "00" : map.hour;
+    return `${map.year}-${map.month}-${map.day} ${hour}:${map.minute}`;
   };
 
   // site.js 의 언어 적용(init) 이후 실행되도록 보장

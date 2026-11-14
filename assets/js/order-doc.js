@@ -51,9 +51,21 @@ function docWon(n) {
 }
 
 function docFmtDate(iso) {
-  const d = new Date(iso);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}년 ${p(d.getMonth() + 1)}월 ${p(d.getDate())}일`;
+  if (typeof KoreaTime !== "undefined" && KoreaTime.formatYmdKorean) {
+    return KoreaTime.formatYmdKorean(iso || new Date());
+  }
+  const d = new Date(iso || Date.now());
+  if (Number.isNaN(d.getTime())) return "-";
+  const map = {};
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d).forEach((p) => {
+    if (p.type !== "literal") map[p.type] = p.value;
+  });
+  return `${map.year}년 ${map.month}월 ${map.day}일`;
 }
 
 function docPartyTable(title, p, withBiz) {
